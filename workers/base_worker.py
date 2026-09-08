@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional
 
 
 def get_secret(key: str, default: str = "") -> str:
-    """Retrieve secret from Streamlit secrets or OS environment."""
+    """Retrieve secret from Streamlit secrets, local secrets.toml, or OS environment."""
     try:
         import streamlit as st
         if hasattr(st, "secrets") and key in st.secrets:
@@ -20,6 +20,22 @@ def get_secret(key: str, default: str = "") -> str:
                 return val
     except Exception:
         pass
+
+    # Direct fallback: check .streamlit/secrets.toml from project root
+    try:
+        from pathlib import Path
+        local_secrets = Path(__file__).parent.parent / ".streamlit" / "secrets.toml"
+        if local_secrets.exists():
+            content = local_secrets.read_text(encoding="utf-8")
+            for line in content.splitlines():
+                line_str = line.strip()
+                if line_str.startswith(f"{key} =") or line_str.startswith(f"{key}="):
+                    val = line_str.split("=", 1)[1].strip().strip('"').strip("'")
+                    if val:
+                        return val
+    except Exception:
+        pass
+
     return os.environ.get(key, default).strip()
 
 
