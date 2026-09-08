@@ -33,17 +33,37 @@ class ProspectExtractor:
         text = raw_text.strip()
         text_lower = text.lower()
 
-        # 1. Company Name
+        # 1. Natural Language Conversational Extraction (e.g. "I am Sarah, VP of Marketing at Datadog")
+        nlp_name = ""
+        nlp_title = ""
+        nlp_company = ""
+
+        # Pattern: "I am <Name>, <Title> at <Company>" or "My name is <Name> and I'm the <Title> at <Company>"
+        match_intro = re.search(r"(?:i am|i'm|my name is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,?\s+(?:the\s+)?([A-Za-z\s&]+?)\s+(?:at|with|from)\s+([A-Z0-9][A-Za-z0-9\s&]+?)(?:\.|\n|,|$)", text, re.IGNORECASE)
+        if match_intro:
+            nlp_name = match_intro.group(1).strip()
+            nlp_title = match_intro.group(2).strip()
+            nlp_company = match_intro.group(3).strip()
+        else:
+            # Pattern: "<Title> at/from <Company>" (e.g. "VP of Marketing at Datadog")
+            match_title_comp = re.search(r"\b((?:VP|Vice President|Director|Head of|Chief|CTO|CFO|CRO|CMO|Manager|Lead)\s+(?:of\s+)?[A-Za-z\s&]+?)\s+(?:at|with|from)\s+([A-Z0-9][A-Za-z0-9\s&]+?)(?:\.|\n|,|$)", text, re.IGNORECASE)
+            if match_title_comp:
+                nlp_title = match_title_comp.group(1).strip()
+                nlp_company = match_title_comp.group(2).strip()
+
+        # 2. Company Name
         company = data.get("company_name")
         if not company or company in ["Target Account", "Target Prospect", "Account"]:
             company = cls._extract_field(text, ["company:", "company name:", "account:", "organization:"])
-            if not company and text.splitlines():
+            if not company and nlp_company:
+                company = nlp_company
+            elif not company and text.splitlines():
                 first_line = text.splitlines()[0].strip()
                 if ":" not in first_line and 2 < len(first_line) < 60:
                     company = first_line
         company = company or "Unspecified Company"
 
-        # 2. Contact Name & Parenthesized Title Extraction
+        # 3. Contact Name & Parenthesized Title Extraction
         contact = data.get("contact_name")
         parenthesized_title = ""
         raw_contact_line = cls._extract_field(text, ["contact:", "name:", "lead name:", "decision maker:"])
@@ -52,16 +72,18 @@ class ProspectExtractor:
             contact = raw_contact_line.split("(")[0].strip()
         elif raw_contact_line:
             contact = raw_contact_line.strip()
+        elif nlp_name:
+            contact = nlp_name
 
         contact = contact or "Unspecified Contact"
 
-        # 3. Job Title
+        # 4. Job Title
         job_title = data.get("job_title")
         if not job_title or job_title in ["Executive", "Unknown"]:
-            job_title = cls._extract_field(text, ["title:", "job title:", "role:", "designation:"]) or parenthesized_title
+            job_title = cls._extract_field(text, ["title:", "job title:", "role:", "designation:"]) or parenthesized_title or nlp_title
         job_title = job_title or "Unspecified Title"
 
-        # 4. Industry
+        # 5. Industry
         industry = data.get("industry")
         if not industry or industry in ["Enterprise B2B", "B2B"]:
             industry = cls._extract_field(text, ["industry:", "vertical:", "sector:"])
