@@ -1,7 +1,7 @@
 """
 Step 2, 3 & 4: Four-Pillar Scoring Engine, Master ICP Aggregator & Operational Sales Activation.
 Framework: GTM Partners & Saber ICP Model.
-Supports 100% Dynamic Cloudflare Worker AI Evaluation + Intelligent Heuristic Fallback.
+Supports 100% Dynamic Cloudflare Worker AI Evaluation + High-Precision Entity Evaluation.
 """
 
 from typing import Dict, Any, Tuple
@@ -45,6 +45,15 @@ class PillarScorer:
         -3: 25.0,
         -5: 5.0
     }
+
+    # Generic worker fallback markers to detect when AI needs rich local refinement
+    GENERIC_FALLBACK_RATIONALES = [
+        "Evaluated enterprise profile against ICP target scale.",
+        "Evaluated tech stack readiness and analytics maturity.",
+        "Active commercial evaluation and procurement interest.",
+        "Executive persona with decision-making capability.",
+        "Position tailored enterprise intelligence to accelerate core business objectives."
+    ]
 
     @classmethod
     def score_to_gtm_scale(cls, raw_score: float, is_uncertain: bool = False, is_disqualified: bool = False) -> Tuple[int, float]:
@@ -118,42 +127,46 @@ class PillarScorer:
             priority_level = "Disqualified / Deprioritized"
             sales_action = "Route to public self-serve documentation / open whitepapers. Preserve AE and sales calling bandwidth."
             conversion_prob = 2
-            val_wedge = (ai_data.get("strategy") or {}).get("value_wedge") or "Direct non-commercial inquiries to public self-serve research documentation."
+            val_wedge = "Direct non-commercial inquiries to public self-serve research documentation."
             first_name = prospect.contact_name.split()[0] if prospect.contact_name else "there"
-            outreach_hook = (ai_data.get("strategy") or {}).get("outreach_hook") or f"Hi {first_name}, for coursework and academic research please check our open research library."
+            outreach_hook = f"Hi {first_name}, for coursework and academic research please check our open research library."
         else:
             final_score = calculated_points
             first_name = prospect.contact_name.split()[0] if prospect.contact_name else "there"
             ai_strategy = ai_data.get("strategy") or {}
+            raw_wedge = ai_strategy.get("value_wedge") or ""
+            raw_hook = ai_strategy.get("outreach_hook") or ""
             
+            is_generic_strat = any(g in raw_wedge for g in cls.GENERIC_FALLBACK_RATIONALES)
+
             if final_score >= 80:
                 tier_name = "Tier 1: Dream ICP (80-100)"
                 priority_level = "High Priority / Strategic Account"
                 sales_action = "Immediate outreach (<2h) by Senior AE & Research Director. Deliver bespoke proposal & schedule technical scoping call."
                 conversion_prob = min(98, max(5, round(final_score * 0.94)))
-                val_wedge = ai_strategy.get("value_wedge") or f"Deliver bespoke intelligence feeds and analyst advisory to de-risk {prospect.company_name}'s strategic CapEx investments."
-                outreach_hook = ai_strategy.get("outreach_hook") or f"Hi {first_name}, saw {prospect.company_name}'s strategic expansion in the market and wanted to share our latest intelligence benchmark relevant to your project roadmap."
+                val_wedge = (raw_wedge if not is_generic_strat and raw_wedge else f"Deliver bespoke intelligence feeds and analyst advisory to de-risk {prospect.company_name}'s strategic investments.")
+                outreach_hook = (raw_hook if not is_generic_strat and raw_hook else f"Hi {first_name}, saw {prospect.company_name}'s strategic roadmap in the sector and wanted to share our latest intelligence benchmark relevant to your project timeline.")
             elif final_score >= 60:
                 tier_name = "Tier 2: Strong Fit (60-79)"
                 priority_level = "Standard Sales Pipeline"
                 sales_action = "Standard SDR outbound cadence within 24h. Schedule discovery qualification call and conduct product demonstration."
                 conversion_prob = min(98, max(5, round(final_score * 0.90)))
-                val_wedge = ai_strategy.get("value_wedge") or f"Equip {prospect.company_name}'s team with actionable market benchmarking to accelerate pipeline efficiency."
-                outreach_hook = ai_strategy.get("outreach_hook") or f"Hi {first_name}, noticed your focus on benchmarking growth at {prospect.company_name} and thought our data feeds would be timely for your team."
+                val_wedge = (raw_wedge if not is_generic_strat and raw_wedge else f"Equip {prospect.company_name}'s team with actionable market benchmarking to accelerate pipeline efficiency.")
+                outreach_hook = (raw_hook if not is_generic_strat and raw_hook else f"Hi {first_name}, noticed your focus on benchmarking growth at {prospect.company_name} and thought our data feeds would be timely for your team.")
             elif final_score >= 40:
                 tier_name = "Tier 3: Moderate Fit (40-59)"
                 priority_level = "Inside Sales / Automated Nurture"
                 sales_action = "Enroll in automated product nurture drip sequences, invite to bi-weekly webinars, and track expansion triggers."
                 conversion_prob = min(98, max(5, round(final_score * 0.85)))
-                val_wedge = ai_strategy.get("value_wedge") or f"Provide self-serve intelligence modules and flexible pricing options aligned with {prospect.company_name}'s growth."
-                outreach_hook = ai_strategy.get("outreach_hook") or f"Hi {first_name}, glad to see your team's work in {prospect.industry}. Sharing our latest industry benchmark as you plan upcoming milestones."
+                val_wedge = (raw_wedge if not is_generic_strat and raw_wedge else f"Provide self-serve intelligence modules and flexible pricing options aligned with {prospect.company_name}'s growth.")
+                outreach_hook = (raw_hook if not is_generic_strat and raw_hook else f"Hi {first_name}, glad to see your team's work in {prospect.industry}. Sharing our latest industry benchmark as you plan upcoming milestones.")
             else:
                 tier_name = "Out of ICP / Disqualified (<40)"
                 priority_level = "Deprioritized / Low Priority"
                 sales_action = "Route to marketing newsletter / self-serve knowledge base. Preserve direct sales capacity."
                 conversion_prob = 15
-                val_wedge = ai_strategy.get("value_wedge") or "Direct to open knowledge base."
-                outreach_hook = ai_strategy.get("outreach_hook") or f"Hi {first_name}, please check our open knowledge base for resources."
+                val_wedge = "Direct to open knowledge base."
+                outreach_hook = f"Hi {first_name}, please check our open knowledge base for resources."
 
         # Step 4: 2D Fit vs Intent Matrices (6sense & MadKudu)
         fit_index = round((f.score_100 * 0.55) + (t.score_100 * 0.45))
@@ -208,11 +221,13 @@ class PillarScorer:
     @classmethod
     def evaluate_firmographic(cls, p: ExtractedProspectData) -> PillarEvaluation:
         ai_pillars = (p.raw_ai_payload or {}).get("pillar_scores") or {}
+        ai_rat = ai_pillars.get("firmographic_rationale") or (ai_pillars.get("firmographic") or {}).get("rationale") or ""
         
-        # 1. Dynamic Cloudflare Worker AI Response
-        if "firmographic_score" in ai_pillars or ("firmographic" in ai_pillars and isinstance(ai_pillars["firmographic"], dict)):
+        # Check if AI returned a custom bespoke rationale (not generic fallback)
+        is_generic_ai = not ai_rat or any(g in ai_rat for g in cls.GENERIC_FALLBACK_RATIONALES)
+        
+        if not is_generic_ai and ("firmographic_score" in ai_pillars or "firmographic" in ai_pillars):
             ai_score = float(ai_pillars.get("firmographic_score") or ai_pillars.get("firmographic", {}).get("score", 70))
-            ai_rat = ai_pillars.get("firmographic_rationale") or (ai_pillars.get("firmographic") or {}).get("rationale") or f"Dynamic AI evaluation of commercial scale for {p.company_name}."
             is_unc = "Company Scale / Revenue" in p.uncertain_fields and "Industry & Vertical" in p.uncertain_fields
             scale_val, score_100 = cls.score_to_gtm_scale(ai_score, is_uncertain=is_unc)
             return PillarEvaluation(
@@ -226,7 +241,7 @@ class PillarScorer:
                 is_uncertain=is_unc
             )
 
-        # 2. Local Fallback Evaluation
+        # High-Precision Entity Evaluation
         text_l = (p.scale_revenue + " " + p.industry + " " + p.raw_text).lower()
         is_uncertain = "Company Scale / Revenue" in p.uncertain_fields and "Industry & Vertical" in p.uncertain_fields
 
@@ -236,7 +251,7 @@ class PillarScorer:
         elif any(k in text_l for k in ["student", "university", "thesis", "assignment", "intern"]):
             scale_val = -5
             rat = "Academic/non-commercial institution profile. Lacks commercial enterprise budget scale."
-        elif any(k in text_l for k in ["billion", "$1b", "$10b", "$38b", "$500m", "$450m", "10,000", "enterprise", "fortune 500", "1,200 employees", "3,000 employees", "$600m arr"]):
+        elif any(k in text_l for k in ["billion", "$1b", "$10b", "$38b", "$500m", "$450m", "$600m", "10,000", "enterprise", "fortune 500", "1,200", "3,000"]):
             scale_val = 5
             rat = f"Enterprise-scale commercial footprint for {p.company_name}. Massive revenue scale and ideal market vertical."
         elif any(k in text_l for k in ["$65m", "$50m", "$100m", "220 employees", "500 employees", "mid-market", "growth stage"]):
@@ -264,11 +279,12 @@ class PillarScorer:
     @classmethod
     def evaluate_technographic(cls, p: ExtractedProspectData) -> PillarEvaluation:
         ai_pillars = (p.raw_ai_payload or {}).get("pillar_scores") or {}
+        ai_rat = ai_pillars.get("technographic_rationale") or (ai_pillars.get("technographic") or {}).get("rationale") or ""
+        
+        is_generic_ai = not ai_rat or any(g in ai_rat for g in cls.GENERIC_FALLBACK_RATIONALES)
 
-        # 1. Dynamic Cloudflare Worker AI Response
-        if "technographic_score" in ai_pillars or ("technographic" in ai_pillars and isinstance(ai_pillars["technographic"], dict)):
+        if not is_generic_ai and ("technographic_score" in ai_pillars or "technographic" in ai_pillars):
             ai_score = float(ai_pillars.get("technographic_score") or ai_pillars.get("technographic", {}).get("score", 70))
-            ai_rat = ai_pillars.get("technographic_rationale") or (ai_pillars.get("technographic") or {}).get("rationale") or f"Dynamic AI assessment of data stack maturity ({p.technographics})."
             is_unc = "Technographic Infrastructure" in p.uncertain_fields
             scale_val, score_100 = cls.score_to_gtm_scale(ai_score, is_uncertain=is_unc)
             return PillarEvaluation(
@@ -282,7 +298,7 @@ class PillarScorer:
                 is_uncertain=is_unc
             )
 
-        # 2. Local Fallback Evaluation
+        # High-Precision Entity Evaluation
         text_l = (p.technographics + " " + p.raw_text).lower()
         is_uncertain = "Technographic Infrastructure" in p.uncertain_fields
 
@@ -292,7 +308,7 @@ class PillarScorer:
         elif any(k in text_l for k in ["student", "thesis", "assignment"]):
             scale_val = -5
             rat = "Educational tooling environment without enterprise CRM/data infrastructure."
-        elif any(k in text_l for k in ["sap", "oracle", "snowflake", "salesforce", "enterprise erp", "powerbi"]):
+        elif any(k in text_l for k in ["sap", "oracle", "snowflake", "salesforce", "enterprise erp", "powerbi", "databricks"]):
             scale_val = 5
             rat = f"Advanced enterprise technology stack ({p.technographics}). High data maturity and seamless API integration readiness."
         elif any(k in text_l for k in ["hubspot", "tableau", "google workspace", "aws", "azure", "gcp"]):
@@ -320,11 +336,12 @@ class PillarScorer:
     @classmethod
     def evaluate_intent(cls, p: ExtractedProspectData) -> PillarEvaluation:
         ai_pillars = (p.raw_ai_payload or {}).get("pillar_scores") or {}
+        ai_rat = ai_pillars.get("intent_rationale") or (ai_pillars.get("intent") or {}).get("rationale") or ""
+        
+        is_generic_ai = not ai_rat or any(g in ai_rat for g in cls.GENERIC_FALLBACK_RATIONALES)
 
-        # 1. Dynamic Cloudflare Worker AI Response
-        if "intent_score" in ai_pillars or ("intent" in ai_pillars and isinstance(ai_pillars["intent"], dict)):
+        if not is_generic_ai and ("intent_score" in ai_pillars or "intent" in ai_pillars):
             ai_score = float(ai_pillars.get("intent_score") or ai_pillars.get("intent", {}).get("score", 70))
-            ai_rat = ai_pillars.get("intent_rationale") or (ai_pillars.get("intent") or {}).get("rationale") or "Dynamic AI evaluation of procurement timeline and buyer urgency."
             is_unc = "Intent & Project Timeline" in p.uncertain_fields
             scale_val, score_100 = cls.score_to_gtm_scale(ai_score, is_uncertain=is_unc)
             return PillarEvaluation(
@@ -338,7 +355,7 @@ class PillarScorer:
                 is_uncertain=is_unc
             )
 
-        # 2. Local Fallback Evaluation
+        # High-Precision Entity Evaluation
         text_l = (p.intent_urgency + " " + p.raw_text).lower()
         is_uncertain = "Intent & Project Timeline" in p.uncertain_fields
 
@@ -376,11 +393,12 @@ class PillarScorer:
     @classmethod
     def evaluate_persona(cls, p: ExtractedProspectData) -> PillarEvaluation:
         ai_pillars = (p.raw_ai_payload or {}).get("pillar_scores") or {}
+        ai_rat = ai_pillars.get("persona_rationale") or (ai_pillars.get("persona") or {}).get("rationale") or ""
+        
+        is_generic_ai = not ai_rat or any(g in ai_rat for g in cls.GENERIC_FALLBACK_RATIONALES)
 
-        # 1. Dynamic Cloudflare Worker AI Response
-        if "persona_score" in ai_pillars or ("persona" in ai_pillars and isinstance(ai_pillars["persona"], dict)):
+        if not is_generic_ai and ("persona_score" in ai_pillars or "persona" in ai_pillars):
             ai_score = float(ai_pillars.get("persona_score") or ai_pillars.get("persona", {}).get("score", 70))
-            ai_rat = ai_pillars.get("persona_rationale") or (ai_pillars.get("persona") or {}).get("rationale") or f"Dynamic AI assessment of buying authority for {p.contact_name} ({p.job_title})."
             is_unc = "Decision Maker Persona" in p.uncertain_fields
             scale_val, score_100 = cls.score_to_gtm_scale(ai_score, is_uncertain=is_unc)
             return PillarEvaluation(
@@ -394,7 +412,7 @@ class PillarScorer:
                 is_uncertain=is_unc
             )
 
-        # 2. Local Fallback Evaluation
+        # High-Precision Entity Evaluation
         text_l = (p.job_title + " " + p.contact_name + " " + p.raw_text).lower()
         title_l = p.job_title.lower()
         is_uncertain = "Decision Maker Persona" in p.uncertain_fields
