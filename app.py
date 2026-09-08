@@ -371,9 +371,6 @@ def get_pillar_info(pillars: dict, key: str) -> tuple[float, str]:
 st.markdown('<div class="title-text">Enterprise ICP Revenue Intelligence</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-text">AI-Powered Lead Scoring & Quality-Weighted Sales Forecaster (Saber ICP Framework)</div>', unsafe_allow_html=True)
 
-if not worker_client.is_connected():
-    st.warning("Notice: CLOUDFLARE_WORKER_URL is not configured in .streamlit/secrets.toml. Please add your Worker link.")
-
 # Single Focused Lead Qualification Interface
 col_in1, col_in2 = st.columns([3, 1])
 with col_in1:
