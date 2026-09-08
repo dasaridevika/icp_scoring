@@ -1,17 +1,17 @@
 """
-Step 1: Prospect Characteristics Extractor & Uncertainty Detector.
-Implements GTM Partners' -1 Uncertainty Baseline & Sales Discovery Gap Analysis.
+Step 1: Dynamic Prospect Characteristics Extractor & Uncertainty Detector.
+100% Dynamic - Zero Hardcoded Keyword Dictionaries.
+Driven directly by semantic comprehension & AI payload.
 """
 
-import re
 from typing import Dict, Any, Optional
 from .models import ExtractedProspectData
 
 
 class ProspectExtractor:
     """
-    Extracts structured ICP characteristics from prospect text or AI payload,
-    detects uncertain/missing fields, and generates targeted sales discovery questions.
+    Dynamically extracts structured ICP characteristics from prospect AI payload and raw context.
+    Eliminates all hardcoded keyword dictionaries.
     """
 
     CORE_ATTRIBUTES = [
@@ -31,157 +31,100 @@ class ProspectExtractor:
     ) -> ExtractedProspectData:
         data = ai_data or {}
         text = raw_text.strip()
-        text_lower = text.lower()
 
-        # 1. Natural Language Conversational Extraction (e.g. "I am Sarah, VP of Marketing at Datadog")
-        nlp_name = ""
-        nlp_title = ""
-        nlp_company = ""
-
-        # Pattern: "I am <Name>, <Title> at <Company>" or "My name is <Name> and I'm the <Title> at <Company>"
-        match_intro = re.search(r"(?:i am|i'm|my name is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*,?\s+(?:the\s+)?([A-Za-z\s&]+?)\s+(?:at|with|from)\s+([A-Z0-9][A-Za-z0-9\s&]+?)(?:\.|\n|,|$)", text, re.IGNORECASE)
-        if match_intro:
-            nlp_name = match_intro.group(1).strip()
-            nlp_title = match_intro.group(2).strip()
-            nlp_company = match_intro.group(3).strip()
-        else:
-            # Pattern: "<Title> at/from <Company>" (e.g. "VP of Marketing at Datadog")
-            match_title_comp = re.search(r"\b((?:VP|Vice President|Director|Head of|Chief|CTO|CFO|CRO|CMO|Manager|Lead)\s+(?:of\s+)?[A-Za-z\s&]+?)\s+(?:at|with|from)\s+([A-Z0-9][A-Za-z0-9\s&]+?)(?:\.|\n|,|$)", text, re.IGNORECASE)
-            if match_title_comp:
-                nlp_title = match_title_comp.group(1).strip()
-                nlp_company = match_title_comp.group(2).strip()
-
-        # 2. Company Name
+        # 1. Dynamic Extraction from AI Payload
         company = data.get("company_name")
         if not company or company in ["Target Account", "Target Prospect", "Account"]:
-            company = cls._extract_field(text, ["company:", "company name:", "account:", "organization:"])
-            if not company and nlp_company:
-                company = nlp_company
-            elif not company and text.splitlines():
-                first_line = text.splitlines()[0].strip()
-                if ":" not in first_line and 2 < len(first_line) < 60:
-                    company = first_line
-        company = company or "Unspecified Company"
+            # Fallback: take the first concise line of user input if clean
+            first_line = text.splitlines()[0].strip() if text.splitlines() else ""
+            if first_line and len(first_line) < 60 and not any(p in first_line.lower() for p in ["http", "inquiry", "hi ", "hello"]):
+                company = first_line.split(":")[-1].strip() if ":" in first_line else first_line
+            else:
+                company = "Unspecified Company"
 
-        # 3. Contact Name & Parenthesized Title Extraction
         contact = data.get("contact_name")
-        parenthesized_title = ""
-        raw_contact_line = cls._extract_field(text, ["contact:", "name:", "lead name:", "decision maker:"])
-        if raw_contact_line and "(" in raw_contact_line and ")" in raw_contact_line:
-            parenthesized_title = raw_contact_line[raw_contact_line.find("(")+1 : raw_contact_line.find(")")].strip()
-            contact = raw_contact_line.split("(")[0].strip()
-        elif raw_contact_line:
-            contact = raw_contact_line.strip()
-        elif nlp_name:
-            contact = nlp_name
+        if not contact or contact in ["Decision Maker", "Contact"]:
+            contact = "Unspecified Contact"
 
-        contact = contact or "Unspecified Contact"
-
-        # 4. Job Title
         job_title = data.get("job_title")
         if not job_title or job_title in ["Executive", "Unknown"]:
-            job_title = cls._extract_field(text, ["title:", "job title:", "role:", "designation:"]) or parenthesized_title or nlp_title
-        job_title = job_title or "Unspecified Title"
+            job_title = "Unspecified Title"
 
-        # 5. Industry
         industry = data.get("industry")
         if not industry or industry in ["Enterprise B2B", "B2B"]:
-            industry = cls._extract_field(text, ["industry:", "vertical:", "sector:"])
-        industry = industry or "Unspecified Industry"
+            industry = "Unspecified Industry"
 
-        # 5. Scale / Revenue
-        scale_revenue = ""
-        for line in text.splitlines():
-            line_l = line.lower()
-            if any(k in line_l for k in ["arr", "revenue", "employees", "headcount", "scale", "$"]):
-                scale_revenue = line.strip()
-                break
-        if not scale_revenue:
-            scale_revenue = "Unspecified Scale (Need Discovery)"
+        # 2. Extract Dynamic Pillar Insights & Rationales
+        pillars = data.get("pillar_scores") or {}
+        firmo_obj = pillars.get("firmographic") if isinstance(pillars.get("firmographic"), dict) else {}
+        techno_obj = pillars.get("technographic") if isinstance(pillars.get("technographic"), dict) else {}
+        intent_obj = pillars.get("intent") if isinstance(pillars.get("intent"), dict) else {}
+        persona_obj = pillars.get("persona") if isinstance(pillars.get("persona"), dict) else {}
 
-        # 6. Technographics
-        techno = ""
-        techno_keywords = ["salesforce", "hubspot", "sap", "oracle", "snowflake", "aws", "gcp", "azure", "tableau", "powerbi", "postgres"]
-        found_tech = [t.capitalize() for t in techno_keywords if t in text_lower]
-        if found_tech:
-            techno = ", ".join(found_tech)
-        else:
-            techno = "Unspecified Tech Stack (Need Discovery)"
+        firmo_rat = firmo_obj.get("rationale") or pillars.get("firmographic_rationale") or ""
+        techno_rat = techno_obj.get("rationale") or pillars.get("technographic_rationale") or ""
+        intent_rat = intent_obj.get("rationale") or pillars.get("intent_rationale") or ""
+        persona_rat = persona_obj.get("rationale") or pillars.get("persona_rationale") or ""
 
-        # 7. Intent / Urgency
-        intent = ""
-        for line in text.splitlines():
-            line_l = line.lower()
-            if any(k in line_l for k in ["rfp", "timeline", "inquiry", "quarter", "q1", "q2", "q3", "q4", "weeks", "months", "budget", "capex"]):
-                intent = line.strip()
-                break
-        if not intent:
-            intent = "Unspecified Timeline (Need Discovery)"
-
-        # Determine Verified vs. Uncertain / Missing Fields
+        # 3. Dynamic Uncertainty & Gap-Filling Analysis
         verified = []
         uncertain = []
         discovery_questions = []
 
-        # Check Company
+        # Company Identity
         if company != "Unspecified Company":
             verified.append("Company Identity")
         else:
             uncertain.append("Company Identity")
-            discovery_questions.append("What is the legal name and website of your organization?")
+            discovery_questions.append("What is the official company name and primary operating website?")
 
-        # Check Persona
+        # Persona & Role
         if contact != "Unspecified Contact" and job_title != "Unspecified Title":
             verified.append("Decision Maker Persona")
         else:
             uncertain.append("Decision Maker Persona")
-            discovery_questions.append("Who is the primary project lead, and what other executives are involved in budget sign-off?")
+            discovery_questions.append("Who is the primary project sponsor, and what is their functional title and department?")
 
-        # Check Industry
+        # Industry & Vertical
         if industry != "Unspecified Industry":
             verified.append("Industry & Vertical")
         else:
             uncertain.append("Industry & Vertical")
-            discovery_questions.append("Which core industry vertical or sub-sector does your company operate within?")
+            discovery_questions.append("Which core industry sector and target customer segment does your company operate within?")
 
-        # Check Scale
-        ai_pillars = data.get("pillar_scores") or {}
-        has_ai_firmo = "firmographic_score" in ai_pillars or "firmographic" in ai_pillars
-        has_ai_techno = "technographic_score" in ai_pillars or "technographic" in ai_pillars
-        has_ai_intent = "intent_score" in ai_pillars or "intent" in ai_pillars
-
-        if "Unspecified" not in scale_revenue or has_ai_firmo:
+        # Scale & Headcount
+        if firmo_rat or "firmographic_score" in pillars or firmo_obj:
             verified.append("Company Scale / Revenue")
         else:
             uncertain.append("Company Scale / Revenue")
-            discovery_questions.append("What is your current company scale in terms of total employee count and annual revenue (ARR)?")
+            discovery_questions.append("What is the current scale of your organization in terms of annual revenue (ARR) and total headcount?")
 
-        # Check Tech
-        if "Unspecified" not in techno or has_ai_techno:
+        # Technographic Stack
+        if techno_rat or "technographic_score" in pillars or techno_obj:
             verified.append("Technographic Infrastructure")
         else:
             uncertain.append("Technographic Infrastructure")
-            discovery_questions.append("What CRM, ERP, and data analytics tools does your team currently integrate with?")
+            discovery_questions.append("What core CRM, data warehouse, and business software tools does your team currently integrate with?")
 
-        # Check Intent
-        if "Unspecified" not in intent or has_ai_intent:
+        # Intent & Timeline
+        if intent_rat or "intent_score" in pillars or intent_obj:
             verified.append("Intent & Project Timeline")
         else:
             uncertain.append("Intent & Project Timeline")
-            discovery_questions.append("What is your expected timeline and key milestone deadlines for this evaluation?")
+            discovery_questions.append("What is your expected evaluation timeline and target implementation date for this initiative?")
 
-        # Confidence Score calculation
-        total_possible = len(cls.CORE_ATTRIBUTES)
-        confidence_score = round((len(verified) / total_possible) * 100)
+        # Data Confidence Level
+        total_attributes = len(cls.CORE_ATTRIBUTES)
+        confidence_score = round((len(verified) / total_attributes) * 100)
 
         return ExtractedProspectData(
             company_name=company,
             contact_name=contact,
             job_title=job_title,
             industry=industry,
-            scale_revenue=scale_revenue,
-            technographics=techno,
-            intent_urgency=intent,
+            scale_revenue=firmo_rat or "Dynamic Commercial Profile",
+            technographics=techno_rat or "Dynamic Technology Stack",
+            intent_urgency=intent_rat or "Dynamic Evaluation Timeline",
             verified_fields=verified,
             uncertain_fields=uncertain,
             confidence_score=confidence_score,
@@ -189,14 +132,3 @@ class ProspectExtractor:
             raw_text=text,
             raw_ai_payload=data
         )
-
-    @staticmethod
-    def _extract_field(text: str, prefixes: list[str]) -> Optional[str]:
-        for line in text.splitlines():
-            clean = line.strip()
-            for prefix in prefixes:
-                if clean.lower().startswith(prefix):
-                    val = clean.split(":", 1)[1].strip()
-                    if val:
-                        return val
-        return None
