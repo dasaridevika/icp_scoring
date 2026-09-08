@@ -442,6 +442,11 @@ if "single_score_result" in st.session_state:
 
     st.markdown("---")
     st.markdown(f"### Qualification Results: **{company_name}**")
+    
+    # Fit vs Intent Alignment Matrix (6sense & MadKudu Best Practice)
+    fit_score = round((firmo_pts * 0.55) + (techno_pts * 0.45))
+    intent_urgency_score = round((intent_pts * 0.55) + (persona_pts * 0.45))
+    win_probability = min(98, max(5, round(final_score * 0.92)))
 
     # Top 4 Symmetrical KPI Metric Cards
     c1, c2, c3, c4 = st.columns(4)
@@ -452,7 +457,7 @@ if "single_score_result" in st.session_state:
             <div style="color: #67E8F9; margin: 8px 0; font-size: 2.5rem; font-weight:900; line-height: 1;">
                 {final_score} <span style="font-size:1.1rem; color:#94A3B8; font-weight:600;">/ 100</span>
             </div>
-            <span style="color:#CBD5E1; font-size:0.8rem;">Saber Weighted Total</span>
+            <span style="color:#CBD5E1; font-size:0.8rem;">Conversion Probability: <strong>{win_probability}%</strong></span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -563,8 +568,28 @@ if "single_score_result" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
 
-    # Recommended Sales Cadence
+    # 6sense / MadKudu Strategic Fit vs Intent Index
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    m_col1, m_col2 = st.columns(2)
+    with m_col1:
+        st.markdown(f"""
+        <div style="background: rgba(30, 27, 75, 0.6); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 12px; padding: 16px; text-align:center;">
+            <span style="color:#C084FC; font-size:0.85rem; font-weight:700;">OVERALL ACCOUNT FIT INDEX</span>
+            <div style="color:#E9D5FF; font-size:1.7rem; font-weight:800; margin:4px 0;">{fit_score} / 100</div>
+            <span style="color:#DDD6FE; font-size:0.82rem;">Firmographic Scale + Technographic Stack</span>
+        </div>
+        """, unsafe_allow_html=True)
+    with m_col2:
+        st.markdown(f"""
+        <div style="background: rgba(6, 78, 59, 0.4); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; padding: 16px; text-align:center;">
+            <span style="color:#34D399; font-size:0.85rem; font-weight:700;">BUYER INTENT & SURGE INDEX</span>
+            <div style="color:#D1FAE5; font-size:1.7rem; font-weight:800; margin:4px 0;">{intent_urgency_score} / 100</div>
+            <span style="color:#A7F3D0; font-size:0.82rem;">Procurement Urgency + Decision Authority</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Recommended Sales Cadence
+    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
     st.markdown(f"""
     <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border: 1px solid #38BDF8; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.15);">
         <h4 style="color:#38BDF8; margin:0 0 8px 0; font-size:1.15rem;">Recommended Sales Department Cadence</h4>
