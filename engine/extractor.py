@@ -145,21 +145,26 @@ class ProspectExtractor:
             discovery_questions.append("Which core industry vertical or sub-sector does your company operate within?")
 
         # Check Scale
-        if "Unspecified" not in scale_revenue:
+        ai_pillars = data.get("pillar_scores") or {}
+        has_ai_firmo = "firmographic_score" in ai_pillars or "firmographic" in ai_pillars
+        has_ai_techno = "technographic_score" in ai_pillars or "technographic" in ai_pillars
+        has_ai_intent = "intent_score" in ai_pillars or "intent" in ai_pillars
+
+        if "Unspecified" not in scale_revenue or has_ai_firmo:
             verified.append("Company Scale / Revenue")
         else:
             uncertain.append("Company Scale / Revenue")
             discovery_questions.append("What is your current company scale in terms of total employee count and annual revenue (ARR)?")
 
         # Check Tech
-        if "Unspecified" not in techno:
+        if "Unspecified" not in techno or has_ai_techno:
             verified.append("Technographic Infrastructure")
         else:
             uncertain.append("Technographic Infrastructure")
             discovery_questions.append("What CRM, ERP, and data analytics tools does your team currently integrate with?")
 
         # Check Intent
-        if "Unspecified" not in intent:
+        if "Unspecified" not in intent or has_ai_intent:
             verified.append("Intent & Project Timeline")
         else:
             uncertain.append("Intent & Project Timeline")
