@@ -23,7 +23,7 @@ st.set_page_config(
     page_title="Enterprise ICP Revenue Intelligence",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Modern Luxury Dark & Neon RevOps Theme
@@ -117,24 +117,6 @@ worker_client = WorkerAIClient()
 # Header
 st.markdown('<div class="title-gradient">⚡ Enterprise ICP Revenue Intelligence</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-text">Cloudflare Worker AI Edge Engine • Fit, Intent, Readiness & Value Qualification</div>', unsafe_allow_html=True)
-
-# Sidebar
-with st.sidebar:
-    st.markdown("### ⚙️ Engine Status")
-    st.success("🟢 Cloudflare Worker AI Active")
-    st.caption(f"Endpoint: `{worker_client.worker_url}`")
-    st.markdown("---")
-    st.markdown("### 🧠 AI Edge Processing")
-    st.markdown("""
-    All intelligence is executed on Cloudflare Worker AI:
-    * **ICP Fit Analysis (0-100)**
-    * **Intent & Timing Signal (0-100)**
-    * **Readiness & Authority (0-100)**
-    * **Value Scale & ARR Forecast**
-    * **Anti-ICP Disqualification**
-    * **Cold Outreach Copywriting**
-    * **Sales Discovery Prompts**
-    """)
 
 # Tabs
 tab_live, tab_batch = st.tabs(["🎯 Live Account Intelligence", "📂 Batch CSV Qualification"])
