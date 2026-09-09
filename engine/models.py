@@ -1,92 +1,59 @@
 """
-Data models for the Enterprise ICP Qualification Engine.
-Step 1: Extracted Characteristics & Uncertainty.
-Step 2: Polarized Scoring Scale (-5 to +5) & 4-Pillar Breakdown.
-Step 3: Master ICP Score, Qualification Tiers & Deal Forecaster.
-Step 4: Sales Cadence SLAs, Fit vs Intent Matrix & CRM Sync.
+Enterprise ICP Intelligence Engine - Comprehensive Worker AI Response Schema.
+Defines the complete intelligence package returned when Worker AI handles the core workload.
 """
 
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any
+from typing import Dict, Any, Optional, List
+from pydantic import BaseModel, Field, field_validator
 
 
-@dataclass
-class ExtractedProspectData:
-    """Step 1 Model: Parsed characteristics, confidence metrics, and discovery questions."""
-    company_name: str
-    contact_name: str
-    job_title: str
-    industry: str
-    scale_revenue: str
-    technographics: str
-    intent_urgency: str
+class ComprehensiveAIWorkerResponse(BaseModel):
+    """
+    Full schema for edge-evaluated ICP Revenue Intelligence from Cloudflare Worker AI.
+    """
+    company_name: str = "Unspecified Company"
+    domain: str = "unspecified.com"
+    contact_name: str = "Unspecified Contact"
+    job_title: str = "Unspecified Title"
+    industry: str = "Unspecified Industry"
+    scale: str = "Unspecified Scale"
+    tech_stack: str = "Unspecified Stack"
+    intent_timeline: str = "Unspecified Timeline"
     
-    # Uncertainty Tracking & Data Quality
-    verified_fields: List[str] = field(default_factory=list)
-    uncertain_fields: List[str] = field(default_factory=list)
-    confidence_score: int = 0  # 0% - 100%
+    # 4 Core Engine Scores & Rationales (0-100)
+    icp_fit_score: float = Field(default=50.0, ge=0.0, le=100.0)
+    icp_fit_rationale: str = "Evaluated against ideal customer profile."
     
-    # Gap-Filling Prompts for Sales Discovery (GTM Partners Step 4)
-    discovery_questions: List[str] = field(default_factory=list)
+    intent_score: float = Field(default=50.0, ge=0.0, le=100.0)
+    intent_rationale: str = "Evaluated for buying urgency and procurement signals."
     
-    # Raw context for downstream scoring steps
-    raw_text: str = ""
-    raw_ai_payload: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class PillarEvaluation:
-    """Step 2 Model: GTM Partners Polarized Rating & Saber Pillar Score."""
-    name: str
-    weight: float            # 0.30, 0.25, 0.25, 0.20
-    gtm_scale: int           # -5, -3, -1, +1, +3, +5
-    gtm_label: str           # e.g., "+5: High LTV & Rapid Expansion"
-    score_100: float         # Normalized 0 - 100
-    points_contributed: float # score_100 * weight
-    rationale: str
-    is_uncertain: bool = False
-
-
-@dataclass
-class FourPillarBreakdown:
-    """Step 2 Container for the 4 Evaluation Pillars."""
-    firmographic: PillarEvaluation
-    technographic: PillarEvaluation
-    intent: PillarEvaluation
-    persona: PillarEvaluation
-
-
-@dataclass
-class StrategyRecommendation:
-    """Step 4 Model: Tailored strategic value wedge and cold outreach opener."""
-    value_wedge: str
-    outreach_hook: str
-
-
-@dataclass
-class MasterScoreResult:
-    """Step 3 & 4 Model: Complete Operational Qualification Result."""
-    final_score: int                 # 0 - 100
-    tier_name: str                   # Tier 1, Tier 2, Tier 3, Out of ICP
-    priority_level: str              # Strategic, Standard, Nurture, Disqualified
-    sales_action: str                # SLA response cadence
+    readiness_score: float = Field(default=50.0, ge=0.0, le=100.0)
+    readiness_rationale: str = "Evaluated for decision-making authority and budget."
     
-    # 2D Matrix Indices (6sense / MadKudu)
-    fit_index: int                   # 0 - 100 (Firmographic + Technographic)
-    intent_index: int                # 0 - 100 (Intent + Persona)
-    conversion_probability: int      # Win probability %
+    value_score: float = Field(default=50.0, ge=0.0, le=100.0)
+    expansion_potential: str = "Moderate"
     
-    # Financial Impact
-    estimated_deal_size: float
-    quality_weighted_value: float    # Deal Size * (final_score / 100)
+    # Eligibility & Confidence
+    is_disqualified: bool = False
+    disqualification_reason: str = ""
+    data_confidence_pct: int = Field(default=75, ge=0, le=100)
     
-    # Disqualification & Negative Scoring
-    is_disqualified: bool
-    disqualification_reason: str
+    # Priority & Strategic Action
+    priority_tier: str = "Tier A2: High Priority Outbound"
+    sales_action: str = "Initiate SDR outbound sequence."
+    urgency_sla: str = "Within 24 hours"
+    recommended_channel: str = "Email + LinkedIn"
     
-    # Granular Pillars & Strategy
-    pillars: FourPillarBreakdown
-    strategy: StrategyRecommendation
-    
-    # CRM Integration Mapping
-    crm_payload: Dict[str, Any] = field(default_factory=dict)
+    # Strategy Copy & Gap Analysis
+    value_wedge: str = "Accelerate strategic growth initiatives."
+    outreach_hook: str = "Reaching out regarding your growth roadmap."
+    discovery_questions: List[str] = Field(default_factory=list)
+    key_strengths: List[str] = Field(default_factory=list)
+    key_risks: List[str] = Field(default_factory=list)
+
+    @field_validator("icp_fit_score", "intent_score", "readiness_score", "value_score", mode="before")
+    def clamp_scores(cls, v: Any) -> float:
+        try:
+            return max(0.0, min(100.0, float(v)))
+        except Exception:
+            return 50.0

@@ -1,26 +1,77 @@
 """
-Enterprise ICP Qualification Engine
-Step 1: ExtractedProspectData, ProspectExtractor
-Step 2: PillarEvaluation, FourPillarBreakdown, PillarScorer
-Step 3 & 4: MasterScoreResult, StrategyRecommendation
+Enterprise ICP Intelligence Engine - Dynamic Package Entry Point.
 """
 
-from .models import (
-    ExtractedProspectData,
-    PillarEvaluation,
-    FourPillarBreakdown,
-    StrategyRecommendation,
-    MasterScoreResult
+from .config import (
+    active_config,
+    EngineConfiguration,
+    ICPFitWeights,
+    IntentWeights,
+    ReadinessWeights,
+    CURRENT_MODEL_VERSION,
+    MODEL_CHANGELOG
 )
+
+from .models import (
+    DataStatus,
+    EvidenceField,
+    DimensionScore,
+    ICPFitScore,
+    IntentScore,
+    ReadinessScore,
+    ValueScore,
+    EligibilityResult,
+    SimilarCustomerMatch,
+    ExpectedValueResult,
+    NextBestAction,
+    MasterAccountIntelligence,
+    AccountRecord,
+    OpportunityRecord,
+    SalesActivityRecord,
+    FeedbackPredictionRecord
+)
+
 from .extractor import ProspectExtractor
-from .scorer import PillarScorer
+from .disqualifier import DisqualificationEngine
+from .similarity import HistoricalSimilarityEngine, GoldenCustomerClassifier
+from .calibration import ModelCalibrator, global_calibrator
+from .evaluator import HistoricalModelEvaluator, ICPDiscoveryEngine
+from .feedback import FeedbackStore
+from .scorer import MasterScoringEngine
+
 
 __all__ = [
-    "ExtractedProspectData",
-    "PillarEvaluation",
-    "FourPillarBreakdown",
-    "StrategyRecommendation",
-    "MasterScoreResult",
+    "active_config",
+    "EngineConfiguration",
+    "ICPFitWeights",
+    "IntentWeights",
+    "ReadinessWeights",
+    "CURRENT_MODEL_VERSION",
+    "MODEL_CHANGELOG",
+    "DataStatus",
+    "EvidenceField",
+    "DimensionScore",
+    "ICPFitScore",
+    "IntentScore",
+    "ReadinessScore",
+    "ValueScore",
+    "EligibilityResult",
+    "SimilarCustomerMatch",
+    "ExpectedValueResult",
+    "NextBestAction",
+    "MasterAccountIntelligence",
+    "AccountRecord",
+    "OpportunityRecord",
+    "SalesActivityRecord",
+    "FeedbackPredictionRecord",
     "ProspectExtractor",
-    "PillarScorer"
+    "DisqualificationEngine",
+    "HistoricalSimilarityEngine",
+    "GoldenCustomerClassifier",
+    "ModelCalibrator",
+    "global_calibrator",
+    "HistoricalModelEvaluator",
+    "ICPDiscoveryEngine",
+    "FeedbackStore",
+    "MasterScoringEngine"
 ]
