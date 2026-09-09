@@ -233,6 +233,9 @@ if "live_worker_res" in st.session_state:
             else:
                 st.success("No critical risks identified.")
 
+        # Format Target
+        target_display = f"{contact_disp} — {title_disp}" if (title_disp and title_disp != "Unspecified Role" and title_disp not in contact_disp) else contact_disp
+
         # Next Best Action Card
         st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
         st.markdown(f"""
@@ -242,7 +245,7 @@ if "live_worker_res" in st.session_state:
                 <span style="background:rgba(255,255,255,0.15); padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:600;">SLA: {res.urgency_sla}</span>
             </div>
             <div style="font-size:1.05rem; font-weight:600; color:#FFFFFF; margin-top:8px;">{res.sales_action}</div>
-            <div style="font-size:0.85rem; color:#D8B4FE; margin-top:6px;"><b>Channel:</b> {res.recommended_channel} | <b>Target:</b> {contact_disp} ({title_disp})</div>
+            <div style="font-size:0.85rem; color:#D8B4FE; margin-top:6px;"><b>Channel:</b> {res.recommended_channel} | <b>Target:</b> {target_display}</div>
             <div style="font-size:0.85rem; color:#E2E8F0; margin-top:10px;"><b>Strategic Value Wedge:</b> {res.value_wedge or 'Accelerate strategic operational outcomes.'}</div>
             <div style="background:rgba(0,0,0,0.25); border-radius:8px; padding:12px; margin-top:12px;">
                 <div style="font-size:0.8rem; font-weight:700; color:#38BDF8;">🔥 1-SENTENCE COLD OUTREACH OPENER:</div>
