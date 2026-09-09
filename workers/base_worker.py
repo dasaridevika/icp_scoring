@@ -31,15 +31,20 @@ from engine.extractor import ProspectExtractor
 
 
 def get_secret(key: str, default: str = "") -> str:
-    """Retrieve secret from Streamlit secrets or OS environment."""
+    """Retrieve secret from Streamlit secrets or OS environment (case-flexible)."""
     try:
         import streamlit as st
-        if hasattr(st, "secrets") and key in st.secrets:
-            val = str(st.secrets[key]).strip()
-            if val:
-                return val
+        if hasattr(st, "secrets"):
+            for k, val in st.secrets.items():
+                if k.lower() == key.lower():
+                    clean_val = str(val).strip()
+                    if clean_val:
+                        return clean_val
     except Exception:
         pass
+    for k, val in os.environ.items():
+        if k.lower() == key.lower():
+            return str(val).strip()
     return os.environ.get(key, default).strip()
 
 
@@ -53,16 +58,11 @@ class WorkerAIClient:
         self.worker_url = (
             worker_url or
             get_secret("CLOUDFLARE_WORKER_URL") or
-            get_secret("WORKER_AI_URL") or
             get_secret("WORKER_URL") or
+            get_secret("WORKER_AI_URL") or
             ""
         ).strip().rstrip("/")
-        self.auth_secret = (
-            get_secret("CLOUDFLARE_AUTH_SECRET") or
-            get_secret("AUTH_SECRET") or
-            get_secret("WORKER_AUTH_SECRET") or
-            ""
-        ).strip()
+        self.auth_secret = get_secret("CLOUDFLARE_AUTH_SECRET") or get_secret("AUTH_SECRET") or ""
         self.timeout_sec = 25
 
     def is_connected(self) -> bool:
