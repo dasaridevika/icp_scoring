@@ -217,14 +217,23 @@ class WorkerAIClient:
             f = ev_fields.get(f_key)
             if not f or f.status == EvidenceStatus.UNKNOWN:
                 return {"score": None, "status": "UNKNOWN", "confidence": 0.0, "rationale": f.rationale if f else "", "evidence_points": [], "missing_points": [f_key]}
-            return {"score": 75.0 if f.status != EvidenceStatus.UNKNOWN else None, "status": f.status.value, "confidence": f.confidence, "rationale": f.rationale, "evidence_points": [str(f.raw_value)], "missing_points": []}
+            calc_score = round(f.confidence * 100.0, 1)
+            return {"score": calc_score, "status": f.status.value, "confidence": f.confidence, "rationale": f.rationale, "evidence_points": [str(f.raw_value)], "missing_points": []}
 
+        rev_field = ev_fields.get("annual_revenue")
         evidence_dict = {
             "firmographic": to_pillar_dict("company_name"),
             "technographic": to_pillar_dict("technographics"),
             "intent": to_pillar_dict("intent_signals"),
             "readiness": to_pillar_dict("contact_authority"),
-            "value": {"score": 70.0, "status": "INFERRED", "confidence": 0.7, "rationale": "Local value proxy", "evidence_points": [], "missing_points": []}
+            "value": {
+                "score": round((rev_field.confidence if rev_field else 0.5) * 100.0, 1),
+                "status": rev_field.status.value if rev_field else "UNKNOWN",
+                "confidence": rev_field.confidence if rev_field else 0.0,
+                "rationale": rev_field.rationale if rev_field else "Value proxy",
+                "evidence_points": [str(rev_field.raw_value)] if rev_field and rev_field.raw_value else [],
+                "missing_points": [] if rev_field and rev_field.raw_value else ["annual_revenue"]
+            }
         }
 
         return MasterScoringEngine.evaluate_assessment(

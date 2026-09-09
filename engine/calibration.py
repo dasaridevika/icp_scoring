@@ -5,9 +5,7 @@ and historical outcomes, preventing fake or uncalibrated conversion claims.
 """
 
 from typing import List, Dict, Any, Tuple, Optional
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import brier_score_loss, log_loss
+import math
 
 
 class ModelCalibrator:
@@ -16,7 +14,8 @@ class ModelCalibrator:
     """
 
     def __init__(self):
-        self.model: Optional[LogisticRegression] = None
+        self.weights: Optional[List[float]] = None
+        self.intercept: float = 0.0
         self.is_fitted: bool = False
         self.feature_names = [
             "icp_fit_score",
@@ -26,9 +25,13 @@ class ModelCalibrator:
             "confidence_score"
         ]
 
+    def _sigmoid(self, z: float) -> float:
+        z = max(-500.0, min(500.0, z))
+        return 1.0 / (1.0 + math.exp(-z))
+
     def fit_historical_data(self, dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Trains a calibrated model on historical opportunities.
+        Trains a calibrated model on historical opportunities using pure-Python logistic regression.
         Each record must have feature scores (0-100) and binary 'won' outcome.
         """
         if len(dataset) < 10:
@@ -41,44 +44,67 @@ class ModelCalibrator:
         y = []
         for row in dataset:
             features = [
-                float(row.get("icp_fit_score", 50.0)),
-                float(row.get("intent_score", 50.0)),
-                float(row.get("readiness_score", 50.0)),
-                float(row.get("value_score", 50.0)),
-                float(row.get("confidence_score", 0.5) * 100.0 if row.get("confidence_score", 0.5) <= 1.0 else row.get("confidence_score", 50.0))
+                float(row.get("icp_fit_score", 50.0)) / 100.0,
+                float(row.get("intent_score", 50.0)) / 100.0,
+                float(row.get("readiness_score", 50.0)) / 100.0,
+                float(row.get("value_score", 50.0)) / 100.0,
+                float(row.get("confidence_score", 0.5) if row.get("confidence_score", 0.5) <= 1.0 else row.get("confidence_score", 50.0) / 100.0)
             ]
             X.append(features)
-            y.append(1 if row.get("won") else 0)
+            y.append(1.0 if row.get("won") else 0.0)
 
-        X_arr = np.array(X)
-        y_arr = np.array(y)
-
-        # Ensure we have both classes
-        if len(np.unique(y_arr)) < 2:
+        won_count = sum(1 for label in y if label == 1.0)
+        if won_count == 0 or won_count == len(y):
             return {
                 "status": "single_class",
                 "message": "Dataset contains only won or only lost deals. Both classes required."
             }
 
-        clf = LogisticRegression(class_weight="balanced", max_iter=200)
-        clf.fit(X_arr, y_arr)
-        self.model = clf
+        # Pure Python Gradient Descent
+        n_features = len(self.feature_names)
+        n_samples = len(X)
+        weights = [0.0] * n_features
+        intercept = 0.0
+        learning_rate = 0.1
+        epochs = 300
+
+        for _ in range(epochs):
+            dw = [0.0] * n_features
+            db = 0.0
+            for i in range(n_samples):
+                z = intercept + sum(weights[j] * X[i][j] for j in range(n_features))
+                p = self._sigmoid(z)
+                err = p - y[i]
+                for j in range(n_features):
+                    dw[j] += err * X[i][j]
+                db += err
+            for j in range(n_features):
+                weights[j] -= (learning_rate / n_samples) * dw[j]
+            intercept -= (learning_rate / n_samples) * db
+
+        self.weights = weights
+        self.intercept = intercept
         self.is_fitted = True
 
-        probs = clf.predict_proba(X_arr)[:, 1]
-        brier = brier_score_loss(y_arr, probs)
+        # Compute Brier Score in pure Python
+        brier = 0.0
+        for i in range(n_samples):
+            z = intercept + sum(weights[j] * X[i][j] for j in range(n_features))
+            p = self._sigmoid(z)
+            brier += (p - y[i]) ** 2
+        brier /= n_samples
 
         coefficients = {
-            name: round(float(coef), 4)
-            for name, coef in zip(self.feature_names, clf.coef_[0])
+            name: round(w, 4)
+            for name, w in zip(self.feature_names, weights)
         }
 
         return {
             "status": "calibrated",
-            "sample_size": len(dataset),
-            "brier_score": round(float(brier), 4),
+            "sample_size": n_samples,
+            "brier_score": round(brier, 4),
             "coefficients": coefficients,
-            "intercept": round(float(clf.intercept_[0]), 4)
+            "intercept": round(intercept, 4)
         }
 
     def predict_propensity(
@@ -93,17 +119,22 @@ class ModelCalibrator:
         Calculates calibrated P(Win | Account Features).
         If model is not yet fitted on sufficient data, falls back to conservative heuristic propensity.
         """
-        if self.is_fitted and self.model is not None:
-            features = np.array([[icp_fit, intent, readiness, value, confidence * 100.0]])
-            prob = float(self.model.predict_proba(features)[0, 1])
+        if self.is_fitted and self.weights is not None:
+            norm_features = [
+                icp_fit / 100.0,
+                intent / 100.0,
+                readiness / 100.0,
+                value / 100.0,
+                confidence if confidence <= 1.0 else confidence / 100.0
+            ]
+            z = self.intercept + sum(w * x for w, x in zip(self.weights, norm_features))
+            prob = self._sigmoid(z)
             return round(min(0.95, max(0.02, prob)), 3)
 
-        # Baseline Heuristic Propensity (Explicitly labeled as uncalibrated heuristic)
-        # Mathematical sigmoid blend based on Fit (35%), Intent (30%), Readiness (25%), and Confidence multiplier
+        # Baseline Heuristic Propensity (Mathematical sigmoid blend based on Fit, Intent, Readiness, Value)
         composite = (icp_fit * 0.35) + (intent * 0.30) + (readiness * 0.25) + (value * 0.10)
-        # Apply confidence discount: unverified/missing data lowers propensity
-        conf_factor = max(0.3, confidence)
-        raw_prob = (composite / 100.0) * conf_factor * 0.45  # Peak baseline win rate ~40-45% for dream deals
+        conf_factor = max(0.3, confidence if confidence <= 1.0 else confidence / 100.0)
+        raw_prob = (composite / 100.0) * conf_factor * 0.45
         return round(min(0.90, max(0.02, raw_prob)), 3)
 
 
