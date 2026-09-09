@@ -8,7 +8,6 @@ Disqualification, Confidence, Next Best Action, and Sales Discovery Prompts.
 import streamlit as st
 import json
 import os
-import pandas as pd
 from pathlib import Path
 import sys
 
@@ -118,211 +117,144 @@ worker_client = WorkerAIClient()
 st.markdown('<div class="title-gradient">⚡ Enterprise ICP Revenue Intelligence</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle-text">Cloudflare Worker AI Edge Engine • Fit, Intent, Readiness & Value Qualification</div>', unsafe_allow_html=True)
 
-# Tabs
-tab_live, tab_batch = st.tabs(["🎯 Live Account Intelligence", "📂 Batch CSV Qualification"])
+# Main Input Section
+col_in1, col_in2 = st.columns([3, 1])
 
-# ==========================================
-# TAB 1: LIVE ACCOUNT INTELLIGENCE
-# ==========================================
-with tab_live:
-    col_in1, col_in2 = st.columns([3, 1])
+with col_in1:
+    prospect_text = st.text_area(
+        "Paste Inbound Lead, Contact Form, RFP, or CRM Notes:",
+        height=180,
+        placeholder="Company: NextEra Clean Infrastructure\nIndustry: Renewable Energy & Utilities\nHeadcount: 1,400 employees | $450M ARR\nTech Stack: SAP, Salesforce, Azure, PowerBI\nContact: Arthur Pendelton (VP of Strategy & Corporate Development)\nInquiry: Requesting proposal for multi-GW asset risk analytics platform with Q2 deployment.",
+        key="live_prospect_input"
+    )
+
+with col_in2:
+    st.markdown("#### Parameters")
+    deal_size = st.number_input("Target Contract Size ($)", min_value=5000, max_value=2000000, value=75000, step=5000)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+    eval_btn = st.button("🚀 Qualify on Worker AI", type="primary", use_container_width=True)
+
+if eval_btn:
+    if not prospect_text.strip():
+        st.error("Please paste account details to qualify.")
+    else:
+        with st.spinner("Executing Worker AI Analysis on Edge..."):
+            res: ComprehensiveAIWorkerResponse = worker_client.evaluate_account(prospect_text, float(deal_size))
+            st.session_state["live_worker_res"] = res
+
+if "live_worker_res" in st.session_state:
+    res: ComprehensiveAIWorkerResponse = st.session_state["live_worker_res"]
     
-    with col_in1:
-        prospect_text = st.text_area(
-            "Paste Inbound Lead, Contact Form, RFP, or CRM Notes:",
-            height=180,
-            placeholder="Company: NextEra Clean Infrastructure\nIndustry: Renewable Energy & Utilities\nHeadcount: 1,400 employees | $450M ARR\nTech Stack: SAP, Salesforce, Azure, PowerBI\nContact: Arthur Pendelton (VP of Strategy & Corporate Development)\nInquiry: Requesting proposal for multi-GW asset risk analytics platform with Q2 deployment.",
-            key="live_prospect_input"
-        )
+    st.markdown("---")
     
-    with col_in2:
-        st.markdown("#### Parameters")
-        deal_size = st.number_input("Target Contract Size ($)", min_value=5000, max_value=2000000, value=75000, step=5000)
-        st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-        eval_btn = st.button("🚀 Qualify on Worker AI", type="primary", use_container_width=True)
-
-    if eval_btn:
-        if not prospect_text.strip():
-            st.error("Please paste account details to qualify.")
-        else:
-            with st.spinner("Executing Worker AI Analysis on Edge..."):
-                res: ComprehensiveAIWorkerResponse = worker_client.evaluate_account(prospect_text, float(deal_size))
-                st.session_state["live_worker_res"] = res
-
-    if "live_worker_res" in st.session_state:
-        res: ComprehensiveAIWorkerResponse = st.session_state["live_worker_res"]
+    if not res.success:
+        st.error(f"""
+        ### ❌ Unable to score this account.
+        **AI evaluation failed:** {res.error_message or 'Workers AI inference failed or returned an invalid response.'}
         
-        st.markdown("---")
+        **Request ID:** `{res.request_id}`
+        """)
+    else:
+        # Account Header
+        c_head1, c_head2 = st.columns([3, 1])
+        company_disp = res.company_name or "Unspecified Account"
+        domain_disp = f"({res.domain})" if res.domain else ""
+        contact_disp = res.contact_name or "Unspecified Contact"
+        title_disp = res.job_title or "Unspecified Role"
+        industry_disp = res.industry or "Unspecified Industry"
+        scale_disp = res.scale or "Unspecified Scale"
+
+        with c_head1:
+            st.markdown(f"## **{company_disp}** `{domain_disp}`")
+            st.caption(f"Contact: **{contact_disp}** — *{title_disp}* | Industry: **{industry_disp}** | Scale: **{scale_disp}** | Confidence: **{res.data_confidence_pct}%** | Trace: `{res.request_id}`")
+        with c_head2:
+            badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier or "Dream" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier or "Strong" in res.priority_tier else "badge-b1"))
+            st.markdown(f'<div style="text-align:right;"><span class="{badge_class}">{res.priority_tier}</span></div>', unsafe_allow_html=True)
+            if res.is_disqualified:
+                st.error(f"Disqualification: {res.disqualification_reason}")
+
+        # 4 Core Engine KPI Cards Evaluated Deterministically from Worker AI Evidence
+        st.markdown("#### ⚡ 4-Dimensional AI Intelligence Engines")
+        k1, k2, k3, k4 = st.columns(4)
         
-        if not res.success:
-            st.error(f"""
-            ### ❌ Unable to score this account.
-            **AI evaluation failed:** {res.error_message or 'Workers AI inference failed or returned an invalid response.'}
-            
-            **Request ID:** `{res.request_id}`
-            """)
-        else:
-            # Account Header
-            c_head1, c_head2 = st.columns([3, 1])
-            company_disp = res.company_name or "Unspecified Account"
-            domain_disp = f"({res.domain})" if res.domain else ""
-            contact_disp = res.contact_name or "Unspecified Contact"
-            title_disp = res.job_title or "Unspecified Role"
-            industry_disp = res.industry or "Unspecified Industry"
-            scale_disp = res.scale or "Unspecified Scale"
-
-            with c_head1:
-                st.markdown(f"## **{company_disp}** `{domain_disp}`")
-                st.caption(f"Contact: **{contact_disp}** — *{title_disp}* | Industry: **{industry_disp}** | Scale: **{scale_disp}** | Confidence: **{res.data_confidence_pct}%** | Trace: `{res.request_id}`")
-            with c_head2:
-                badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier or "Dream" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier or "Strong" in res.priority_tier else "badge-b1"))
-                st.markdown(f'<div style="text-align:right;"><span class="{badge_class}">{res.priority_tier}</span></div>', unsafe_allow_html=True)
-                if res.is_disqualified:
-                    st.error(f"Disqualification: {res.disqualification_reason}")
-
-            # 4 Core Engine KPI Cards Evaluated Deterministically from Worker AI Evidence
-            st.markdown("#### ⚡ 4-Dimensional AI Intelligence Engines")
-            k1, k2, k3, k4 = st.columns(4)
-            
-            with k1:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">1. ICP FIT SCORE</div>
-                    <div class="metric-value" style="color: #A78BFA;">{res.icp_fit_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
-                    <div style="color: #94A3B8; font-size:0.75rem;">{res.icp_fit_rationale[:60]}...</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with k2:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">2. INTENT & TIMING</div>
-                    <div class="metric-value" style="color: #34D399;">{res.intent_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
-                    <div style="color: #94A3B8; font-size:0.75rem;">{res.intent_rationale[:60]}...</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with k3:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">3. READINESS & AUTHORITY</div>
-                    <div class="metric-value" style="color: #60A5FA;">{res.readiness_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
-                    <div style="color: #94A3B8; font-size:0.75rem;">{res.readiness_rationale[:60]}...</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with k4:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">4. ACCOUNT VALUE SCALE</div>
-                    <div class="metric-value" style="color: #F472B6;">{res.value_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
-                    <div style="color: #94A3B8; font-size:0.75rem;">Expansion: <b>{res.expansion_potential}</b></div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # Why (Strengths) vs Risks
-            st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
-            col_why, col_risk = st.columns(2)
-            
-            with col_why:
-                st.markdown("##### 🟢 Key Drivers & Evidence")
-                if res.key_strengths:
-                    for s in res.key_strengths:
-                        st.success(f"✓ {s}")
-                else:
-                    st.info(f"ICP Fit: {res.icp_fit_rationale}")
-
-            with col_risk:
-                st.markdown("##### ⚠️ Risks & Missing Information")
-                if res.key_risks:
-                    for r in res.key_risks:
-                        st.warning(f"⚠ {r}")
-                else:
-                    st.success("No critical risks identified.")
-
-            # Next Best Action Card
-            st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+        with k1:
             st.markdown(f"""
-            <div class="action-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:1.1rem; font-weight:700; color:#E9D5FF;">🎯 Deterministic Next Best Action:</span>
-                    <span style="background:rgba(255,255,255,0.15); padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:600;">SLA: {res.urgency_sla}</span>
-                </div>
-                <div style="font-size:1.05rem; font-weight:600; color:#FFFFFF; margin-top:8px;">{res.sales_action}</div>
-                <div style="font-size:0.85rem; color:#D8B4FE; margin-top:6px;"><b>Channel:</b> {res.recommended_channel} | <b>Target:</b> {contact_disp} ({title_disp})</div>
-                <div style="font-size:0.85rem; color:#E2E8F0; margin-top:10px;"><b>Strategic Value Wedge:</b> {res.value_wedge or 'Accelerate strategic operational outcomes.'}</div>
-                <div style="background:rgba(0,0,0,0.25); border-radius:8px; padding:12px; margin-top:12px;">
-                    <div style="font-size:0.8rem; font-weight:700; color:#38BDF8;">🔥 1-SENTENCE COLD OUTREACH OPENER:</div>
-                    <div style="font-size:0.85rem; color:#F1F5F9; font-style:italic; margin-top:4px;">"{res.outreach_hook or 'Reaching out regarding your strategic initiatives.'}"</div>
-                </div>
+            <div class="metric-card">
+                <div class="metric-label">1. ICP FIT SCORE</div>
+                <div class="metric-value" style="color: #A78BFA;">{res.icp_fit_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
+                <div style="color: #94A3B8; font-size:0.75rem;">{res.icp_fit_rationale[:60]}...</div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Discovery Gap Prompts
-            if res.discovery_questions:
-                st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-                with st.expander("❓ Sales Discovery Questions (Targeted for Missing Evidence)", expanded=True):
-                    for q in res.discovery_questions:
-                        st.markdown(f"• **Discovery Question:** *{q}*")
+        with k2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">2. INTENT & TIMING</div>
+                <div class="metric-value" style="color: #34D399;">{res.intent_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
+                <div style="color: #94A3B8; font-size:0.75rem;">{res.intent_rationale[:60]}...</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-# ==========================================
-# TAB 2: BATCH CSV SCORING
-# ==========================================
-with tab_batch:
-    st.markdown("### 📂 Batch Worker AI Qualification")
-    st.caption("Upload a CSV file to evaluate multiple leads directly on Cloudflare Worker AI.")
+        with k3:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">3. READINESS & AUTHORITY</div>
+                <div class="metric-value" style="color: #60A5FA;">{res.readiness_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
+                <div style="color: #94A3B8; font-size:0.75rem;">{res.readiness_rationale[:60]}...</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader("Upload Prospect CSV", type=["csv"])
-    
-    if uploaded_file is not None:
-        df_in = pd.read_csv(uploaded_file)
-        st.dataframe(df_in.head(5), use_container_width=True)
+        with k4:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">4. ACCOUNT VALUE SCALE</div>
+                <div class="metric-value" style="color: #F472B6;">{res.value_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
+                <div style="color: #94A3B8; font-size:0.75rem;">Expansion: <b>{res.expansion_potential}</b></div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Why (Strengths) vs Risks
+        st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+        col_why, col_risk = st.columns(2)
         
-        if st.button("⚡ Qualify Entire CSV on Worker AI", type="primary"):
-            results_rows = []
-            progress_bar = st.progress(0)
-            for idx, (_, row) in enumerate(df_in.iterrows()):
-                raw_text = " ".join([f"{col}: {val}" for col, val in row.items() if pd.notna(val)])
-                try:
-                    eval_res = worker_client.evaluate_account(raw_text)
-                    if eval_res.success:
-                        results_rows.append({
-                            "Account Name": eval_res.company_name or "Unspecified",
-                            "Domain": eval_res.domain or "",
-                            "ICP Fit Score": eval_res.icp_fit_score,
-                            "Intent Score": eval_res.intent_score,
-                            "Readiness Score": eval_res.readiness_score,
-                            "Priority Tier": eval_res.priority_tier,
-                            "Status": "SUCCESS",
-                            "Request ID": eval_res.request_id
-                        })
-                    else:
-                        results_rows.append({
-                            "Account Name": "Unscored",
-                            "Domain": "",
-                            "ICP Fit Score": None,
-                            "Intent Score": None,
-                            "Readiness Score": None,
-                            "Priority Tier": "FAILED",
-                            "Status": f"ERROR: {eval_res.error_message}",
-                            "Request ID": eval_res.request_id
-                        })
-                except Exception as row_err:
-                    results_rows.append({
-                        "Account Name": "Unscored",
-                        "Domain": "",
-                        "ICP Fit Score": None,
-                        "Intent Score": None,
-                        "Readiness Score": None,
-                        "Priority Tier": "FAILED",
-                        "Status": f"EXCEPTION: {row_err}",
-                        "Request ID": "N/A"
-                    })
-                progress_bar.progress((idx + 1) / len(df_in))
-            df_out = pd.DataFrame(results_rows)
-            st.success(f"Processed {len(df_out)} accounts.")
-            st.dataframe(df_out, use_container_width=True)
-            st.download_button("📥 Download Scored Accounts CSV", df_out.to_csv(index=False), "qualified_accounts.csv", "text/csv")
-    else:
-        st.info("Upload a CSV file to batch qualify prospects.")
+        with col_why:
+            st.markdown("##### 🟢 Key Drivers & Evidence")
+            if res.key_strengths:
+                for s in res.key_strengths:
+                    st.success(f"✓ {s}")
+            else:
+                st.info(f"ICP Fit: {res.icp_fit_rationale}")
+
+        with col_risk:
+            st.markdown("##### ⚠️ Risks & Missing Information")
+            if res.key_risks:
+                for r in res.key_risks:
+                    st.warning(f"⚠ {r}")
+            else:
+                st.success("No critical risks identified.")
+
+        # Next Best Action Card
+        st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="action-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:1.1rem; font-weight:700; color:#E9D5FF;">🎯 Deterministic Next Best Action:</span>
+                <span style="background:rgba(255,255,255,0.15); padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:600;">SLA: {res.urgency_sla}</span>
+            </div>
+            <div style="font-size:1.05rem; font-weight:600; color:#FFFFFF; margin-top:8px;">{res.sales_action}</div>
+            <div style="font-size:0.85rem; color:#D8B4FE; margin-top:6px;"><b>Channel:</b> {res.recommended_channel} | <b>Target:</b> {contact_disp} ({title_disp})</div>
+            <div style="font-size:0.85rem; color:#E2E8F0; margin-top:10px;"><b>Strategic Value Wedge:</b> {res.value_wedge or 'Accelerate strategic operational outcomes.'}</div>
+            <div style="background:rgba(0,0,0,0.25); border-radius:8px; padding:12px; margin-top:12px;">
+                <div style="font-size:0.8rem; font-weight:700; color:#38BDF8;">🔥 1-SENTENCE COLD OUTREACH OPENER:</div>
+                <div style="font-size:0.85rem; color:#F1F5F9; font-style:italic; margin-top:4px;">"{res.outreach_hook or 'Reaching out regarding your strategic initiatives.'}"</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Discovery Gap Prompts
+        if res.discovery_questions:
+            st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+            with st.expander("❓ Sales Discovery Questions (Targeted for Missing Evidence)", expanded=True):
+                for q in res.discovery_questions:
+                    st.markdown(f"• **Discovery Question:** *{q}*")
 
