@@ -82,7 +82,16 @@ export default {
     }
 
     const dealSize = Number(payload.deal_size_usd) || 50000;
-    const model = env.AI_MODEL || "@cf/meta/llama-3.1-8b-instruct";
+    
+    // Supported modern Workers AI models (excluding deprecated infire models)
+    const primaryModel = env.AI_MODEL && !env.AI_MODEL.includes("infire") ? env.AI_MODEL : "@cf/meta/llama-3.1-8b-instruct";
+    const candidateModels = [
+      primaryModel,
+      "@cf/meta/llama-3.1-8b-instruct",
+      "@cf/meta/llama-3.2-3b-instruct",
+      "@cf/meta/llama-3-8b-instruct",
+      "@cf/mistral/mistral-7b-instruct-v0.2"
+    ].filter((m, i, arr) => arr.indexOf(m) === i);
 
     // 1. Check if Cloudflare Workers AI binding is attached
     if (!env.AI) {
@@ -186,15 +195,21 @@ Respond ONLY with valid JSON.`;
     let aiErrorMsg = "";
     let aiResult = null;
 
-    try {
-      const aiResponse = await env.AI.run(model, {
-        prompt: `${systemPrompt}\n\nProspect Text to Evaluate:\n${prospectInput}\n\nTarget Contract Size: $${dealSize.toLocaleString()} USD`
-      });
-      aiRaw = typeof aiResponse === "string" ? aiResponse : aiResponse.response || JSON.stringify(aiResponse);
-      aiResult = parseJsonSafely(aiRaw);
-    } catch (aiError) {
-      aiErrorMsg = aiError.message || String(aiError);
-      console.error(`[Workers AI Error][${requestId}]:`, aiErrorMsg);
+    // Try candidate models in sequence
+    for (const model of candidateModels) {
+      try {
+        const aiResponse = await env.AI.run(model, {
+          prompt: `${systemPrompt}\n\nProspect Text to Evaluate:\n${prospectInput}\n\nTarget Contract Size: $${dealSize.toLocaleString()} USD`
+        });
+        aiRaw = typeof aiResponse === "string" ? aiResponse : aiResponse.response || JSON.stringify(aiResponse);
+        aiResult = parseJsonSafely(aiRaw);
+        if (aiResult) {
+          break; // Successfully got structured JSON
+        }
+      } catch (aiError) {
+        aiErrorMsg = aiError.message || String(aiError);
+        console.warn(`[Workers AI Model Warning][${model}][${requestId}]:`, aiErrorMsg);
+      }
     }
 
     // 3. Handle inference failure
