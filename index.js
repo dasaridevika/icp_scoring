@@ -83,14 +83,15 @@ export default {
 
     const dealSize = Number(payload.deal_size_usd) || 50000;
     
-    // Supported modern Workers AI models (excluding deprecated infire models)
+    // Verified Cloudflare Workers AI model slugs
     const primaryModel = env.AI_MODEL && !env.AI_MODEL.includes("infire") ? env.AI_MODEL : "@cf/meta/llama-3.1-8b-instruct";
     const candidateModels = [
       primaryModel,
       "@cf/meta/llama-3.1-8b-instruct",
-      "@cf/meta/llama-3.2-3b-instruct",
       "@cf/meta/llama-3-8b-instruct",
-      "@cf/mistral/mistral-7b-instruct-v0.2"
+      "@cf/meta/llama-3.2-3b-instruct",
+      "@cf/meta/llama-3.2-1b-instruct",
+      "@cf/mistral/mistral-7b-instruct-v0.1"
     ].filter((m, i, arr) => arr.indexOf(m) === i);
 
     // 1. Check if Cloudflare Workers AI binding is attached
@@ -191,6 +192,8 @@ SCHEMA TO RETURN (Strict JSON only):
 }
 Respond ONLY with valid JSON.`;
 
+    const userPromptContent = `Prospect Text to Evaluate:\n${prospectInput}\n\nTarget Contract Size: $${dealSize.toLocaleString()} USD`;
+
     let aiRaw = null;
     let aiErrorMsg = "";
     let aiResult = null;
@@ -198,17 +201,34 @@ Respond ONLY with valid JSON.`;
     // Try candidate models in sequence
     for (const model of candidateModels) {
       try {
-        const aiResponse = await env.AI.run(model, {
-          prompt: `${systemPrompt}\n\nProspect Text to Evaluate:\n${prospectInput}\n\nTarget Contract Size: $${dealSize.toLocaleString()} USD`
-        });
-        aiRaw = typeof aiResponse === "string" ? aiResponse : aiResponse.response || JSON.stringify(aiResponse);
+        let aiResponse;
+        try {
+          // 1. Try standard OpenAI-compatible messages format first
+          aiResponse = await env.AI.run(model, {
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPromptContent }
+            ],
+            max_tokens: 2048,
+            temperature: 0.1
+          });
+        } catch (chatErr) {
+          // 2. Fall back to direct prompt string format if messages format rejected
+          aiResponse = await env.AI.run(model, {
+            prompt: `${systemPrompt}\n\n${userPromptContent}`,
+            max_tokens: 2048,
+            temperature: 0.1
+          });
+        }
+
+        aiRaw = typeof aiResponse === "string" ? aiResponse : (aiResponse.response || JSON.stringify(aiResponse));
         aiResult = parseJsonSafely(aiRaw);
         if (aiResult) {
           break; // Successfully got structured JSON
         }
       } catch (aiError) {
         aiErrorMsg = aiError.message || String(aiError);
-        console.warn(`[Workers AI Model Warning][${model}][${requestId}]:`, aiErrorMsg);
+        console.warn(`[Workers AI Warning][${model}][${requestId}]:`, aiErrorMsg);
       }
     }
 
