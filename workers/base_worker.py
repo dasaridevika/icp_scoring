@@ -108,42 +108,81 @@ class WorkerAIClient:
 
                         if isinstance(candidate, dict):
                             # Normalize fields across worker response formats
-                            pillars = candidate.get("pillar_scores") or {}
+                            ratings = candidate.get("ratings") or {}
+                            rationales = candidate.get("rationales") or {}
                             strategy = candidate.get("strategy") or {}
+                            pillars = candidate.get("pillar_scores") or {}
 
-                            fit_score = candidate.get("icp_fit_score") or candidate.get("final_icp_score") or (pillars.get("firmographic_score") if isinstance(pillars, dict) else 50.0) or 50.0
-                            intent_score = candidate.get("intent_score") or (pillars.get("intent_score") if isinstance(pillars, dict) else 50.0) or 50.0
-                            readiness_score = candidate.get("readiness_score") or (pillars.get("persona_score") if isinstance(pillars, dict) else 50.0) or 50.0
-                            value_score = candidate.get("value_score") or (pillars.get("technographic_score") if isinstance(pillars, dict) else 50.0) or 50.0
+                            # Convert GTM ratings (-5..+5) to 0-100 scores
+                            def rating_to_score(r):
+                                try:
+                                    num = float(r)
+                                    return max(0.0, min(100.0, (num + 5.0) * 10.0))
+                                except Exception:
+                                    return 40.0
+
+                            f_rating = ratings.get("firmographic")
+                            t_rating = ratings.get("technographic")
+                            i_rating = ratings.get("intent")
+                            p_rating = ratings.get("persona")
+
+                            fit_score = candidate.get("icp_fit_score") or candidate.get("final_icp_score")
+                            if fit_score is None and f_rating is not None:
+                                fit_score = rating_to_score(f_rating)
+                            elif fit_score is None:
+                                fit_score = pillars.get("firmographic_score", 0.0)
+
+                            intent_score = rating_to_score(i_rating) if i_rating is not None else candidate.get("intent_score", pillars.get("intent_score", 0.0))
+                            readiness_score = rating_to_score(p_rating) if p_rating is not None else candidate.get("readiness_score", pillars.get("persona_score", 0.0))
+                            value_score = rating_to_score(t_rating) if t_rating is not None else candidate.get("value_score", pillars.get("technographic_score", 0.0))
+
+                            # Calculate Data Confidence Percentage based on missing (-1) ratings
+                            active_ratings = [f_rating, t_rating, i_rating, p_rating]
+                            verified_count = sum(1 for r in active_ratings if r is not None and r != -1)
+                            calc_confidence = int((verified_count / 4.0) * 100) if any(r is not None for r in active_ratings) else int(candidate.get("data_confidence_pct", 50))
+
+                            is_disqualified = bool(candidate.get("is_disqualified")) or (p_rating == -5)
+                            
+                            # Determine Priority Tier dynamically
+                            if is_disqualified:
+                                priority_tier = "Disqualified / Anti-ICP"
+                            elif float(fit_score) >= 80 and float(intent_score) >= 70:
+                                priority_tier = "Tier A1: Strategic Inbound"
+                            elif float(fit_score) >= 65:
+                                priority_tier = "Tier A2: High Priority Outbound"
+                            elif float(fit_score) >= 50:
+                                priority_tier = "Tier B1: Nurture Pipeline"
+                            else:
+                                priority_tier = "Tier C: Low Priority / Long-Tail"
 
                             res_obj = ComprehensiveAIWorkerResponse(
-                                company_name=candidate.get("company_name") or "Target Account",
-                                domain=candidate.get("domain") or "corporate.com",
-                                contact_name=candidate.get("contact_name") or "Decision Maker",
-                                job_title=candidate.get("job_title") or "Executive",
-                                industry=candidate.get("industry") or "B2B Enterprise",
-                                scale=candidate.get("scale") or "Enterprise",
-                                tech_stack=candidate.get("tech_stack") or "Enterprise Stack",
-                                intent_timeline=candidate.get("intent_timeline") or "Evaluating",
-                                icp_fit_score=float(fit_score),
-                                icp_fit_rationale=candidate.get("icp_fit_rationale") or (pillars.get("firmographic_rationale") if isinstance(pillars, dict) else "Evaluated enterprise fit."),
-                                intent_score=float(intent_score),
-                                intent_rationale=candidate.get("intent_rationale") or (pillars.get("intent_rationale") if isinstance(pillars, dict) else "Evaluated purchasing urgency."),
-                                readiness_score=float(readiness_score),
-                                readiness_rationale=candidate.get("readiness_rationale") or (pillars.get("persona_rationale") if isinstance(pillars, dict) else "Evaluated budget authority."),
-                                value_score=float(value_score),
-                                expansion_potential=candidate.get("expansion_potential") or ("High" if float(value_score) >= 75 else "Moderate"),
-                                is_disqualified=bool(candidate.get("is_disqualified")),
-                                disqualification_reason=candidate.get("disqualification_reason") or "",
-                                data_confidence_pct=int(candidate.get("data_confidence_pct") or 80),
-                                priority_tier=candidate.get("priority_tier") or candidate.get("saber_tier") or ("Tier A1: Strategic Inbound" if float(fit_score) >= 80 else "Tier A2: High Priority Outbound"),
-                                sales_action=candidate.get("sales_action") or "Schedule discovery qualification call within 24 hours.",
-                                urgency_sla=candidate.get("urgency_sla") or "Within 24 hours",
-                                recommended_channel=candidate.get("recommended_channel") or "Executive Email + LinkedIn",
-                                value_wedge=candidate.get("value_wedge") or (strategy.get("value_wedge") if isinstance(strategy, dict) else "Accelerate strategic growth initiatives."),
-                                outreach_hook=candidate.get("outreach_hook") or (strategy.get("outreach_hook") if isinstance(strategy, dict) else "Reaching out regarding your growth roadmap."),
+                                company_name=candidate.get("company_name") or None,
+                                domain=candidate.get("domain") or None,
+                                contact_name=candidate.get("contact_name") or None,
+                                job_title=candidate.get("job_title") or None,
+                                industry=candidate.get("industry") or None,
+                                scale=candidate.get("scale") or None,
+                                tech_stack=candidate.get("tech_stack") or None,
+                                intent_timeline=candidate.get("intent_timeline") or None,
+                                icp_fit_score=float(fit_score or 0.0),
+                                icp_fit_rationale=candidate.get("icp_fit_rationale") or rationales.get("firmographic") or "Evaluated firmographic fit.",
+                                intent_score=float(intent_score or 0.0),
+                                intent_rationale=candidate.get("intent_rationale") or rationales.get("intent") or "Evaluated intent signal.",
+                                readiness_score=float(readiness_score or 0.0),
+                                readiness_rationale=candidate.get("readiness_rationale") or rationales.get("persona") or "Evaluated buyer persona.",
+                                value_score=float(value_score or 0.0),
+                                expansion_potential=candidate.get("expansion_potential") or ("High" if float(value_score or 0) >= 75 else ("Moderate" if float(value_score or 0) >= 50 else "Low")),
+                                is_disqualified=is_disqualified,
+                                disqualification_reason=candidate.get("disqualification_reason") or ("Disqualified by role/anti-ICP rule" if is_disqualified else ""),
+                                data_confidence_pct=calc_confidence,
+                                priority_tier=candidate.get("priority_tier") or priority_tier,
+                                sales_action=candidate.get("sales_action") or ("Disqualify or route to self-service." if is_disqualified else "Schedule discovery qualification call within 24 hours."),
+                                urgency_sla=candidate.get("urgency_sla") or ("N/A" if is_disqualified else "Within 24 hours"),
+                                recommended_channel=candidate.get("recommended_channel") or "Email + LinkedIn",
+                                value_wedge=candidate.get("value_wedge") or (strategy.get("value_wedge") if isinstance(strategy, dict) else ""),
+                                outreach_hook=candidate.get("outreach_hook") or (strategy.get("outreach_hook") if isinstance(strategy, dict) else ""),
                                 discovery_questions=candidate.get("discovery_questions") or [],
-                                key_strengths=candidate.get("key_strengths") or [f"Strong ICP Fit: {fit_score:.0f}/100", f"Active Intent: {intent_score:.0f}/100"],
+                                key_strengths=candidate.get("key_strengths") or [],
                                 key_risks=candidate.get("key_risks") or []
                             )
                             return res_obj
@@ -152,37 +191,37 @@ class WorkerAIClient:
                         print(f"[Worker AI Connection Exception]: {e}")
                     continue
 
-        # Dynamic fallback if worker unreachable
+        # Unreachable fallback - surfaces status as unverified with 0 confidence
         return ComprehensiveAIWorkerResponse(
-            company_name="Inbound Prospect",
-            domain="corporate.com",
-            contact_name="Executive Sponsor",
-            job_title="VP / Director",
-            industry="Enterprise B2B",
-            scale="Commercial Scale",
-            tech_stack="Enterprise Stack",
-            intent_timeline="Evaluating",
-            icp_fit_score=75.0,
-            icp_fit_rationale="Evaluated profile against target enterprise parameters.",
-            intent_score=70.0,
-            intent_rationale="Inbound interest received with active commercial evaluation.",
-            readiness_score=75.0,
-            readiness_rationale="Executive sponsor with decision-making capability.",
-            value_score=75.0,
-            expansion_potential="Moderate",
+            company_name=None,
+            domain=None,
+            contact_name=None,
+            job_title=None,
+            industry=None,
+            scale=None,
+            tech_stack=None,
+            intent_timeline=None,
+            icp_fit_score=0.0,
+            icp_fit_rationale="Worker AI offline or unreachable. Field marked as unverified.",
+            intent_score=0.0,
+            intent_rationale="Worker AI offline or unreachable. Field marked as unverified.",
+            readiness_score=0.0,
+            readiness_rationale="Worker AI offline or unreachable. Field marked as unverified.",
+            value_score=0.0,
+            expansion_potential="Uncertain",
             is_disqualified=False,
             disqualification_reason="",
-            data_confidence_pct=80,
-            priority_tier="Tier A2: High Priority Outbound",
-            sales_action="Standard SDR cadence. Schedule qualification discovery call within 24 hours.",
-            urgency_sla="Within 24 hours",
-            recommended_channel="Email & LinkedIn",
-            value_wedge="Position tailored enterprise intelligence to accelerate core business objectives.",
-            outreach_hook="Reaching out regarding your strategic initiatives and growth roadmap.",
+            data_confidence_pct=0,
+            priority_tier="Unverified Pipeline",
+            sales_action="Check Cloudflare Worker AI connection or inspect wrangler logs.",
+            urgency_sla="N/A",
+            recommended_channel="Email",
+            value_wedge="",
+            outreach_hook="",
             discovery_questions=[
-                "What is your target timeline for evaluating and implementing a solution?",
-                "What core CRM, data warehouse, or ERP tools do you currently operate?"
+                "What is the official operating company name and target industry?",
+                "What is your target timeline for evaluating and deploying a solution?"
             ],
-            key_strengths=["Strong initial enterprise profile fit", "Verified executive title"],
-            key_risks=[]
+            key_strengths=[],
+            key_risks=["Worker AI offline or unreachable - manual review required."]
         )

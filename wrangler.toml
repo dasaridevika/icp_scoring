@@ -1,0 +1,7 @@
+name = "icp-scoring-worker-ai"
+main = "index.js"
+compatibility_date = "2024-09-01"
+
+# Workers AI binding
+[ai]
+binding = "AI"

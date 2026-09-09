@@ -174,9 +174,16 @@ with tab_live:
         
         # Account Header
         c_head1, c_head2 = st.columns([3, 1])
+        company_disp = res.company_name or "Unspecified Account"
+        domain_disp = f"({res.domain})" if res.domain else ""
+        contact_disp = res.contact_name or "Unspecified Contact"
+        title_disp = res.job_title or "Unspecified Role"
+        industry_disp = res.industry or "Unspecified Industry"
+        scale_disp = res.scale or "Unspecified Scale"
+
         with c_head1:
-            st.markdown(f"## **{res.company_name}** `({res.domain})`")
-            st.caption(f"Contact: **{res.contact_name}** — *{res.job_title}* | Industry: **{res.industry}** | Scale: **{res.scale}**")
+            st.markdown(f"## **{company_disp}** `{domain_disp}`")
+            st.caption(f"Contact: **{contact_disp}** — *{title_disp}* | Industry: **{industry_disp}** | Scale: **{scale_disp}** | Confidence: **{res.data_confidence_pct}%**")
         with c_head2:
             badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier or "Dream" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier or "Strong" in res.priority_tier else "badge-b1"))
             st.markdown(f'<div style="text-align:right;"><span class="{badge_class}">{res.priority_tier}</span></div>', unsafe_allow_html=True)
@@ -252,11 +259,11 @@ with tab_live:
                 <span style="background:rgba(255,255,255,0.15); padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:600;">SLA: {res.urgency_sla}</span>
             </div>
             <div style="font-size:1.05rem; font-weight:600; color:#FFFFFF; margin-top:8px;">{res.sales_action}</div>
-            <div style="font-size:0.85rem; color:#D8B4FE; margin-top:6px;"><b>Channel:</b> {res.recommended_channel} | <b>Target:</b> {res.contact_name} ({res.job_title})</div>
-            <div style="font-size:0.85rem; color:#E2E8F0; margin-top:10px;"><b>Strategic Value Wedge:</b> {res.value_wedge}</div>
+            <div style="font-size:0.85rem; color:#D8B4FE; margin-top:6px;"><b>Channel:</b> {res.recommended_channel} | <b>Target:</b> {contact_disp} ({title_disp})</div>
+            <div style="font-size:0.85rem; color:#E2E8F0; margin-top:10px;"><b>Strategic Value Wedge:</b> {res.value_wedge or 'Accelerate strategic operational outcomes.'}</div>
             <div style="background:rgba(0,0,0,0.25); border-radius:8px; padding:12px; margin-top:12px;">
                 <div style="font-size:0.8rem; font-weight:700; color:#38BDF8;">🔥 1-SENTENCE COLD OUTREACH OPENER:</div>
-                <div style="font-size:0.85rem; color:#F1F5F9; font-style:italic; margin-top:4px;">"{res.outreach_hook}"</div>
+                <div style="font-size:0.85rem; color:#F1F5F9; font-style:italic; margin-top:4px;">"{res.outreach_hook or 'Reaching out regarding your strategic initiatives.'}"</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
