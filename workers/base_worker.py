@@ -1,15 +1,33 @@
 """
-Enterprise ICP Intelligence Engine - Heavy-Lifting Worker AI Client.
-Delegates core qualification, scoring, rationale generation, eligibility checking,
-and next best action copy directly to Cloudflare Worker AI on edge.
+Enterprise ICP Intelligence Engine - Worker AI Client.
+Delegates evidence extraction to Cloudflare Worker AI on edge,
+validates the response schema, and evaluates deterministic scores
+via the centralized MasterScoringEngine.
 """
 
 import os
 import json
+import time
 import urllib.request
 import urllib.error
 from typing import Dict, Any, Optional
-from engine.models import ComprehensiveAIWorkerResponse
+from datetime import datetime, timezone
+
+from engine.models import (
+    AccountAssessment,
+    AssessmentMetadata,
+    AccountInfo,
+    ScoresBreakdown,
+    ConfidenceBreakdown,
+    EvidenceBreakdown,
+    DecisionInfo,
+    CommercialInfo,
+    EvidencePillar,
+    EvidenceStatus
+)
+from engine.config import active_config
+from engine.scorer import MasterScoringEngine
+from engine.extractor import ProspectExtractor
 
 
 DEFAULT_WORKER_URL = "https://icp-scoring-worker-ai.devika-worker.workers.dev"
@@ -30,7 +48,8 @@ def get_secret(key: str, default: str = "") -> str:
 
 class WorkerAIClient:
     """
-    Client connecting to Cloudflare Worker AI as the primary intelligence engine.
+    Client connecting to Cloudflare Worker AI for structured evidence extraction.
+    Scores and decisions are deterministically computed by MasterScoringEngine.
     """
 
     def __init__(self, worker_url: Optional[str] = None):
@@ -62,166 +81,164 @@ class WorkerAIClient:
             cleaned = cleaned[:-3]
         return cleaned.strip()
 
-    def evaluate_account(self, prospect_text: str, deal_size_usd: float = 50000.0) -> ComprehensiveAIWorkerResponse:
+    def evaluate_account(self, prospect_text: str, deal_size_usd: float = 50000.0) -> AccountAssessment:
         """
-        Calls Cloudflare Worker AI to perform the complete revenue intelligence analysis.
-        If worker is unreachable, provides dynamic fallback response.
+        Executes end-to-end ICP qualification:
+        1. Calls Cloudflare Worker AI to extract structured evidence and signals.
+        2. Validates the extracted payload and schema.
+        3. Deterministically computes scores and business tiers via MasterScoringEngine.
+        4. If Worker fails, returns an un-scored AccountAssessment with success=False and request_id.
         """
-        if self.worker_url and prospect_text.strip():
-            payload = {
-                "action": "full_qualification",
-                "text": prospect_text,
-                "prospect_text": prospect_text,
-                "deal_size_usd": deal_size_usd
-            }
+        req_id = f"req_{int(time.time() * 1000)}_{os.urandom(3).hex()}"
 
-            headers = {
-                "Content-Type": "application/json",
-                "User-Agent": "Enterprise-ICP-Engine/2.0",
-                "Accept": "application/json"
-            }
-            if self.auth_secret:
-                headers["Authorization"] = f"Bearer {self.auth_secret}"
+        if not prospect_text.strip():
+            return AccountAssessment(
+                metadata=AssessmentMetadata(
+                    request_id=req_id,
+                    success=False,
+                    error_code="EMPTY_INPUT",
+                    error_message="Prospect text input is empty."
+                )
+            )
 
-            for attempt in range(2):
-                try:
-                    data_bytes = json.dumps(payload).encode("utf-8")
-                    req = urllib.request.Request(
-                        self.worker_url,
-                        data=data_bytes,
-                        headers=headers,
-                        method="POST"
+        if not self.worker_url:
+            return AccountAssessment(
+                metadata=AssessmentMetadata(
+                    request_id=req_id,
+                    success=False,
+                    error_code="WORKER_URL_MISSING",
+                    error_message="CLOUDFLARE_WORKER_URL is not configured."
+                )
+            )
+
+        payload = {
+            "text": prospect_text,
+            "prospect_text": prospect_text,
+            "deal_size_usd": deal_size_usd
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Enterprise-ICP-Engine/2.0",
+            "Accept": "application/json",
+            "X-Request-ID": req_id
+        }
+        if self.auth_secret:
+            headers["Authorization"] = f"Bearer {self.auth_secret}"
+
+        try:
+            data_bytes = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                self.worker_url,
+                data=data_bytes,
+                headers=headers,
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
+                body = response.read().decode("utf-8")
+                raw_res = json.loads(body)
+
+                # Check for explicit failure from Worker
+                if not raw_res.get("success", True):
+                    err_info = raw_res.get("error") or {}
+                    return AccountAssessment(
+                        metadata=AssessmentMetadata(
+                            request_id=raw_res.get("request_id") or req_id,
+                            success=False,
+                            error_code=err_info.get("code", "AI_EXECUTION_FAILED"),
+                            error_message=err_info.get("message", "Workers AI evaluation failed.")
+                        )
                     )
-                    with urllib.request.urlopen(req, timeout=self.timeout_sec) as response:
-                        body = response.read().decode("utf-8")
-                        raw_res = json.loads(body)
 
-                        candidate = raw_res
-                        if isinstance(raw_res, dict):
-                            if "response" in raw_res:
-                                candidate = raw_res["response"]
-                            elif "result" in raw_res:
-                                candidate = raw_res["result"]
+                # Extract validated evidence components
+                account_data = raw_res.get("account") or {}
+                evidence_data = raw_res.get("evidence") or {}
+                strategy_data = raw_res.get("strategy") or {}
+                discovery_questions = raw_res.get("discovery_questions") or []
+                key_strengths = raw_res.get("key_strengths") or []
+                key_risks = raw_res.get("key_risks") or []
+                is_disq = bool(raw_res.get("is_disqualified"))
+                disq_reason = str(raw_res.get("disqualification_reason") or "")
+                server_req_id = raw_res.get("request_id") or req_id
 
-                        if isinstance(candidate, str):
-                            candidate = json.loads(self._clean_json_response(candidate))
+                # Pass extracted evidence into deterministic scoring engine
+                return MasterScoringEngine.evaluate_assessment(
+                    account_data=account_data,
+                    evidence_data=evidence_data,
+                    deal_size_usd=deal_size_usd,
+                    strategy_data=strategy_data,
+                    discovery_questions=discovery_questions,
+                    key_strengths=key_strengths,
+                    key_risks=key_risks,
+                    is_disqualified=is_disq,
+                    disqualification_reason=disq_reason,
+                    config=active_config,
+                    request_id=server_req_id
+                )
 
-                        if isinstance(candidate, dict):
-                            # Normalize fields across worker response formats
-                            ratings = candidate.get("ratings") or {}
-                            rationales = candidate.get("rationales") or {}
-                            strategy = candidate.get("strategy") or {}
-                            pillars = candidate.get("pillar_scores") or {}
+        except urllib.error.HTTPError as http_err:
+            error_body = http_err.read().decode("utf-8", errors="ignore")
+            parsed_err = {}
+            try:
+                parsed_err = json.loads(error_body)
+            except Exception:
+                pass
+            err_details = parsed_err.get("error", {})
+            return AccountAssessment(
+                metadata=AssessmentMetadata(
+                    request_id=parsed_err.get("request_id") or req_id,
+                    success=False,
+                    error_code=err_details.get("code", f"HTTP_{http_err.code}"),
+                    error_message=err_details.get("message", f"Worker returned HTTP {http_err.code}: {http_err.reason}")
+                )
+            )
+        except Exception as e:
+            return AccountAssessment(
+                metadata=AssessmentMetadata(
+                    request_id=req_id,
+                    success=False,
+                    error_code="CONNECTION_FAILED",
+                    error_message=f"Could not connect to Cloudflare Worker AI: {e}"
+                )
+            )
 
-                            # Convert GTM ratings (-5..+5) to 0-100 scores
-                            def rating_to_score(r):
-                                try:
-                                    num = float(r)
-                                    return max(0.0, min(100.0, (num + 5.0) * 10.0))
-                                except Exception:
-                                    return 40.0
+    @classmethod
+    def evaluate_locally(cls, prospect_text: str, deal_size_usd: float = 50000.0) -> AccountAssessment:
+        """
+        Pure deterministic offline qualification for tests and local fallback without remote AI.
+        """
+        req_id = f"req_local_{int(time.time() * 1000)}"
+        extracted = ProspectExtractor.extract_evidence(prospect_text)
+        
+        # Build evidence structure from local extractor
+        ev_fields = extracted.get("evidence_fields") or {}
+        
+        def to_pillar_dict(f_key: str):
+            f = ev_fields.get(f_key)
+            if not f or f.status == EvidenceStatus.UNKNOWN:
+                return {"score": None, "status": "UNKNOWN", "confidence": 0.0, "rationale": f.rationale if f else "", "evidence_points": [], "missing_points": [f_key]}
+            return {"score": 75.0 if f.status != EvidenceStatus.UNKNOWN else None, "status": f.status.value, "confidence": f.confidence, "rationale": f.rationale, "evidence_points": [str(f.raw_value)], "missing_points": []}
 
-                            f_rating = ratings.get("firmographic")
-                            t_rating = ratings.get("technographic")
-                            i_rating = ratings.get("intent")
-                            p_rating = ratings.get("persona")
+        evidence_dict = {
+            "firmographic": to_pillar_dict("company_name"),
+            "technographic": to_pillar_dict("technographics"),
+            "intent": to_pillar_dict("intent_signals"),
+            "readiness": to_pillar_dict("contact_authority"),
+            "value": {"score": 70.0, "status": "INFERRED", "confidence": 0.7, "rationale": "Local value proxy", "evidence_points": [], "missing_points": []}
+        }
 
-                            fit_score = candidate.get("icp_fit_score") or candidate.get("final_icp_score")
-                            if fit_score is None and f_rating is not None:
-                                fit_score = rating_to_score(f_rating)
-                            elif fit_score is None:
-                                fit_score = pillars.get("firmographic_score", 0.0)
-
-                            intent_score = rating_to_score(i_rating) if i_rating is not None else candidate.get("intent_score", pillars.get("intent_score", 0.0))
-                            readiness_score = rating_to_score(p_rating) if p_rating is not None else candidate.get("readiness_score", pillars.get("persona_score", 0.0))
-                            value_score = rating_to_score(t_rating) if t_rating is not None else candidate.get("value_score", pillars.get("technographic_score", 0.0))
-
-                            # Calculate Data Confidence Percentage based on missing (-1) ratings
-                            active_ratings = [f_rating, t_rating, i_rating, p_rating]
-                            verified_count = sum(1 for r in active_ratings if r is not None and r != -1)
-                            calc_confidence = int((verified_count / 4.0) * 100) if any(r is not None for r in active_ratings) else int(candidate.get("data_confidence_pct", 50))
-
-                            is_disqualified = bool(candidate.get("is_disqualified")) or (p_rating == -5)
-                            
-                            # Determine Priority Tier dynamically
-                            if is_disqualified:
-                                priority_tier = "Disqualified / Anti-ICP"
-                            elif float(fit_score) >= 80 and float(intent_score) >= 70:
-                                priority_tier = "Tier A1: Strategic Inbound"
-                            elif float(fit_score) >= 65:
-                                priority_tier = "Tier A2: High Priority Outbound"
-                            elif float(fit_score) >= 50:
-                                priority_tier = "Tier B1: Nurture Pipeline"
-                            else:
-                                priority_tier = "Tier C: Low Priority / Long-Tail"
-
-                            res_obj = ComprehensiveAIWorkerResponse(
-                                company_name=candidate.get("company_name") or None,
-                                domain=candidate.get("domain") or None,
-                                contact_name=candidate.get("contact_name") or None,
-                                job_title=candidate.get("job_title") or None,
-                                industry=candidate.get("industry") or None,
-                                scale=candidate.get("scale") or None,
-                                tech_stack=candidate.get("tech_stack") or None,
-                                intent_timeline=candidate.get("intent_timeline") or None,
-                                icp_fit_score=float(fit_score or 0.0),
-                                icp_fit_rationale=candidate.get("icp_fit_rationale") or rationales.get("firmographic") or "Evaluated firmographic fit.",
-                                intent_score=float(intent_score or 0.0),
-                                intent_rationale=candidate.get("intent_rationale") or rationales.get("intent") or "Evaluated intent signal.",
-                                readiness_score=float(readiness_score or 0.0),
-                                readiness_rationale=candidate.get("readiness_rationale") or rationales.get("persona") or "Evaluated buyer persona.",
-                                value_score=float(value_score or 0.0),
-                                expansion_potential=candidate.get("expansion_potential") or ("High" if float(value_score or 0) >= 75 else ("Moderate" if float(value_score or 0) >= 50 else "Low")),
-                                is_disqualified=is_disqualified,
-                                disqualification_reason=candidate.get("disqualification_reason") or ("Disqualified by role/anti-ICP rule" if is_disqualified else ""),
-                                data_confidence_pct=calc_confidence,
-                                priority_tier=candidate.get("priority_tier") or priority_tier,
-                                sales_action=candidate.get("sales_action") or ("Disqualify or route to self-service." if is_disqualified else "Schedule discovery qualification call within 24 hours."),
-                                urgency_sla=candidate.get("urgency_sla") or ("N/A" if is_disqualified else "Within 24 hours"),
-                                recommended_channel=candidate.get("recommended_channel") or "Email + LinkedIn",
-                                value_wedge=candidate.get("value_wedge") or (strategy.get("value_wedge") if isinstance(strategy, dict) else ""),
-                                outreach_hook=candidate.get("outreach_hook") or (strategy.get("outreach_hook") if isinstance(strategy, dict) else ""),
-                                discovery_questions=candidate.get("discovery_questions") or [],
-                                key_strengths=candidate.get("key_strengths") or [],
-                                key_risks=candidate.get("key_risks") or []
-                            )
-                            return res_obj
-                except Exception as e:
-                    if attempt == 1:
-                        print(f"[Worker AI Connection Exception]: {e}")
-                    continue
-
-        # Unreachable fallback - surfaces status as unverified with 0 confidence
-        return ComprehensiveAIWorkerResponse(
-            company_name=None,
-            domain=None,
-            contact_name=None,
-            job_title=None,
-            industry=None,
-            scale=None,
-            tech_stack=None,
-            intent_timeline=None,
-            icp_fit_score=0.0,
-            icp_fit_rationale="Worker AI offline or unreachable. Field marked as unverified.",
-            intent_score=0.0,
-            intent_rationale="Worker AI offline or unreachable. Field marked as unverified.",
-            readiness_score=0.0,
-            readiness_rationale="Worker AI offline or unreachable. Field marked as unverified.",
-            value_score=0.0,
-            expansion_potential="Uncertain",
-            is_disqualified=False,
-            disqualification_reason="",
-            data_confidence_pct=0,
-            priority_tier="Unverified Pipeline",
-            sales_action="Check Cloudflare Worker AI connection or inspect wrangler logs.",
-            urgency_sla="N/A",
-            recommended_channel="Email",
-            value_wedge="",
-            outreach_hook="",
-            discovery_questions=[
-                "What is the official operating company name and target industry?",
-                "What is your target timeline for evaluating and deploying a solution?"
-            ],
-            key_strengths=[],
-            key_risks=["Worker AI offline or unreachable - manual review required."]
+        return MasterScoringEngine.evaluate_assessment(
+            account_data={
+                "company_name": extracted.get("company_name"),
+                "domain": extracted.get("domain"),
+                "contact_name": extracted.get("contact_name"),
+                "job_title": extracted.get("job_title"),
+                "industry": extracted.get("industry")
+            },
+            evidence_data=evidence_dict,
+            deal_size_usd=deal_size_usd,
+            discovery_questions=extracted.get("discovery_questions") or [],
+            config=active_config,
+            request_id=req_id
         )
+

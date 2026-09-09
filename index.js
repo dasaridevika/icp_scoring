@@ -1,11 +1,15 @@
 // Enterprise ICP Revenue Intelligence - Cloudflare Worker AI Edge Engine
-// GTM Partners Polarized Forced-Choice Framework (-5, -3, -1, +1, +3, +5)
+// Dynamic Evidence-Aware Qualification & Structured Extraction
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization"
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-ID"
 };
+
+function generateRequestId() {
+  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -28,15 +32,25 @@ function parseJsonSafely(rawText) {
   }
 }
 
+function clampScore(val) {
+  if (val === null || val === undefined || isNaN(Number(val))) return null;
+  return Math.max(0, Math.min(100, Number(val)));
+}
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
+
+    const requestId = request.headers.get("X-Request-ID") || generateRequestId();
+
     if (request.method !== "POST") {
       return jsonResponse({
+        success: true,
         status: "online",
-        service: "Enterprise ICP Intelligence Engine (GTM Partners Model)",
+        service: "Enterprise ICP Intelligence Engine",
+        request_id: requestId,
         protocol: "Send a POST request with prospect text or JSON payload."
       });
     }
@@ -45,198 +59,208 @@ export default {
     try {
       payload = await request.json();
     } catch (err) {
-      return jsonResponse({ error: "Invalid JSON request payload." }, 400);
+      return jsonResponse({
+        success: false,
+        error: {
+          code: "INVALID_JSON_PAYLOAD",
+          message: "Request body must be valid JSON.",
+          request_id: requestId
+        }
+      }, 400);
     }
 
     const prospectInput = (payload.text || payload.prospect_text || "").trim() || JSON.stringify(payload);
+    if (!prospectInput || prospectInput === "{}") {
+      return jsonResponse({
+        success: false,
+        error: {
+          code: "EMPTY_PROSPECT_INPUT",
+          message: "Prospect text or account payload is required.",
+          request_id: requestId
+        }
+      }, 400);
+    }
+
     const dealSize = Number(payload.deal_size_usd) || 50000;
     const model = env.AI_MODEL || "@cf/meta/llama-3.1-8b-instruct";
 
     // 1. Check if Cloudflare Workers AI binding is attached
     if (!env.AI) {
       return jsonResponse({
-        ai_status: "binding_missing",
-        error: "Cloudflare Workers AI binding [ai] is not bound. Ensure [ai] binding = 'AI' is in wrangler.toml.",
-        company_name: null,
-        contact_name: null,
-        job_title: null,
-        industry: null,
-        is_disqualified: false,
-        disqualification_reason: "",
-        ratings: {
-          firmographic: -1,
-          technographic: -1,
-          intent: -1,
-          persona: -1
-        },
-        rationales: {
-          firmographic: "AI binding unavailable. Field marked as -1 (Uncertainty).",
-          technographic: "AI binding unavailable. Field marked as -1 (Uncertainty).",
-          intent: "AI binding unavailable. Field marked as -1 (Uncertainty).",
-          persona: "AI binding unavailable. Field marked as -1 (Uncertainty)."
-        },
-        discovery_questions: [
-          "What is the official operating company name and target industry?",
-          "What is your target timeline for evaluating a solution?"
-        ]
+        success: false,
+        error: {
+          code: "AI_BINDING_MISSING",
+          message: "Cloudflare Workers AI binding [ai] is not bound. Ensure [ai] binding = 'AI' is in wrangler.toml.",
+          request_id: requestId
+        }
       }, 500);
     }
 
-    // 2. Strict GTM Partners Polarized System Prompt
-    const systemPrompt = `You are an expert Enterprise B2B Revenue Intelligence Engine implementing the GTM Partners ICP Scoring Framework.
-Analyze the prospect text and evaluate the 4 ICP Pillars using the forced-choice polarized rating scale:
+    // 2. Strict Evidence Extraction System Prompt
+    const systemPrompt = `You are an expert Enterprise B2B Revenue Intelligence Engine.
+Analyze the prospect input text and extract structured evidence for ICP qualification.
+DO NOT fabricate details. If a field is not present or cannot be inferred from context, mark it as null or UNKNOWN.
 
-RATING SCALE (Use ONLY these exact integers: -5, -3, -1, +1, +3, +5):
-+5: High Potential for Growth / Rapid Expansion / Ideal ICP
-+3: Clear Advantages / Strong Product-Market Fit
-+1: Serviceable / Limited Growth Potential
--1: Uncertainty / Missing Data / Unverified in Inbound Context
--3: High Resource Drain / Sub-Scale Economics / Complex Custom Needs
--5: High Churn Risk / Non-Commercial / Anti-ICP / Disqualified
+EVALUATION DIMENSIONS (Score 0-100 where evidence exists, or null if UNKNOWN):
+1. Firmographics: Headcount, revenue, operational scale, vertical fit.
+2. Technographics: Current software stack, data infrastructure, sophistication.
+3. Intent & Urgency: Active RFP, buying timeline, hiring expansion, pain point urgency.
+4. Buyer Readiness & Authority: Decision maker title, VP/C-suite authority, budget availability.
+5. Commercial Value & Expansion: Potential contract scale, multi-department expansion.
 
-PILLARS TO EVALUATE:
-1. Firmographics: Headcount scale, revenue (ARR), target vertical, operating model.
-2. Technographics: Technology stack sophistication, CRM/data warehouse infrastructure.
-3. Intent & Timing: Active RFP, buying urgency, expansion triggers, hiring momentum.
-4. Buyer Persona & Authority: VP/C-Suite budget authority (mark students, job seekers, and academic inquiries as -5).
+EVIDENCE STATUS RULES:
+- "VERIFIED": Explicitly stated in the text with clear numbers/titles.
+- "INFERRED": Logically deduced from industry, company description, or role context.
+- "UNKNOWN": Information is missing, unclear, or unverified.
 
-EXTRACTION RULES:
-- If company name, contact, job title, or industry is not explicitly mentioned, return null (do NOT invent placeholder names).
-- If any pillar has missing or unknown information, rate it as -1 (Uncertainty) and generate a discovery question to qualify it on the call.
+DISQUALIFICATION RULES:
+- Mark is_disqualified = true if the contact is clearly a student, personal user, job seeker, or non-commercial inquiry.
 
-Return a strict JSON object with EXACTLY this schema:
+SCHEMA TO RETURN (Strict JSON only):
 {
-  "company_name": "string or null",
-  "contact_name": "string or null",
-  "job_title": "string or null",
-  "industry": "string or null",
+  "account": {
+    "company_name": "string or null",
+    "domain": "string or null",
+    "contact_name": "string or null",
+    "job_title": "string or null",
+    "industry": "string or null",
+    "scale": "string or null",
+    "tech_stack": "string or null",
+    "intent_timeline": "string or null"
+  },
+  "evidence": {
+    "firmographic": {
+      "score": number 0-100 or null,
+      "status": "VERIFIED" | "INFERRED" | "UNKNOWN",
+      "confidence": number 0.0-1.0,
+      "rationale": "string explanation",
+      "evidence_points": ["string"],
+      "missing_points": ["string"]
+    },
+    "technographic": {
+      "score": number 0-100 or null,
+      "status": "VERIFIED" | "INFERRED" | "UNKNOWN",
+      "confidence": number 0.0-1.0,
+      "rationale": "string explanation",
+      "evidence_points": ["string"],
+      "missing_points": ["string"]
+    },
+    "intent": {
+      "score": number 0-100 or null,
+      "status": "VERIFIED" | "INFERRED" | "UNKNOWN",
+      "confidence": number 0.0-1.0,
+      "rationale": "string explanation",
+      "evidence_points": ["string"],
+      "missing_points": ["string"]
+    },
+    "readiness": {
+      "score": number 0-100 or null,
+      "status": "VERIFIED" | "INFERRED" | "UNKNOWN",
+      "confidence": number 0.0-1.0,
+      "rationale": "string explanation",
+      "evidence_points": ["string"],
+      "missing_points": ["string"]
+    },
+    "value": {
+      "score": number 0-100 or null,
+      "status": "VERIFIED" | "INFERRED" | "UNKNOWN",
+      "confidence": number 0.0-1.0,
+      "rationale": "string explanation",
+      "evidence_points": ["string"],
+      "missing_points": ["string"]
+    }
+  },
   "is_disqualified": boolean,
   "disqualification_reason": "string (empty if eligible)",
-  "ratings": {
-    "firmographic": 5,
-    "technographic": 3,
-    "intent": 1,
-    "persona": -1
-  },
-  "rationales": {
-    "firmographic": "string (1-2 sentences explaining rating)",
-    "technographic": "string (1-2 sentences explaining rating)",
-    "intent": "string (1-2 sentences explaining rating)",
-    "persona": "string (1-2 sentences explaining rating)"
-  },
   "strategy": {
     "value_wedge": "string (sharpest positioning angle)",
     "outreach_hook": "string (1-sentence cold email opener)"
   },
-  "discovery_questions": [
-    "string (question to qualify missing -1 attributes)"
-  ],
+  "discovery_questions": ["string (questions for missing UNKNOWN attributes)"],
   "key_strengths": ["string (evidence 1)", "string (evidence 2)"],
   "key_risks": ["string (risk 1)"]
 }
-Respond ONLY with pure valid JSON.`;
+Respond ONLY with valid JSON.`;
 
-    let aiResult = null;
     let aiRaw = null;
     let aiErrorMsg = "";
+    let aiResult = null;
 
     try {
       const aiResponse = await env.AI.run(model, {
         prompt: `${systemPrompt}\n\nProspect Text to Evaluate:\n${prospectInput}\n\nTarget Contract Size: $${dealSize.toLocaleString()} USD`
       });
-      const rawText = typeof aiResponse === "string" ? aiResponse : aiResponse.response || JSON.stringify(aiResponse);
-      aiRaw = rawText;
-      aiResult = parseJsonSafely(rawText);
+      aiRaw = typeof aiResponse === "string" ? aiResponse : aiResponse.response || JSON.stringify(aiResponse);
+      aiResult = parseJsonSafely(aiRaw);
     } catch (aiError) {
       aiErrorMsg = aiError.message || String(aiError);
-      console.error("[Workers AI Run Error]:", aiErrorMsg);
+      console.error(`[Workers AI Error][${requestId}]:`, aiErrorMsg);
     }
 
-    // 3. Handle parse or execution failure with explicit error surfacing
+    // 3. Handle inference failure
     if (!aiResult) {
       return jsonResponse({
-        ai_status: "inference_failed",
-        ai_error: aiErrorMsg || "Failed to parse structured JSON from LLM output.",
-        raw_output: aiRaw,
-        company_name: null,
-        contact_name: null,
-        job_title: null,
-        industry: null,
-        is_disqualified: false,
-        disqualification_reason: "",
-        ratings: {
-          firmographic: -1,
-          technographic: -1,
-          intent: -1,
-          persona: -1
-        },
-        rationales: {
-          firmographic: "AI inference failed. Field marked as -1 (Uncertainty).",
-          technographic: "AI inference failed. Field marked as -1 (Uncertainty).",
-          intent: "AI inference failed. Field marked as -1 (Uncertainty).",
-          persona: "AI inference failed. Field marked as -1 (Uncertainty)."
-        },
-        strategy: {
-          value_wedge: "Deliver tailored enterprise intelligence to accelerate strategic initiatives.",
-          outreach_hook: "Reaching out regarding your growth roadmap and operational initiatives."
-        },
-        discovery_questions: [
-          "What is your target timeline for evaluating and deploying a solution?",
-          "What core CRM, data warehouse, or ERP tools do you currently operate?"
-        ],
-        key_strengths: [],
-        key_risks: ["AI inference unverified - requires manual discovery."]
+        success: false,
+        error: {
+          code: aiErrorMsg ? "AI_EXECUTION_FAILED" : "AI_PARSE_FAILED",
+          message: aiErrorMsg || "Failed to parse structured JSON from Workers AI output.",
+          request_id: requestId,
+          raw_output: aiRaw ? aiRaw.substring(0, 500) : null
+        }
       }, 502);
     }
 
-    // 4. Validate and Clamp Ratings to valid GTM Partners values: {-5, -3, -1, +1, +3, +5}
-    const ALLOWED_GTM_RATINGS = [-5, -3, -1, 1, 3, 5];
-    function sanitizeGtmRating(val) {
-      const num = Number(val);
-      if (ALLOWED_GTM_RATINGS.includes(num)) return num;
-      // Closest GTM rating mapping if model output is outside
-      if (num >= 4) return 5;
-      if (num >= 2) return 3;
-      if (num >= 0) return 1;
-      if (num >= -2) return -1;
-      if (num >= -4) return -3;
-      return -5;
+    // 4. Sanitize and Validate AI evidence output
+    const account = aiResult.account || {};
+    const rawEvidence = aiResult.evidence || {};
+
+    function sanitizePillar(pillarKey, fallbackScore = null) {
+      const p = rawEvidence[pillarKey] || {};
+      const score = clampScore(p.score !== undefined ? p.score : fallbackScore);
+      const status = ["VERIFIED", "INFERRED", "UNKNOWN"].includes(p.status) ? p.status : (score !== null ? "INFERRED" : "UNKNOWN");
+      const confidence = status === "UNKNOWN" ? 0.0 : Math.max(0.0, Math.min(1.0, Number(p.confidence) || 0.5));
+      return {
+        score: score,
+        status: status,
+        confidence: Number(confidence.toFixed(2)),
+        rationale: String(p.rationale || ""),
+        evidence_points: Array.isArray(p.evidence_points) ? p.evidence_points.map(String) : [],
+        missing_points: Array.isArray(p.missing_points) ? p.missing_points.map(String) : []
+      };
     }
 
-    const ratings = aiResult.ratings || {};
-    const fRating = sanitizeGtmRating(ratings.firmographic ?? -1);
-    const tRating = sanitizeGtmRating(ratings.technographic ?? -1);
-    const iRating = sanitizeGtmRating(ratings.intent ?? -1);
-    const pRating = sanitizeGtmRating(ratings.persona ?? -1);
-
-    const isDisqualified = Boolean(aiResult.is_disqualified) || pRating === -5;
-
-    // GTM Partners Mathematical Weighted Formula (Weights: Firmo 30%, Techno 25%, Intent 25%, Persona 20%)
-    const rawGtmScore = isDisqualified ? -5.0 : ((fRating * 0.30) + (tRating * 0.25) + (iRating * 0.25) + (pRating * 0.20));
-    // Normalized 0 to 100 score: (Raw - (-5)) / 10 * 100
-    const normalizedScore = isDisqualified ? 12 : Math.round(Math.max(0, Math.min(100, (rawGtmScore + 5.0) * 10.0)));
+    const validatedEvidence = {
+      firmographic: sanitizePillar("firmographic"),
+      technographic: sanitizePillar("technographic"),
+      intent: sanitizePillar("intent"),
+      readiness: sanitizePillar("readiness"),
+      value: sanitizePillar("value")
+    };
 
     return jsonResponse({
-      ai_status: "success",
-      company_name: aiResult.company_name || null,
-      contact_name: aiResult.contact_name || null,
-      job_title: aiResult.job_title || null,
-      industry: aiResult.industry || null,
-      is_disqualified: isDisqualified,
-      disqualification_reason: aiResult.disqualification_reason || (isDisqualified ? "Non-commercial lead or anti-ICP role" : ""),
-      ratings: {
-        firmographic: fRating,
-        technographic: tRating,
-        intent: iRating,
-        persona: pRating
+      success: true,
+      request_id: requestId,
+      account: {
+        company_name: account.company_name || null,
+        domain: account.domain || null,
+        contact_name: account.contact_name || null,
+        job_title: account.job_title || null,
+        industry: account.industry || null,
+        scale: account.scale || null,
+        tech_stack: account.tech_stack || null,
+        intent_timeline: account.intent_timeline || null
       },
-      raw_gtm_weighted_score: Number(rawGtmScore.toFixed(2)),
-      final_icp_score: normalizedScore,
-      rationales: aiResult.rationales || {},
-      strategy: aiResult.strategy || {},
-      discovery_questions: aiResult.discovery_questions || [],
-      key_strengths: aiResult.key_strengths || [],
-      key_risks: aiResult.key_risks || []
+      evidence: validatedEvidence,
+      is_disqualified: Boolean(aiResult.is_disqualified),
+      disqualification_reason: String(aiResult.disqualification_reason || ""),
+      strategy: {
+        value_wedge: String(aiResult.strategy?.value_wedge || ""),
+        outreach_hook: String(aiResult.strategy?.outreach_hook || "")
+      },
+      discovery_questions: Array.isArray(aiResult.discovery_questions) ? aiResult.discovery_questions.map(String) : [],
+      key_strengths: Array.isArray(aiResult.key_strengths) ? aiResult.key_strengths.map(String) : [],
+      key_risks: Array.isArray(aiResult.key_risks) ? aiResult.key_risks.map(String) : []
     });
   }
 };
+

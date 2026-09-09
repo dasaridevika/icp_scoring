@@ -75,6 +75,28 @@ class ReadinessWeights(BaseModel):
         return True
 
 
+class MasterWeights(BaseModel):
+    icp_fit: float = Field(default=0.35, description="Weight for ICP Fit engine in Master Score")
+    intent: float = Field(default=0.25, description="Weight for Intent engine in Master Score")
+    readiness: float = Field(default=0.20, description="Weight for Readiness engine in Master Score")
+    value: float = Field(default=0.20, description="Weight for Value engine in Master Score")
+
+    def validate_sum(self, tolerance: float = 1e-4) -> bool:
+        total = self.icp_fit + self.intent + self.readiness + self.value
+        if abs(total - 1.0) > tolerance:
+            raise ValueError(f"Master weights must sum to 1.0, got {total:.4f}")
+        return True
+
+
+class TierThresholds(BaseModel):
+    tier_a1_min_fit: float = 80.0
+    tier_a1_min_intent: float = 70.0
+    tier_a2_min_fit: float = 65.0
+    tier_b1_min_fit: float = 50.0
+    tier_b1_min_intent: float = 50.0
+    tier_a3_min_fit: float = 40.0
+
+
 class DisqualificationRuleConfig(BaseModel):
     blocked_email_domains: List[str] = Field(
         default_factory=lambda: [
@@ -98,9 +120,11 @@ class DisqualificationRuleConfig(BaseModel):
 
 class EngineConfiguration(BaseModel):
     model_version: str = Field(default=CURRENT_MODEL_VERSION)
+    master_weights: MasterWeights = Field(default_factory=MasterWeights)
     icp_fit_weights: ICPFitWeights = Field(default_factory=ICPFitWeights)
     intent_weights: IntentWeights = Field(default_factory=IntentWeights)
     readiness_weights: ReadinessWeights = Field(default_factory=ReadinessWeights)
+    tier_thresholds: TierThresholds = Field(default_factory=TierThresholds)
     disqualification: DisqualificationRuleConfig = Field(default_factory=DisqualificationRuleConfig)
     
     # Financial Calibration Defaults (heuristic baseline before regression calibration)
@@ -108,6 +132,7 @@ class EngineConfiguration(BaseModel):
     default_retention_rate: float = Field(default=0.88, description="Baseline 1-yr gross retention rate")
 
     def validate_all_weights(self) -> None:
+        self.master_weights.validate_sum()
         self.icp_fit_weights.validate_sum()
         self.intent_weights.validate_sum()
         self.readiness_weights.validate_sum()
@@ -128,3 +153,4 @@ class EngineConfiguration(BaseModel):
 # Global active configuration instance
 active_config = EngineConfiguration()
 active_config.validate_all_weights()
+

@@ -1,86 +1,108 @@
 # Enterprise ICP Intelligence & Revenue Qualification Engine (v2.0)
 
-A production-grade, evidence-driven B2B Revenue Intelligence Engine implementing the **GTM Partners & Saber ICP Framework 2.0**.
-
-**100% Dynamic Engine**: Zero hardcoded keyword dictionaries, static lists, or mock datasets. Driven purely by AI semantic evaluation, mathematical weights, and dynamic feature distance.
+A production-grade, evidence-driven B2B Revenue Intelligence Engine powered by Cloudflare Worker AI for edge evidence extraction and a deterministic Python scoring engine for qualification, tiering, and sales action recommendations.
 
 ---
 
 ## 🏛️ System Architecture
 
 ```text
-Account / Inbound Lead
-        ↓
-Data Normalization & Dynamic Evidence Extraction (DataStatus: Known Positive/Negative, Inferred, Unknown)
-        ↓
-Hard Eligibility & Anti-ICP Check (Disqualifier Engine)
-        ↓
-┌────────────────────────────────────────────────────────────────────────┐
-│                      4-DIMENSIONAL REVENUE ENGINES                     │
-├───────────────────┬───────────────────┬────────────────────────────────┤
-│ 1. ICP FIT ENGINE │  2. INTENT ENGINE │ 3. READINESS   │ 4. VALUE      │
-│ (Firmographics,   │ (Active RFPs,     │ (Authority,    │ (ARR Scale,   │
-│  Vertical, Tech,  │  Buying Timeline, │  Budget,       │  Expansion    │
-│  Dynamic Sim)     │  Expansion)       │  Deployment)   │  Potential)   │
-└───────────────────┴───────────────────┴────────────────────────────────┘
-        ↓
-Expected Value Model (P(Win) × Expected ARR × P(Retention) - Expected CAC)
-        ↓
-Operational Next Best Action (SLA Cadence, Channel, Hook, Discovery Prompts)
-        ↓
-Sales Outcome Recording & Dynamic Feedback Store (Model Evaluation & Calibration)
+Streamlit UI / Inbound CSV
+         ↓
+Worker AI Client (`workers/base_worker.py`) [Generates Trace/Request ID: req_...]
+         ↓
+Cloudflare Worker (`index.js` on Edge)
+         ↓
+Workers AI (Meta Llama 3.1 8B Instruct)
+         ↓
+Evidence Extraction & Schema Validation (Pillars: Firmographic, Technographic, Intent, Readiness, Value)
+         ↓
+Deterministic Scoring Engine (`engine/scorer.py`) [Applies Centralized Weights & Thresholds]
+         ↓
+Canonical Assessment Contract (`AccountAssessment`)
+         ↓
+UI / CRM Export (`app.py`)
 ```
 
----
-
-## 🎯 Key Architectural Upgrades (v1.0 → v2.0)
-
-| Capability | Legacy v1.0 Prototype | Production v2.0 Engine |
-| :--- | :--- | :--- |
-| **Fit vs. Intent Separation** | Combined into a single murky 1–100 number. | **Strictly decoupled**: Static ICP Fit vs. Dynamic Buying Intent. |
-| **Missing Data Handling** | Defaulted missing attributes to positive ~70 points. | Explicit `DataStatus.UNKNOWN`, **reduces confidence** instead of inflating score. |
-| **Hard Eligibility** | Subtracted arbitrary points for anti-ICP. | **Binary Gatekeeper**: Hard disqualifiers (freemail, sanctioned geos, sub-scale). |
-| **Win Likelihood** | Fake/uncalibrated conversion claims. | **Calibrated Win Propensity** $P(\text{Win} \mid \text{Features})$ via Logistic Regression. |
-| **Valuation Model** | Simple deal multiplier. | **Expected Net Value (EV)** equation incorporating Retention and CAC. |
-| **Model Governance** | Unversioned, hardcoded weights. | **Model Versioning (`ICP-v2.0-Production`)**, configurable YAML/Pydantic weights ($\sum w = 1.0$). |
-| **Sales Activation** | Generic recommendation. | **Actionable SLAs, cold outreach hooks, and gap-filling discovery prompts**. |
+### Separation of Responsibilities
+* **Workers AI on Edge (`index.js`)**: Responsible for language understanding, extracting entity attributes, classifying evidence status (`VERIFIED`, `INFERRED`, `UNKNOWN`), generating sales discovery questions, and crafting cold outreach copy.
+* **Deterministic Scoring Engine (`engine/scorer.py`)**: Owns 100% of final score computation, weighted dimensional aggregation, tier assignment, and expected value calculation using authoritative weights from `engine/config.py`. AI cannot override final deterministic scores.
 
 ---
 
-## 📐 Mathematical Specification & Scoring Formulas
+## 🛡️ Failure Modes & Error Behavior
 
-### 1. ICP Fit Engine (0–100)
-$$\text{ICP Fit} = \sum_{i} w_i \times S_i$$
-* **Weights:** Firmographics ($0.25$), Vertical ($0.25$), Problem Fit ($0.20$), Technographics ($0.15$), Geo ($0.05$), Dynamic Similarity ($0.10$).
-* **Constraint:** $\sum w_i = 1.00$.
-
-### 2. Intent Engine (0–100)
-$$\text{Intent} = (0.30 \times \text{Search/RFP}) + (0.35 \times \text{Timeline}) + (0.20 \times \text{Expansion}) + (0.15 \times \text{Competitor})$$
-
-### 3. Readiness Engine (0–100)
-$$\text{Readiness} = (0.35 \times \text{Authority}) + (0.30 \times \text{Budget}) + (0.20 \times \text{Deployment}) + (0.15 \times \text{Procurement})$$
-
-### 4. Expected Net Value (EV)
-$$\text{Expected Net Value} = \left[ P(\text{Win}) \times \text{ARR} \times (1 + P(\text{Retention})) \right] - \left[ P(\text{Win}) \times \text{CAC} \right]$$
+1. **AI Failure → Explicit Visible Error with Request ID**:
+   - If Workers AI binding is missing (`HTTP 500`), inference fails (`HTTP 502`), or response is malformed (`HTTP 422`), the system returns `AccountAssessment` with `success=False`, error details, and a unique `request_id`.
+   - **Zero Fake Scores**: AI failure never generates fallback average scores (`75/70/70/75` or `50.0`). The UI clearly presents:
+     ```text
+     ❌ Unable to score this account.
+     AI evaluation failed: [Error Message]
+     Request ID: req_1725883800000_abc123
+     ```
+2. **Missing Data Handling (Zero `70` Fallbacks)**:
+   - Missing or unverified attributes receive `EvidenceStatus.UNKNOWN` with `confidence = 0.0`.
+   - Missing pillars contribute `0.0` points, reducing overall confidence instead of inflating scores.
+   - Targeted discovery questions are automatically generated so sales reps know what questions to ask.
 
 ---
 
-## 🚦 Priority Tiers & Next Best Action Matrix
+## 📐 Scoring Methodology & Authoritative Configuration
+
+All scoring weights, tier thresholds, and disqualifiers are centrally managed in `engine/config.py`.
+
+### 1. 4-Dimensional Core Engine (0–100)
+* **ICP Fit Score**: Firmographic Scale ($0.65$) + Technographic Sophistication ($0.35$).
+* **Intent & Timing Score**: Active Research, RFP, and Buying Urgency Signals.
+* **Readiness & Authority Score**: Decision-Maker Title, C-Suite Mandate, and Budget Authority.
+* **Value & Expansion Score**: Contract ARR Scale and Expansion Potential.
+
+### 2. Master ICP Score
+$$\text{Master ICP Score} = (0.35 \times \text{Fit}) + (0.25 \times \text{Intent}) + (0.20 \times \text{Readiness}) + (0.20 \times \text{Value})$$
+
+### 3. Business Priority Tiers & Action Matrix
 
 | Priority Tier | Fit Score | Intent Score | Sales SLA & Recommended Action |
 | :--- | :---: | :---: | :--- |
 | **Tier A1: Strategic Inbound** | $\ge 80$ | $\ge 70$ | **<2 hours** outreach by Senior AE & Research Director. Deliver bespoke proposal. |
-| **Tier A2: High Priority Outbound** | $\ge 75$ | $< 70$ | **<24 hours** SDR outbound cadence leading with tailored value wedge. |
-| **Tier B1: Mid-Market Fast Track** | $\ge 50$ | $\ge 50$ | Inside Sales demonstration and rapid qualification call. |
-| **Tier A3: Outbound Nurture** | $\ge 45$ | $< 50$ | Automated marketing webinar drip sequences and expansion trigger monitoring. |
-| **Tier C: Deprioritize** | $< 45$ | Any | Self-serve product documentation / marketing newsletter. |
-| **Disqualified / Anti-ICP** | N/A | N/A | Automated disqualification (Preserves SDR calling bandwidth). |
+| **Tier A2: High Priority Outbound** | $\ge 65$ | Any | **<24 hours** SDR strategic outbound sequence. |
+| **Tier B1: Mid-Market Fast Track** | $\ge 50$ | $\ge 50$ | Inside Sales rapid qualification call. |
+| **Tier A3: Outbound Nurture** | $\ge 40$ | $< 50$ | Automated marketing educational sequences and trigger tracking. |
+| **Tier C: Low Priority / Long-Tail** | $< 40$ | Any | Marketing newsletter and self-service documentation. |
+| **Disqualified / Anti-ICP** | N/A | N/A | Personal freemail, prohibited industry, or non-commercial inquiry. |
 
 ---
 
-## 🚀 Launching the Streamlit Application
+## 🧪 Automated Test Suite
+
+Run the full automated test suite using `pytest`:
+
+```bash
+pytest -v
+```
+
+### Verified Test Scenarios:
+1. `test_ai_failure_produces_no_score_and_visible_error`: Confirms AI failure returns structured error and zero fake scores.
+2. `test_missing_pillar_is_unknown_not_70`: Confirms missing data receives `UNKNOWN` status, 0 confidence, and no 70 default.
+3. `test_malformed_ai_response_validation`: Confirms invalid JSON from LLM is safely handled.
+4. `test_out_of_range_ai_scores_clamped`: Confirms scores outside 0-100 are strictly bounded.
+5. `test_ai_final_score_override_is_ignored`: Confirms deterministic engine calculates score regardless of LLM claim.
+6. `test_materially_different_companies_produce_different_scores`: Confirms Account A (Enterprise, Score $\ge 85$) > Account B (Mid-Market, Score $50-70$) > Account C (Disqualified, Score $0$).
+7. `test_account_d_unknown_data_low_confidence`: Confirms company-only accounts have low confidence and flagged unknowns.
+8. `test_configuration_consistency`: Confirms updating weights in `config.py` consistently alters score calculations.
+9. `test_disqualification_personal_email_and_prohibited_vertical`: Confirms personal emails (@gmail.com) and excluded industries are disqualified.
+10. `test_batch_processing_isolated_failures`: Confirms batch processing handles row-level failures safely without corrupting other rows.
+
+---
+
+## 🚀 Running the Streamlit Application
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
+
+### Environment Variables (Optional):
+* `CLOUDFLARE_WORKER_URL`: Cloudflare Worker endpoint URL (defaults to deployed worker).
+* `CLOUDFLARE_AUTH_SECRET`: Bearer token if Cloudflare Worker is protected with auth secret.
+
