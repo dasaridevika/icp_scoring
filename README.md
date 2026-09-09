@@ -73,36 +73,21 @@ $$\text{Master ICP Score} = (0.35 \times \text{Fit}) + (0.25 \times \text{Intent
 
 ---
 
-## 🧪 Automated Test Suite
+## 🚀 Running the Application
 
-Run the full automated test suite using `pytest`:
-
-```bash
-pytest -v
-```
-
-### Verified Test Scenarios:
-1. `test_ai_failure_produces_no_score_and_visible_error`: Confirms AI failure returns structured error and zero fake scores.
-2. `test_missing_pillar_is_unknown_not_70`: Confirms missing data receives `UNKNOWN` status, 0 confidence, and no 70 default.
-3. `test_malformed_ai_response_validation`: Confirms invalid JSON from LLM is safely handled.
-4. `test_out_of_range_ai_scores_clamped`: Confirms scores outside 0-100 are strictly bounded.
-5. `test_ai_final_score_override_is_ignored`: Confirms deterministic engine calculates score regardless of LLM claim.
-6. `test_materially_different_companies_produce_different_scores`: Confirms Account A (Enterprise, Score $\ge 85$) > Account B (Mid-Market, Score $50-70$) > Account C (Disqualified, Score $0$).
-7. `test_account_d_unknown_data_low_confidence`: Confirms company-only accounts have low confidence and flagged unknowns.
-8. `test_configuration_consistency`: Confirms updating weights in `config.py` consistently alters score calculations.
-9. `test_disqualification_personal_email_and_prohibited_vertical`: Confirms personal emails (@gmail.com) and excluded industries are disqualified.
-10. `test_batch_processing_isolated_failures`: Confirms batch processing handles row-level failures safely without corrupting other rows.
-
----
-
-## 🚀 Running the Streamlit Application
-
+### 1. Local Development
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### Environment Variables (Optional):
-* `CLOUDFLARE_WORKER_URL`: Cloudflare Worker endpoint URL (defaults to deployed worker).
-* `CLOUDFLARE_AUTH_SECRET`: Bearer token if Cloudflare Worker is protected with auth secret.
+### 2. Deploy Cloudflare Worker Edge Engine
+```bash
+npx wrangler deploy
+```
+
+### 3. Environment Variables & Streamlit Secrets (Optional):
+* `CLOUDFLARE_WORKER_URL`: Cloudflare Worker endpoint URL (defaults to deployed worker: `https://icp-scoring-worker-ai.devika-worker.workers.dev`).
+* `CLOUDFLARE_AUTH_SECRET`: Optional Bearer token if Cloudflare Worker is protected with auth secret.
+
 
