@@ -30,22 +30,19 @@ from engine.scorer import MasterScoringEngine
 from engine.extractor import ProspectExtractor
 
 
-def get_secret(key: str, default: str = "") -> str:
-    """Retrieve secret from Streamlit secrets or OS environment (case-flexible)."""
+def get_worker_url() -> str:
+    """Retrieve CLOUDFLARE_WORKER_URL strictly from Streamlit secrets or OS environment."""
     try:
         import streamlit as st
         if hasattr(st, "secrets"):
+            if "CLOUDFLARE_WORKER_URL" in st.secrets:
+                return str(st.secrets["CLOUDFLARE_WORKER_URL"]).strip().rstrip("/")
             for k, val in st.secrets.items():
-                if k.lower() == key.lower():
-                    clean_val = str(val).strip()
-                    if clean_val:
-                        return clean_val
+                if k.lower() == "cloudflare_worker_url":
+                    return str(val).strip().rstrip("/")
     except Exception:
         pass
-    for k, val in os.environ.items():
-        if k.lower() == key.lower():
-            return str(val).strip()
-    return os.environ.get(key, default).strip()
+    return os.environ.get("CLOUDFLARE_WORKER_URL", "").strip().rstrip("/")
 
 
 class WorkerAIClient:
@@ -55,14 +52,7 @@ class WorkerAIClient:
     """
 
     def __init__(self, worker_url: Optional[str] = None):
-        self.worker_url = (
-            worker_url or
-            get_secret("CLOUDFLARE_WORKER_URL") or
-            get_secret("WORKER_URL") or
-            get_secret("WORKER_AI_URL") or
-            ""
-        ).strip().rstrip("/")
-        self.auth_secret = get_secret("CLOUDFLARE_AUTH_SECRET") or get_secret("AUTH_SECRET") or ""
+        self.worker_url = (worker_url or get_worker_url()).strip().rstrip("/")
         self.timeout_sec = 25
 
     def is_connected(self) -> bool:
@@ -121,8 +111,6 @@ class WorkerAIClient:
             "Accept": "application/json",
             "X-Request-ID": req_id
         }
-        if self.auth_secret:
-            headers["Authorization"] = f"Bearer {self.auth_secret}"
 
         try:
             data_bytes = json.dumps(payload).encode("utf-8")
