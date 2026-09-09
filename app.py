@@ -163,10 +163,11 @@ if "live_worker_res" in st.session_state:
         title_disp = res.job_title or "Unspecified Role"
         industry_disp = res.industry or "Unspecified Industry"
         scale_disp = res.scale or "Unspecified Scale"
+        loc_disp = f" | Location: **{res.location}**" if res.location else ""
 
         with c_head1:
             st.markdown(f"## **{company_disp}** `{domain_disp}`")
-            st.caption(f"Contact: **{contact_disp}** — *{title_disp}* | Industry: **{industry_disp}** | Scale: **{scale_disp}** | Confidence: **{res.data_confidence_pct}%** | Trace: `{res.request_id}`")
+            st.caption(f"Contact: **{contact_disp}** — *{title_disp}* | Industry: **{industry_disp}**{loc_disp} | Scale: **{scale_disp}** | Confidence: **{res.data_confidence_pct}%** | Trace: `{res.request_id}`")
         with c_head2:
             badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier or "Dream" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier or "Strong" in res.priority_tier else "badge-b1"))
             st.markdown(f'<div style="text-align:right;"><span class="{badge_class}">{res.priority_tier}</span></div>', unsafe_allow_html=True)

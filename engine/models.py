@@ -144,6 +144,7 @@ class AccountInfo(BaseModel):
     contact_name: Optional[str] = None
     job_title: Optional[str] = None
     industry: Optional[str] = None
+    location: Optional[str] = None
     scale: Optional[str] = None
     tech_stack: Optional[str] = None
     intent_timeline: Optional[str] = None
@@ -242,6 +243,10 @@ class AccountAssessment(BaseModel):
     @property
     def industry(self) -> Optional[str]:
         return self.account.industry
+
+    @property
+    def location(self) -> Optional[str]:
+        return self.account.location
 
     @property
     def scale(self) -> Optional[str]:

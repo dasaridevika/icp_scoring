@@ -141,6 +141,7 @@ SCHEMA TO RETURN (Strict JSON only):
     "contact_name": "string or null",
     "job_title": "string or null",
     "industry": "string or null",
+    "location": "string (headquarters city, state, or country) or null",
     "scale": "string or null",
     "tech_stack": "string or null",
     "intent_timeline": "string or null"

@@ -67,6 +67,7 @@ class MasterScoringEngine:
         contact_name = account_data.get("contact_name")
         job_title = account_data.get("job_title")
         industry = account_data.get("industry")
+        location = account_data.get("location")
         scale = account_data.get("scale")
         tech_stack = account_data.get("tech_stack")
         intent_timeline = account_data.get("intent_timeline")
@@ -77,6 +78,7 @@ class MasterScoringEngine:
             contact_name=contact_name,
             job_title=job_title,
             industry=industry,
+            location=location,
             scale=scale,
             tech_stack=tech_stack,
             intent_timeline=intent_timeline
@@ -86,6 +88,7 @@ class MasterScoringEngine:
         eligibility: EligibilityResult = DisqualificationEngine.evaluate(
             email_or_domain=domain,
             industry=industry or "",
+            country_or_region=location or "",
             config=cfg
         )
         if is_disqualified and disqualification_reason:
