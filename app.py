@@ -122,7 +122,7 @@ col_in1, col_in2 = st.columns([3, 1])
 
 with col_in1:
     prospect_text = st.text_area(
-        "Paste Inbound Lead, Contact Form, RFP, or CRM Notes:",
+        "Paste Inbound Lead:",
         height=180,
         placeholder="Company: NextEra Clean Infrastructure\nIndustry: Renewable Energy & Utilities\nHeadcount: 1,400 employees | $450M ARR\nTech Stack: SAP, Salesforce, Azure, PowerBI\nContact: Arthur Pendelton (VP of Strategy & Corporate Development)\nInquiry: Requesting proposal for multi-GW asset risk analytics platform with Q2 deployment.",
         key="live_prospect_input"
