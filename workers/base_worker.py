@@ -27,7 +27,6 @@ from engine.models import (
 )
 from engine.config import active_config
 from engine.scorer import MasterScoringEngine
-from engine.extractor import ProspectExtractor
 
 
 def get_worker_url() -> str:
@@ -187,53 +186,4 @@ class WorkerAIClient:
                     error_message=f"Could not connect to Cloudflare Worker AI: {e}"
                 )
             )
-
-    @classmethod
-    def evaluate_locally(cls, prospect_text: str, deal_size_usd: float = 50000.0) -> AccountAssessment:
-        """
-        Pure deterministic offline qualification for tests and local fallback without remote AI.
-        """
-        req_id = f"req_local_{int(time.time() * 1000)}"
-        extracted = ProspectExtractor.extract_evidence(prospect_text)
-        
-        # Build evidence structure from local extractor
-        ev_fields = extracted.get("evidence_fields") or {}
-        
-        def to_pillar_dict(f_key: str):
-            f = ev_fields.get(f_key)
-            if not f or f.status == EvidenceStatus.UNKNOWN:
-                return {"score": None, "status": "UNKNOWN", "confidence": 0.0, "rationale": f.rationale if f else "", "evidence_points": [], "missing_points": [f_key]}
-            calc_score = round(f.confidence * 100.0, 1)
-            return {"score": calc_score, "status": f.status.value, "confidence": f.confidence, "rationale": f.rationale, "evidence_points": [str(f.raw_value)], "missing_points": []}
-
-        rev_field = ev_fields.get("annual_revenue")
-        evidence_dict = {
-            "firmographic": to_pillar_dict("company_name"),
-            "technographic": to_pillar_dict("technographics"),
-            "intent": to_pillar_dict("intent_signals"),
-            "readiness": to_pillar_dict("contact_authority"),
-            "value": {
-                "score": round((rev_field.confidence if rev_field else 0.5) * 100.0, 1),
-                "status": rev_field.status.value if rev_field else "UNKNOWN",
-                "confidence": rev_field.confidence if rev_field else 0.0,
-                "rationale": rev_field.rationale if rev_field else "Value proxy",
-                "evidence_points": [str(rev_field.raw_value)] if rev_field and rev_field.raw_value else [],
-                "missing_points": [] if rev_field and rev_field.raw_value else ["annual_revenue"]
-            }
-        }
-
-        return MasterScoringEngine.evaluate_assessment(
-            account_data={
-                "company_name": extracted.get("company_name"),
-                "domain": extracted.get("domain"),
-                "contact_name": extracted.get("contact_name"),
-                "job_title": extracted.get("job_title"),
-                "industry": extracted.get("industry")
-            },
-            evidence_data=evidence_dict,
-            deal_size_usd=deal_size_usd,
-            discovery_questions=extracted.get("discovery_questions") or [],
-            config=active_config,
-            request_id=req_id
-        )
 

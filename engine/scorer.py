@@ -33,7 +33,6 @@ from .models import (
 )
 from .config import EngineConfiguration, active_config
 from .disqualifier import DisqualificationEngine
-from .similarity import HistoricalSimilarityEngine
 from .calibration import global_calibrator
 
 
