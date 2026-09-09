@@ -177,12 +177,20 @@ if "live_worker_res" in st.session_state:
         st.markdown("#### ⚡ 4-Dimensional AI Intelligence Engines")
         k1, k2, k3, k4 = st.columns(4)
         
+        def format_snippet(text: str, max_len: int = 120) -> str:
+            if not text:
+                return "Evidence evaluated."
+            t = text.strip()
+            if len(t) <= max_len:
+                return t
+            return t[:max_len].rsplit(" ", 1)[0] + "..."
+
         with k1:
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">1. ICP FIT SCORE</div>
                 <div class="metric-value" style="color: #A78BFA;">{res.icp_fit_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
-                <div style="color: #94A3B8; font-size:0.75rem;">{res.icp_fit_rationale[:60]}...</div>
+                <div style="color: #94A3B8; font-size:0.75rem; line-height:1.3;">{format_snippet(res.icp_fit_rationale)}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -191,7 +199,7 @@ if "live_worker_res" in st.session_state:
             <div class="metric-card">
                 <div class="metric-label">2. INTENT & TIMING</div>
                 <div class="metric-value" style="color: #34D399;">{res.intent_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
-                <div style="color: #94A3B8; font-size:0.75rem;">{res.intent_rationale[:60]}...</div>
+                <div style="color: #94A3B8; font-size:0.75rem; line-height:1.3;">{format_snippet(res.intent_rationale)}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -200,7 +208,7 @@ if "live_worker_res" in st.session_state:
             <div class="metric-card">
                 <div class="metric-label">3. READINESS & AUTHORITY</div>
                 <div class="metric-value" style="color: #60A5FA;">{res.readiness_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
-                <div style="color: #94A3B8; font-size:0.75rem;">{res.readiness_rationale[:60]}...</div>
+                <div style="color: #94A3B8; font-size:0.75rem; line-height:1.3;">{format_snippet(res.readiness_rationale)}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -209,7 +217,7 @@ if "live_worker_res" in st.session_state:
             <div class="metric-card">
                 <div class="metric-label">4. ACCOUNT VALUE SCALE</div>
                 <div class="metric-value" style="color: #F472B6;">{res.value_score:.0f}<span style="font-size:1rem; color:#94A3B8;">/100</span></div>
-                <div style="color: #94A3B8; font-size:0.75rem;">Expansion: <b>{res.expansion_potential}</b></div>
+                <div style="color: #94A3B8; font-size:0.75rem; line-height:1.3;">Expansion: <b>{res.expansion_potential}</b></div>
             </div>
             """, unsafe_allow_html=True)
 
