@@ -86,8 +86,9 @@ streamlit run app.py
 npx wrangler deploy
 ```
 
-### 3. Environment Variables & Streamlit Secrets (Optional):
-* `CLOUDFLARE_WORKER_URL`: Cloudflare Worker endpoint URL (defaults to deployed worker: `https://icp-scoring-worker-ai.devika-worker.workers.dev`).
-* `CLOUDFLARE_AUTH_SECRET`: Optional Bearer token if Cloudflare Worker is protected with auth secret.
+### 3. Secrets & Environment Variables:
+Configure in Streamlit Cloud (`Settings > Secrets`) or environment variables:
+* `CLOUDFLARE_WORKER_URL`: Cloudflare Worker endpoint URL (e.g. `https://<your-worker>.<your-subdomain>.workers.dev`).
+* `CLOUDFLARE_AUTH_SECRET`: Optional Bearer auth token if Worker endpoint is protected.
 
 

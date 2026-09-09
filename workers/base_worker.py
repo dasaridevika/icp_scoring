@@ -30,9 +30,6 @@ from engine.scorer import MasterScoringEngine
 from engine.extractor import ProspectExtractor
 
 
-DEFAULT_WORKER_URL = "https://icp-scoring-worker-ai.devika-worker.workers.dev"
-
-
 def get_secret(key: str, default: str = "") -> str:
     """Retrieve secret from Streamlit secrets or OS environment."""
     try:
@@ -57,7 +54,8 @@ class WorkerAIClient:
             worker_url or
             get_secret("CLOUDFLARE_WORKER_URL") or
             get_secret("WORKER_AI_URL") or
-            DEFAULT_WORKER_URL
+            get_secret("WORKER_URL") or
+            ""
         ).strip().rstrip("/")
         self.auth_secret = (
             get_secret("CLOUDFLARE_AUTH_SECRET") or
