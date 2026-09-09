@@ -6,7 +6,10 @@ hard disqualifiers, and scoring thresholds.
 
 from typing import Dict, Any, List, Optional
 import os
-import yaml
+try:
+    import yaml
+except ImportError:
+    yaml = None
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -143,6 +146,8 @@ class EngineConfiguration(BaseModel):
             config = cls()
             config.validate_all_weights()
             return config
+        if yaml is None:
+            raise ImportError("PyYAML is required to load configuration from YAML files. Install pyyaml.")
         with open(yaml_path, "r", encoding="utf-8") as f:
             raw_data = yaml.safe_load(f) or {}
         config = cls(**raw_data)
