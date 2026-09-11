@@ -30,110 +30,210 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Ultra-High Contrast Theme-Safe CSS
+# Sleek Futuristic Design System & Robust High-Contrast Styling
 st.markdown("""
 <style>
-    /* Main container padding */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    html, body, [class*="css"], .stMarkdown, p, div, label {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+    
+    code, pre, .mono {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+
     .main .block-container {
         padding-top: 1.5rem;
-        padding-bottom: 3rem;
+        padding-bottom: 3.5rem;
         max-width: 1400px;
     }
 
-    /* Headings and Subheadings */
-    .main-title {
-        font-size: 2.2rem;
+    /* Page Header */
+    .hero-title {
+        font-size: 2.3rem;
         font-weight: 800;
-        letter-spacing: -0.5px;
-        color: #0F172A !important;
-        margin-bottom: 0.15rem;
+        letter-spacing: -0.8px;
+        background: linear-gradient(135deg, #1E1B4B 0%, #4F46E5 50%, #7C3AED 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.2rem;
     }
 
-    .main-subtitle {
+    .hero-subtitle {
+        color: #475569 !important;
         font-size: 0.98rem;
-        color: #334155 !important;
         font-weight: 500;
         margin-bottom: 1.2rem;
     }
 
-    /* Section Headings */
-    h1, h2, h3, h4, h5, h6 {
+    /* Form Section Headers */
+    .form-section-title {
+        font-size: 1.15rem;
+        font-weight: 700;
         color: #0F172A !important;
-        font-weight: 700 !important;
+        border-left: 4px solid #4F46E5;
+        padding-left: 10px;
+        margin-top: 8px;
+        margin-bottom: 14px;
     }
 
-    /* All markdown paragraphs and labels */
-    div[data-testid="stMarkdownContainer"] p, 
-    div[data-testid="stMarkdownContainer"] span,
-    div[data-testid="stMarkdownContainer"] div,
-    label,
-    div[data-baseweb="tab-list"] button {
-        color: #0F172A !important;
-        font-weight: 500;
+    /* Status Bar Card */
+    .status-bar-box {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 12px 18px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: 16px;
     }
 
-    /* High-contrast Badges */
-    .badge-tier-a1 {
-        background-color: #059669;
+    /* Sleek Output Cards */
+    .master-score-card {
+        background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 60%, #311042 100%);
+        border: 1px solid rgba(167, 139, 250, 0.35);
+        border-radius: 16px;
+        padding: 24px 28px;
+        color: #FFFFFF !important;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.4), 0 8px 10px -6px rgba(15, 23, 42, 0.4);
+        margin-bottom: 20px;
+    }
+
+    .ai-feature-card {
+        background: linear-gradient(145deg, #0F172A 0%, #1E1B4B 100%);
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        border-radius: 14px;
+        padding: 18px;
+        color: #F8FAFC !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .ai-feature-card:hover {
+        border-color: rgba(167, 139, 250, 0.6);
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.25);
+    }
+
+    .metric-pillar-card {
+        background: linear-gradient(145deg, #0F172A 0%, #1A2238 100%);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        padding: 18px;
+        color: #FFFFFF !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.18);
+    }
+
+    .action-routing-card {
+        background: linear-gradient(135deg, #1E1B4B 0%, #2E1065 50%, #4C0519 100%);
+        border: 1px solid rgba(244, 114, 182, 0.4);
+        border-radius: 16px;
+        padding: 22px 26px;
+        color: #FFFFFF !important;
+        box-shadow: 0 8px 24px rgba(236, 72, 153, 0.18);
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+
+    .intel-driver-card {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Badges */
+    .badge-a1 {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
         color: #FFFFFF !important;
         padding: 8px 18px;
         border-radius: 24px;
         font-weight: 800;
         font-size: 0.95rem;
         display: inline-block;
-        box-shadow: 0 2px 4px rgba(5, 150, 105, 0.25);
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
     }
 
-    .badge-tier-a2 {
-        background-color: #2563EB;
+    .badge-a2 {
+        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
         color: #FFFFFF !important;
         padding: 8px 18px;
         border-radius: 24px;
         font-weight: 800;
         font-size: 0.95rem;
         display: inline-block;
-        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
     }
 
-    .badge-tier-b1 {
-        background-color: #D97706;
+    .badge-b1 {
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
         color: #FFFFFF !important;
         padding: 8px 18px;
         border-radius: 24px;
         font-weight: 800;
         font-size: 0.95rem;
         display: inline-block;
-        box-shadow: 0 2px 4px rgba(217, 119, 6, 0.25);
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
     }
 
     .badge-disq {
-        background-color: #DC2626;
+        background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
         color: #FFFFFF !important;
         padding: 8px 18px;
         border-radius: 24px;
         font-weight: 800;
         font-size: 0.95rem;
         display: inline-block;
-        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25);
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
     }
 
     .ai-pill-tag {
         background-color: #EEF2FF;
         color: #4338CA !important;
         border: 1px solid #C7D2FE;
-        padding: 6px 14px;
+        padding: 5px 12px;
         border-radius: 20px;
-        font-size: 0.85rem;
+        font-size: 0.82rem;
         font-weight: 700;
         display: inline-block;
     }
 
-    /* Container Card Enhancements */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    .tag-chip {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: 6px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        margin-top: 4px;
+    }
+
+    .tag-purple {
+        background: rgba(167, 139, 250, 0.2);
+        color: #C4B5FD !important;
+        border: 1px solid rgba(167, 139, 250, 0.4);
+    }
+
+    .tag-cyan {
+        background: rgba(56, 189, 248, 0.2);
+        color: #7DD3FC !important;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .tag-emerald {
+        background: rgba(52, 211, 153, 0.2);
+        color: #6EE7B7 !important;
+        border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+
+    .tag-amber {
+        background: rgba(251, 191, 36, 0.2);
+        color: #FDE68A !important;
+        border: 1px solid rgba(251, 191, 36, 0.4);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -145,8 +245,8 @@ if "company_config" not in st.session_state:
 cfg: CompanyStandardsConfig = st.session_state["company_config"]
 
 # Header
-st.markdown('<div class="main-title">⚡ Enterprise ICP Revenue Intelligence Studio</div>', unsafe_allow_html=True)
-st.markdown('<div class="main-subtitle">AI Semantic Text Field Analysis • Dynamic Settings Thresholds • Deterministic GTM Scoring</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-title">⚡ Enterprise ICP Revenue Intelligence Studio</div>', unsafe_allow_html=True)
+st.markdown('<div class="hero-subtitle">AI Semantic Text Field Analysis • Dynamic Settings Thresholds • Deterministic GTM Scoring Engine</div>', unsafe_allow_html=True)
 
 # Master Tabs
 tab_form, tab_settings = st.tabs(["📋 Lead Qualification Studio", "⚙️ Company ICP Standards & Thresholds"])
@@ -172,7 +272,7 @@ with tab_form:
         col_f1, col_f2 = st.columns(2, gap="large")
 
         with col_f1:
-            st.markdown("### 🏢 1. Company Scale & Vertical Profile")
+            st.markdown('<div class="form-section-title">🏢 1. Company Scale & Vertical Profile</div>', unsafe_allow_html=True)
             f_company = st.text_input("1. Company Name", value=st.session_state.get("f_company", ""), placeholder="e.g. Acme Corporation")
             f_loc = st.text_input("2. Location / Territory", value=st.session_state.get("f_loc", ""), placeholder="e.g. United States, United Kingdom, UAE")
 
@@ -191,7 +291,7 @@ with tab_form:
                 f_hc = st.number_input("Employee Headcount", min_value=1, max_value=500000, value=int(st.session_state.get("f_hc", 50)), step=25)
 
         with col_f2:
-            st.markdown("### 👤 2. Contact Authority, Intent & Tech Stack")
+            st.markdown('<div class="form-section-title">👤 2. Contact Authority, Intent & Tech Stack</div>', unsafe_allow_html=True)
             c_ct1, c_ct2 = st.columns(2)
             with c_ct1:
                 f_name = st.text_input("5. Contact Name", value=st.session_state.get("f_name", ""), placeholder="e.g. Jane Doe")
@@ -270,102 +370,194 @@ with tab_form:
 
     st.markdown("---")
 
-    # Display Results / Framework Ready State
+    # ==============================================================================
+    # OUTPUT: SLEEK CARD DESIGN
+    # ==============================================================================
     if "streamlined_res" in st.session_state:
         res: StreamlinedScoringResult = st.session_state["streamlined_res"]
 
-        # Header Badge & Master Score Bar
-        c_res1, c_res2 = st.columns([3, 1])
-        with c_res1:
-            st.markdown(f"## **{res.company_name or 'Unspecified Account'}**")
-            st.markdown(f"Standards: **{cfg.company_name}** &nbsp;•&nbsp; Master ICP Fit: **{res.master_icp_score:.1f}/100** &nbsp;•&nbsp; SLA: **{res.urgency_sla}**")
-        with c_res2:
-            badge_class = "badge-disq" if res.is_disqualified else ("badge-tier-a1" if "A1" in res.priority_tier else ("badge-tier-a2" if "A2" in res.priority_tier else "badge-tier-b1"))
-            st.markdown(f'<div style="text-align:right; margin-top:8px;"><span class="{badge_class}">{res.priority_tier}</span></div>', unsafe_allow_html=True)
+        badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier else "badge-b1"))
+        fit_color = "#EF4444" if res.is_disqualified else ("#10B981" if res.master_icp_score >= 70 else ("#3B82F6" if res.master_icp_score >= 55 else "#F59E0B"))
+
+        # 1. Master Score Obsidian Banner
+        st.markdown(f"""
+        <div class="master-score-card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+                <div>
+                    <div style="font-size:0.80rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
+                        GTM Revenue Intelligence Report &bull; {cfg.company_name}
+                    </div>
+                    <div style="font-size:1.9rem; font-weight:800; color:#FFFFFF; letter-spacing:-0.5px; margin-bottom:6px;">
+                        {res.company_name or 'Unspecified Account'}
+                    </div>
+                    <div style="display:flex; align-items:center; gap:18px; font-size:0.92rem; color:#CBD5E1;">
+                        <span>Industry: <strong style="color:#FFFFFF;">{res.lead_summary.get('industry', 'N/A')}</strong></span>
+                        <span>&bull;</span>
+                        <span>Location: <strong style="color:#FFFFFF;">{res.lead_summary.get('location', 'Global')}</strong></span>
+                        <span>&bull;</span>
+                        <span>SLA: <strong style="color:#38BDF8;">{res.urgency_sla}</strong></span>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:0.78rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">
+                        Master ICP Score
+                    </div>
+                    <div style="font-size:2.8rem; font-weight:800; color:{fit_color}; line-height:1; letter-spacing:-1px; margin-bottom:8px;">
+                        {res.master_icp_score:.1f}<span style="font-size:1.2rem; color:#94A3B8; font-weight:500;">/100</span>
+                    </div>
+                    <div>
+                        <span class="{badge_class}">{res.priority_tier}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         if res.is_disqualified:
             st.error(f"❌ **Hard Disqualification Detected**: {res.disqualification_reason}")
 
-        # 🤖 AI Semantic Text Intelligence Panel
-        st.markdown("### 🤖 AI Semantic Text Field Intelligence")
-        ai_c1, ai_c2, ai_c3, ai_c4 = st.columns(4)
+        # 2. 🤖 AI Semantic Text Intelligence Grid
+        st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>🤖 AI Semantic Text Field Intelligence</h4>", unsafe_allow_html=True)
+        ai_col1, ai_col2, ai_col3, ai_col4 = st.columns(4)
 
-        with ai_c1:
-            with st.container(border=True):
-                st.markdown("#### 👤 Role & Persona")
-                if res.ai_role:
-                    st.markdown(f"**{res.ai_role.raw_title}**")
-                    st.markdown(f"Level: **{res.ai_role.seniority_level}**")
-                    st.markdown(f"Persona: **{res.ai_role.persona_type}**")
-                    st.caption(f"Dept: {res.ai_role.department}")
-                    st.caption(f"_{res.ai_role.rationale}_")
+        with ai_col1:
+            st.markdown(f"""
+            <div class="ai-feature-card">
+                <div>
+                    <div style="font-size:0.75rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:0.8px;">
+                        👤 Role & Authority
+                    </div>
+                    <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:4px; line-height:1.3;">
+                        {res.ai_role.raw_title if res.ai_role else 'Unspecified Role'}
+                    </div>
+                    <div style="margin-top:8px;">
+                        <span class="tag-chip tag-purple">{res.ai_role.seniority_level if res.ai_role else 'Standard'}</span>
+                        <span class="tag-chip tag-cyan">{res.ai_role.persona_type if res.ai_role else 'End User'}</span>
+                    </div>
+                </div>
+                <div style="margin-top:14px; font-size:0.80rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                    <div style="color:#94A3B8; font-size:0.75rem;">Dept: <strong style="color:#E2E8F0;">{res.ai_role.department if res.ai_role else 'General'}</strong></div>
+                    <div style="font-style:italic; margin-top:4px; color:#A78BFA;">"{res.ai_role.rationale if res.ai_role else ''}"</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        with ai_c2:
-            with st.container(border=True):
-                st.markdown("#### 🏢 Vertical Niche")
-                if res.ai_niche:
-                    st.markdown(f"**{res.ai_niche.raw_niche}**")
-                    st.markdown(f"Market: **{res.ai_niche.market_complexity}**")
-                    st.caption(f"_{res.ai_niche.rationale}_")
+        with ai_col2:
+            st.markdown(f"""
+            <div class="ai-feature-card">
+                <div>
+                    <div style="font-size:0.75rem; font-weight:700; color:#38BDF8; text-transform:uppercase; letter-spacing:0.8px;">
+                        🏢 Vertical & Niche
+                    </div>
+                    <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:4px; line-height:1.3;">
+                        {res.ai_niche.raw_niche if res.ai_niche else 'Standard Market'}
+                    </div>
+                    <div style="margin-top:8px;">
+                        <span class="tag-chip tag-cyan">{res.ai_niche.market_complexity if res.ai_niche else 'Established'}</span>
+                    </div>
+                </div>
+                <div style="margin-top:14px; font-size:0.80rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                    <div style="font-style:italic; color:#7DD3FC;">"{res.ai_niche.rationale if res.ai_niche else ''}"</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        with ai_c3:
-            with st.container(border=True):
-                st.markdown("#### ⚡ Intent & Timeline")
-                if res.ai_intent:
-                    st.markdown(f"**{res.ai_intent.raw_intent or 'Standard Inquiry'}**")
-                    st.markdown(f"Urgency: **{res.ai_intent.urgency_tier}**")
-                    st.caption(f"Timeline: **{res.ai_intent.timeline_detected or 'Unspecified'}**")
-                    st.caption(f"_{res.ai_intent.rationale}_")
+        with ai_col3:
+            st.markdown(f"""
+            <div class="ai-feature-card">
+                <div>
+                    <div style="font-size:0.75rem; font-weight:700; color:#FBBF24; text-transform:uppercase; letter-spacing:0.8px;">
+                        ⚡ Intent & Timeline
+                    </div>
+                    <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:4px; line-height:1.3;">
+                        {res.ai_intent.raw_intent if res.ai_intent else 'Standard Lead'}
+                    </div>
+                    <div style="margin-top:8px;">
+                        <span class="tag-chip tag-amber">{res.ai_intent.urgency_tier if res.ai_intent else 'Moderate'}</span>
+                    </div>
+                </div>
+                <div style="margin-top:14px; font-size:0.80rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                    <div style="color:#94A3B8; font-size:0.75rem;">Timeline: <strong style="color:#FDE68A;">{res.ai_intent.timeline_detected or 'Unspecified'}</strong></div>
+                    <div style="font-style:italic; margin-top:4px; color:#FBBF24;">"{res.ai_intent.rationale if res.ai_intent else ''}"</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        with ai_c4:
-            with st.container(border=True):
-                st.markdown("#### 💻 Tech Ecosystem")
-                if res.ai_tech:
-                    st.markdown(f"**{res.ai_tech.raw_stack}**")
-                    st.markdown(f"Fit: **{res.ai_tech.ecosystem_fit}**")
-                    st.caption(f"_{res.ai_tech.rationale}_")
+        with ai_col4:
+            st.markdown(f"""
+            <div class="ai-feature-card">
+                <div>
+                    <div style="font-size:0.75rem; font-weight:700; color:#34D399; text-transform:uppercase; letter-spacing:0.8px;">
+                        💻 Tech Stack Synergy
+                    </div>
+                    <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:4px; line-height:1.3;">
+                        {res.ai_tech.raw_stack if res.ai_tech else 'Standard Stack'}
+                    </div>
+                    <div style="margin-top:8px;">
+                        <span class="tag-chip tag-emerald">{res.ai_tech.ecosystem_fit if res.ai_tech else 'Standard'}</span>
+                    </div>
+                </div>
+                <div style="margin-top:14px; font-size:0.80rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                    <div style="font-style:italic; color:#6EE7B7;">"{res.ai_tech.rationale if res.ai_tech else ''}"</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        # 4 Core Pillar Score KPI Cards
-        st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-        st.markdown("### ⚡ 4-Dimensional Revenue Intelligence Scores")
-        k1, k2, k3, k4 = st.columns(4)
+        # 3. ⚡ 4-Dimensional Revenue Intelligence Score Cards
+        st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>⚡ 4-Dimensional Revenue Intelligence Scores</h4>", unsafe_allow_html=True)
+        p1, p2, p3, p4 = st.columns(4)
 
-        with k1:
-            st.metric(
-                label=f"1. FIRMOGRAPHIC SCALE ({cfg.weight_firmographics*100:.0f}%)",
-                value=f"{res.pillar_firmographics.score:.0f} / 100",
-                delta=f"{res.pillar_firmographics.score - 50:+.0f} pts vs base"
-            )
+        pillars = [
+            (p1, "1. FIRMOGRAPHIC SCALE", res.pillar_firmographics, cfg.weight_firmographics, "#38BDF8"),
+            (p2, "2. DECISION AUTHORITY", res.pillar_authority, cfg.weight_authority, "#A78BFA"),
+            (p3, "3. BUYING INTENT", res.pillar_intent, cfg.weight_intent, "#FBBF24"),
+            (p4, "4. CONTRACT VALUE", res.pillar_value, cfg.weight_value, "#34D399")
+        ]
 
-        with k2:
-            st.metric(
-                label=f"2. DECISION AUTHORITY ({cfg.weight_authority*100:.0f}%)",
-                value=f"{res.pillar_authority.score:.0f} / 100",
-                delta=f"{res.pillar_authority.score - 50:+.0f} pts vs base"
-            )
+        for col, title, p_res, weight, col_accent in pillars:
+            with col:
+                diff = p_res.score - 50.0
+                diff_str = f"+{diff:.0f} pts" if diff >= 0 else f"{diff:.0f} pts"
+                st.markdown(f"""
+                <div class="metric-pillar-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:0.72rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.6px;">
+                            {title}
+                        </div>
+                        <div style="font-size:0.72rem; font-weight:700; color:{col_accent};">
+                            {weight*100:.0f}% Weight
+                        </div>
+                    </div>
+                    <div style="font-size:2.1rem; font-weight:800; color:#FFFFFF; margin:8px 0; letter-spacing:-0.5px;">
+                        {p_res.score:.0f} <span style="font-size:1.0rem; font-weight:500; color:#94A3B8;">/100</span>
+                    </div>
+                    <div style="font-size:0.80rem; font-weight:600; color:{col_accent};">
+                        {diff_str} vs baseline
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-        with k3:
-            st.metric(
-                label=f"3. BUYING INTENT ({cfg.weight_intent*100:.0f}%)",
-                value=f"{res.pillar_intent.score:.0f} / 100",
-                delta=f"{res.pillar_intent.score - 50:+.0f} pts vs base"
-            )
+        # 4. 🎯 Next Best Action & Routing Card
+        st.markdown(f"""
+        <div class="action-routing-card">
+            <div style="font-size:0.78rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
+                🎯 Strategic Next Best Action & Routing &bull; SLA: {res.urgency_sla}
+            </div>
+            <div style="font-size:1.25rem; font-weight:700; color:#FFFFFF; margin-bottom:10px;">
+                Channel: <span style="color:#FDE68A;">{res.recommended_channel}</span>
+            </div>
+            <div style="font-size:0.92rem; color:#F1F5F9; line-height:1.5; margin-bottom:12px;">
+                <strong>Strategic Value Wedge:</strong> {res.value_wedge}
+            </div>
+            <div style="background:rgba(0,0,0,0.3); border-left:4px solid #F472B6; padding:12px 16px; border-radius:8px;">
+                <div style="font-size:0.76rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:0.5px;">🔥 Recommended 1-Sentence Outreach Hook:</div>
+                <div style="font-size:0.92rem; color:#FFFFFF; font-style:italic; margin-top:4px;">"{res.outreach_hook}"</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        with k4:
-            st.metric(
-                label=f"4. CONTRACT VALUE ({cfg.weight_value*100:.0f}%)",
-                value=f"{res.pillar_value.score:.0f} / 100",
-                delta=f"{res.pillar_value.score - 50:+.0f} pts vs base"
-            )
-
-        # Action Box
-        with st.container(border=True):
-            st.markdown(f"#### 🎯 Next Best Action & Routing (SLA: `{res.urgency_sla}`)")
-            st.markdown(f"**Recommended Channel:** {res.recommended_channel}")
-            st.markdown(f"**Strategic Value Wedge:** {res.value_wedge}")
-            st.info(f"🔥 **1-Sentence Sales Opener:** \"{res.outreach_hook}\"")
-
-        # Strengths vs Risks
+        # 5. Strengths vs Risks
         c_why, c_risk = st.columns(2)
         with c_why:
             with st.container(border=True):
@@ -384,7 +576,7 @@ with tab_form:
                 else:
                     st.success("Zero critical risks detected.")
 
-        # Full Explainable Point Receipt
+        # 6. Explainable Point Audit Receipt
         with st.expander("🧾 View Full Score Audit Receipt (Explainable Point Breakdown)", expanded=False):
             all_summaries = [
                 res.pillar_firmographics,
@@ -405,11 +597,11 @@ with tab_form:
                     })
                 st.table(receipt_data)
 
-        # Discovery Questions
+        # 7. Discovery Prompts
         if res.discovery_questions:
             with st.expander("❓ Sales Discovery Prompts (Targeted Questions for SDRs)", expanded=False):
                 for q in res.discovery_questions:
-                    st.markdown(f"• **Discovery Question:** *{q}*")
+                    st.markdown(f"• **Discovery Prompt:** *{q}*")
     else:
         # Framework Ready State
         st.markdown("### ⚡ System Readiness & Active ICP Framework")
