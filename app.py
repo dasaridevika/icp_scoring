@@ -149,60 +149,42 @@ with tab_form:
         col_f1, col_f2 = st.columns(2)
 
         with col_f1:
-            st.markdown('<div class="section-header">🏢 Company & Scale Profile</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">🏢 Company Scale & Niche Profile</div>', unsafe_allow_html=True)
             f_company = st.text_input("1. Company Name", value="", placeholder="e.g. Acme Corporation")
             f_loc = st.text_input("2. Location / Territory", value="", placeholder="e.g. United States, United Kingdom, UAE")
 
             c_ind1, c_ind2 = st.columns(2)
             with c_ind1:
-                f_ind = st.selectbox("3. Industry Macro-Sector", options=MASTER_INDUSTRY_SECTORS, index=0)
+                f_ind = st.selectbox("3. Macro Industry Sector", options=MASTER_INDUSTRY_SECTORS, index=0)
             with c_ind2:
-                f_subv = st.text_input("Sub-Vertical / Niche", value="", placeholder="e.g. Enterprise Cloud Infrastructure")
+                f_subv = st.text_input("Sub-Vertical / Niche (AI Analyzed)", value="", placeholder="e.g. Solar Energy Farm Infrastructure")
 
             c_sc1, c_sc2 = st.columns(2)
             with c_sc1:
-                f_rev = st.number_input("4. Annual Revenue ($ USD)", min_value=0.0, max_value=1000000000.0, value=0.0, step=500000.0)
+                f_rev = st.number_input("4. Annual Revenue ($ USD) [Settings Thresholds]", min_value=0.0, max_value=1000000000.0, value=0.0, step=500000.0)
             with c_sc2:
-                f_hc = st.number_input("Employee Headcount", min_value=1, max_value=500000, value=50, step=25)
+                f_hc = st.number_input("Employee Headcount [Settings Thresholds]", min_value=1, max_value=500000, value=50, step=25)
 
         with col_f2:
-            st.markdown('<div class="section-header">👤 Contact Authority & Buying Intent</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-header">👤 Contact Authority, Intent & Tech Stack</div>', unsafe_allow_html=True)
             c_ct1, c_ct2 = st.columns(2)
             with c_ct1:
                 f_name = st.text_input("5. Contact Name", value="", placeholder="e.g. Jane Doe")
             with c_ct2:
                 f_email = st.text_input("Work Email", value="", placeholder="e.g. jane@company.com")
 
-            c_ro1, c_ro2 = st.columns(2)
-            with c_ro1:
-                f_role = st.text_input("Role Title", value="", placeholder="e.g. VP of Operations")
-            with c_ro2:
-                sen_opts = [
-                    "C-Suite / Founder (+5)",
-                    "VP / Head of (+5)",
-                    "Director (+3)",
-                    "Manager (+1)",
-                    "Individual Contributor (+1)",
-                    "Student / Intern (-5)"
-                ]
-                f_sen = st.selectbox("Seniority Level", options=sen_opts, index=1)
+            f_role = st.text_input("6. Role Title (AI Auto-Classifies Seniority, Persona & Dept)", value="", placeholder="e.g. VP of Global Supply Chain, Principal DevOps Architect, Intern")
 
             c_in1, c_in2 = st.columns(2)
             with c_in1:
-                intent_opts = [
-                    "Executive Callback / Demo Scheduled (+5)",
-                    "Inbound RFP Submitted (+5)",
-                    "Active Pricing Inquiry (+3)",
-                    "General Browsing (+1)"
-                ]
-                f_intent = st.selectbox("6. Buying Intent Signal", options=intent_opts, index=0)
+                f_intent = st.text_input("Buying Intent & Notes (AI Urgency Signal)", value="", placeholder="e.g. Need pricing for 50 seats before Q4 renewal")
             with c_in2:
-                f_deal = st.number_input("Target Deal Size ($ USD)", min_value=0.0, max_value=5000000.0, value=0.0, step=5000.0)
+                f_deal = st.number_input("Target Deal Size ($ USD) [Settings]", min_value=0.0, max_value=5000000.0, value=0.0, step=5000.0)
 
-            f_tech = st.text_input("Current Tech Stack / Tools (Optional)", value="", placeholder="e.g. SAP, AWS, Salesforce")
+            f_tech = st.text_input("Tech Stack & Tooling Notes (AI Ecosystem Analysis)", value="", placeholder="e.g. SAP S/4HANA, AWS, Snowflake, Salesforce")
 
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-        calc_btn = st.form_submit_button("🚀 Qualify Lead Instantly", type="primary", use_container_width=True)
+        calc_btn = st.form_submit_button("🚀 Run AI Analysis & Score Lead", type="primary", use_container_width=True)
 
     # Process Form
     if calc_btn:
@@ -219,8 +201,7 @@ with tab_form:
                 contact_name=f_name.strip(),
                 contact_email=f_email.strip(),
                 contact_role_title=f_role.strip(),
-                contact_seniority=f_sen,
-                buying_intent=f_intent,
+                buying_intent=f_intent.strip(),
                 target_deal_size_usd=f_deal,
                 tech_stack_notes=f_tech.strip()
             )
@@ -243,6 +224,68 @@ with tab_form:
             st.markdown(f'<div style="text-align:right;"><span class="{badge_class}">{res.priority_tier}</span></div>', unsafe_allow_html=True)
             if res.is_disqualified:
                 st.error(f"Disqualification: {res.disqualification_reason}")
+
+        # 🤖 AI Text Field Intelligence Insights Panel
+        st.markdown("#### 🤖 AI Text Field Intelligence (Natural Language Analysis)")
+        ai_c1, ai_c2 = st.columns(2)
+
+        with ai_c1:
+            if res.ai_role:
+                persona_badge_color = "#10B981" if res.ai_role.seniority_points >= 5 else ("#3B82F6" if res.ai_role.seniority_points >= 3 else "#F59E0B")
+                st.markdown(f"""
+                <div class="metric-card" style="margin-bottom: 12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="metric-label">👤 Role & Persona AI Analysis</span>
+                        <span style="background:{persona_badge_color}; color:white; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px;">{res.ai_role.seniority_level}</span>
+                    </div>
+                    <div style="font-size:1.05rem; font-weight:700; color:#F8FAFC; margin-top:6px;">{res.ai_role.raw_title}</div>
+                    <div style="font-size:0.82rem; color:#A78BFA; margin-top:2px;"><b>Persona:</b> {res.ai_role.persona_type} &nbsp;•&nbsp; <b>Dept:</b> {res.ai_role.department}</div>
+                    <div style="font-size:0.78rem; color:#94A3B8; margin-top:6px; font-style:italic;">"{res.ai_role.rationale}"</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            if res.ai_niche:
+                niche_color = "#10B981" if res.ai_niche.fit_points == 5 else "#3B82F6"
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="metric-label">🏢 Sub-Vertical / Niche AI Analysis</span>
+                        <span style="background:{niche_color}; color:white; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px;">{res.ai_niche.market_complexity}</span>
+                    </div>
+                    <div style="font-size:1.05rem; font-weight:700; color:#F8FAFC; margin-top:6px;">{res.ai_niche.raw_niche}</div>
+                    <div style="font-size:0.78rem; color:#94A3B8; margin-top:6px; font-style:italic;">"{res.ai_niche.rationale}"</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        with ai_c2:
+            if res.ai_intent:
+                intent_color = "#10B981" if res.ai_intent.intent_points >= 5 else ("#3B82F6" if res.ai_intent.intent_points >= 3 else "#F59E0B")
+                st.markdown(f"""
+                <div class="metric-card" style="margin-bottom: 12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="metric-label">⚡ Buying Intent & Timeline AI Analysis</span>
+                        <span style="background:{intent_color}; color:white; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px;">{res.ai_intent.urgency_tier}</span>
+                    </div>
+                    <div style="font-size:0.95rem; font-weight:700; color:#F8FAFC; margin-top:6px;">{res.ai_intent.raw_intent or 'Standard Inquiry'}</div>
+                    <div style="font-size:0.82rem; color:#38BDF8; margin-top:2px;"><b>Timeline Signal:</b> {res.ai_intent.timeline_detected or 'Unspecified / Exploratory'}</div>
+                    <div style="font-size:0.78rem; color:#94A3B8; margin-top:6px; font-style:italic;">"{res.ai_intent.rationale}"</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            if res.ai_tech:
+                tech_color = "#10B981" if res.ai_tech.tech_points >= 5 else ("#EF4444" if res.ai_tech.tech_points < 0 else "#3B82F6")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="metric-label">💻 Tech Stack Ecosystem AI Analysis</span>
+                        <span style="background:{tech_color}; color:white; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px;">{res.ai_tech.ecosystem_fit}</span>
+                    </div>
+                    <div style="font-size:0.95rem; font-weight:700; color:#F8FAFC; margin-top:6px;">{res.ai_tech.raw_stack}</div>
+                    <div style="font-size:0.78rem; color:#94A3B8; margin-top:6px; font-style:italic;">"{res.ai_tech.rationale}"</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
 
         # 4 Core Pillar Score KPI Cards
         st.markdown("#### ⚡ 4-Dimensional Revenue Intelligence Scores")
