@@ -40,6 +40,87 @@ function clampScore(val) {
   return Math.max(0, Math.min(100, Number(val)));
 }
 
+// Live Web & SerpAPI Enrichment Helper
+async function searchWebIntelligence(prospectText, env) {
+  let webData = "";
+
+  // 1. Extract domain or company keywords for search query
+  const domainMatch = prospectText.match(/(?:https?:\/\/)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?)/i);
+  const emailMatch = prospectText.match(/@([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/i);
+  const companyMatch = prospectText.match(/Company[:\s]+([^\n\r,]+)/i);
+
+  const rawDomain = (domainMatch ? domainMatch[1] : (emailMatch ? emailMatch[1] : "")).toLowerCase();
+  const domain = (rawDomain.includes("gmail") || rawDomain.includes("yahoo") || rawDomain.includes("hotmail") || rawDomain.includes("outlook")) ? "" : rawDomain;
+  const company = companyMatch ? companyMatch[1].trim() : "";
+
+  const querySubject = company || domain;
+  if (!querySubject) return "";
+
+  // 2. SerpAPI Integration (if SERPAPI_API_KEY is configured in env / secrets)
+  const serpApiKey = env.SERPAPI_API_KEY || env.SERP_API_KEY;
+  if (serpApiKey) {
+    try {
+      const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(querySubject + " company overview headcount revenue industry")}&api_key=${serpApiKey}&num=3`;
+      const serpRes = await fetch(serpUrl, { cf: { cacheTtl: 86400 } });
+      if (serpRes.ok) {
+        const serpData = await serpRes.json();
+        const organic = serpData.organic_results || [];
+        const snippets = organic.slice(0, 3).map(r => `• ${r.title}: ${r.snippet || ""}`).join("\n");
+        if (snippets) {
+          webData += `\n[SerpAPI Live Web Search for "${querySubject}"]:\n${snippets}`;
+        }
+      }
+    } catch (serpErr) {
+      console.warn("SerpAPI search warning:", serpErr);
+    }
+  }
+
+  // 3. Serper.dev Integration (if SERPER_API_KEY is configured in env / secrets)
+  const serperKey = env.SERPER_API_KEY;
+  if (!webData && serperKey) {
+    try {
+      const serperRes = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q: `${querySubject} company overview headcount revenue industry`, num: 3 }),
+        cf: { cacheTtl: 86400 }
+      });
+      if (serperRes.ok) {
+        const serperData = await serperRes.json();
+        const organic = serperData.organic || [];
+        const snippets = organic.slice(0, 3).map(r => `• ${r.title}: ${r.snippet || ""}`).join("\n");
+        if (snippets) {
+          webData += `\n[Serper Live Web Search for "${querySubject}"]:\n${snippets}`;
+        }
+      }
+    } catch (serperErr) {
+      console.warn("Serper search warning:", serperErr);
+    }
+  }
+
+  // 4. Direct Homepage Scraping (Free & Fast fallback if domain found)
+  if (!webData && domain && !domain.includes("blackridgeresearch.com")) {
+    try {
+      const siteRes = await fetch(`https://${domain}`, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+        cf: { cacheTtl: 86400 }
+      });
+      if (siteRes.ok) {
+        const html = await siteRes.text();
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        const metaDescMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
+        const title = titleMatch ? titleMatch[1].trim() : "";
+        const desc = metaDescMatch ? metaDescMatch[1].trim() : "";
+        if (title || desc) {
+          webData += `\n[Direct Live Website Meta for ${domain}]:\nTitle: ${title}\nDescription: ${desc}`;
+        }
+      }
+    } catch (siteErr) {}
+  }
+
+  return webData;
+}
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
@@ -206,7 +287,11 @@ SCHEMA TO RETURN (Strict JSON only):
 }
 Respond ONLY with valid JSON.`;
 
-    const userPromptContent = `Prospect Text to Evaluate:\n${prospectInput}\n\nTarget Contract Size: $${dealSize.toLocaleString()} USD`;
+    // Enrich prospect data with SerpAPI / Live Web Intelligence
+    const liveWebContext = await searchWebIntelligence(prospectInput, env);
+    const enrichedProspect = liveWebContext ? `${prospectInput}\n\n--- LIVE WEB & SEARCH INTELLIGENCE ---${liveWebContext}\n--------------------------------------` : prospectInput;
+
+    const userPromptContent = `Prospect Text to Evaluate:\n${enrichedProspect}\n\nTarget Contract Size: $${dealSize.toLocaleString()} USD`;
 
     let aiRaw = null;
     let aiErrorMsg = "";
