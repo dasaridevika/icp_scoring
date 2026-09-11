@@ -117,20 +117,20 @@ export default {
 Analyze the prospect input text and generate a structured, highly personalized B2B intelligence dossier for ICP qualification.
 DO NOT fabricate details. If a field is not present or cannot be inferred from context, mark it as null or UNKNOWN.
 
-EVALUATION DIMENSIONS (Score 0-100 where evidence exists, or null if UNKNOWN):
-1. Firmographics: Headcount, revenue, operational scale, vertical fit.
-2. Technographics: Current software stack, data infrastructure, sophistication.
-3. Intent & Urgency: Active RFP, buying timeline, hiring expansion, pain point urgency.
-4. Buyer Readiness & Authority: Decision maker title, VP/C-suite authority, budget availability.
-5. Commercial Value & Expansion: Potential contract scale, multi-department expansion.
+EVALUATION & SCORING RULES (Score 0-100 based on verified or inferred evidence):
+1. Firmographics (0-100): Headcount, revenue, corporate status, industry alignment (65-90 for verified B2B/industrial corporations). Mark "VERIFIED" if exact numbers given, "INFERRED" if established corporate firm.
+2. Technographics (0-100): Current stack compatibility and data infrastructure (55-80 inferred for established industry operations).
+3. Intent & Urgency (0-100): Active inquiry, inbound callback request, scheduled appointment date/time, RFP, or buying timeline (Score 75-95 for direct callback requests or stated expansion projects).
+4. Buyer Readiness & Authority (0-100): Corporate business email domain (@company.com), commercial/procurement role, or decision-maker mandate (Score 65-85).
+5. Commercial Value & Expansion (0-100): Contract ARR potential, multi-region or solar/product division expansion (Score 65-85).
 
 EVIDENCE STATUS RULES:
-- "VERIFIED": Explicitly stated in the text with clear numbers/titles.
-- "INFERRED": Logically deduced from industry, company description, or role context.
-- "UNKNOWN": Information is missing, unclear, or unverified.
+- "VERIFIED": Explicitly stated in the text with clear numbers/dates/titles.
+- "INFERRED": Logically deduced from industry, company description, corporate domain, or role context.
+- "UNKNOWN": Only use if the text provides zero commercial context.
 
 DISQUALIFICATION RULES:
-- Mark is_disqualified = true if the contact is clearly a student, personal user, job seeker, or non-commercial inquiry.
+- Mark is_disqualified = true only if the contact is clearly a student, personal user (@gmail/@yahoo for non-business), job seeker, or non-commercial spam.
 
 STRATEGIC COPYWRITING REQUIREMENTS:
 - outreach_hook: Write a compelling, bespoke 1-sentence cold email opening line tailored directly to the contact (or company if contact is unknown). Reference their specific role, tech stack, scale, or stated initiative to prove deep contextual relevance. NEVER output a generic phrase or lazy snippet. Example: "Hi Sarah, with CloudScale Dynamics planning a Q3 rollout across 180 enterprise reps, I wanted to share how we integrate directly with Snowflake and Salesforce to replace legacy pipeline analytics without workflow disruption."
