@@ -1,49 +1,37 @@
 # Enterprise ICP Intelligence & Revenue Qualification Engine (v2.0)
 
-A production-grade, evidence-driven B2B Revenue Intelligence Engine powered by Cloudflare Worker AI for edge evidence extraction and a deterministic Python scoring engine for qualification, tiering, and sales action recommendations.
+A production-grade, 100% self-contained, evidence-driven B2B Revenue Intelligence Engine. Powered by a deterministic Python extraction and scoring pipeline for real-time account qualification, priority tiering, win propensity calibration, and sales outreach generation — with zero external API dependencies and sub-50ms execution.
 
 ---
 
 ## 🏛️ System Architecture
 
 ```text
-Streamlit UI / Inbound CSV
+Streamlit UI / Lead Inbound Input
          ↓
-Worker AI Client (`workers/base_worker.py`) [Generates Trace/Request ID: req_...]
+Lead Evidence Extractor (`engine/extractor.py`)
+  • Deterministic entity parsing (Company, Contact, Domain, Industry, Scale, Tech Stack, Intent Timeline)
+  • Evidence pillar classification (Firmographic, Technographic, Intent, Readiness, Value)
+  • Anti-ICP & freemail detection (student, personal freemail, non-commercial)
          ↓
-Cloudflare Worker (`index.js` on Edge)
+Disqualification Engine (`engine/disqualifier.py`)
+  • Hard eligibility checks (Prohibited industries, non-business domains, compliance)
          ↓
-Workers AI (Meta Llama 3.1 8B Instruct)
-         ↓
-Evidence Extraction & Schema Validation (Pillars: Firmographic, Technographic, Intent, Readiness, Value)
-         ↓
-Deterministic Scoring Engine (`engine/scorer.py`) [Applies Centralized Weights & Thresholds]
+Deterministic Scoring Engine (`engine/scorer.py`)
+  • Centralized authoritative weights & thresholds (`engine/config.py`)
+  • 4-Dimensional mathematical scoring (Fit, Intent, Readiness, Value)
+  • Probability calibration & expected value modeling (`engine/calibration.py`)
          ↓
 Canonical Assessment Contract (`AccountAssessment`)
          ↓
-UI / CRM Export (`app.py`)
+Interactive Streamlit Dashboard (`app.py`)
 ```
 
-### Separation of Responsibilities
-* **Workers AI on Edge (`index.js`)**: Responsible for language understanding, extracting entity attributes, classifying evidence status (`VERIFIED`, `INFERRED`, `UNKNOWN`), generating sales discovery questions, and crafting cold outreach copy.
-* **Deterministic Scoring Engine (`engine/scorer.py`)**: Owns 100% of final score computation, weighted dimensional aggregation, tier assignment, and expected value calculation using authoritative weights from `engine/config.py`. AI cannot override final deterministic scores.
-
----
-
-## 🛡️ Failure Modes & Error Behavior
-
-1. **AI Failure → Explicit Visible Error with Request ID**:
-   - If Workers AI binding is missing (`HTTP 500`), inference fails (`HTTP 502`), or response is malformed (`HTTP 422`), the system returns `AccountAssessment` with `success=False`, error details, and a unique `request_id`.
-   - **Zero Fake Scores**: AI failure never generates fallback average scores (`75/70/70/75` or `50.0`). The UI clearly presents:
-     ```text
-     ❌ Unable to score this account.
-     AI evaluation failed: [Error Message]
-     Request ID: req_1725883800000_abc123
-     ```
-2. **Missing Data Handling (Zero `70` Fallbacks)**:
-   - Missing or unverified attributes receive `EvidenceStatus.UNKNOWN` with `confidence = 0.0`.
-   - Missing pillars contribute `0.0` points, reducing overall confidence instead of inflating scores.
-   - Targeted discovery questions are automatically generated so sales reps know what questions to ask.
+### Key Capabilities
+* **100% Self-Contained & Offline**: Zero network calls, zero external API keys, zero cloud worker bindings required. Runs anywhere Python 3.9+ runs.
+* **Deterministic Scoring Engine (`engine/scorer.py`)**: Owns 100% of final score computation, weighted dimensional aggregation, tier assignment, and expected value calculation using authoritative weights from `engine/config.py`.
+* **Zero Mock Datasets & Zero Fake Fallbacks**: Parses real inbound lead text dynamically and scores mathematically based on verified evidence points.
+* **Granular Confidence & Missing Data Tracking**: Missing attributes are marked as `UNKNOWN` ($0$ contribution) rather than assuming inflated values, triggering targeted sales discovery questions.
 
 ---
 
@@ -75,20 +63,41 @@ $$\text{Master ICP Score} = (0.35 \times \text{Fit}) + (0.25 \times \text{Intent
 
 ## 🚀 Running the Application
 
-### 1. Local Development
+### 1. Installation
 ```bash
 pip install -r requirements.txt
+```
+
+### 2. Run the Streamlit Dashboard
+```bash
 streamlit run app.py
 ```
 
-### 2. Deploy Cloudflare Worker Edge Engine
-```bash
-npx wrangler deploy
-```
+### 3. Python SDK Usage
+```python
+from engine import evaluate_lead
 
-### 3. Secrets & Environment Variables:
-Configure in Streamlit Cloud (`Settings > Secrets`) or environment variables:
-* `CLOUDFLARE_WORKER_URL`: Cloudflare Worker endpoint URL (e.g. `https://<your-worker>.<your-subdomain>.workers.dev`).
-* `CLOUDFLARE_AUTH_SECRET`: Optional Bearer auth token if Worker endpoint is protected.
+lead_text = """
+Company: Parveen Industries Pvt. Ltd.
+Contact: Gabriel Martinez (Commercial Sales & Procurement)
+Email: sales@parvenoilfield.com
+Phone: +971 55 669 322
+Location: United Arab Emirates (UAE)
+Industry: Industrial Manufacturing & Solar Energy Infrastructure
+
+Inquiry Details:
+Requested an executive callback meeting scheduled for August 18 (08:30 PM - 09:30 PM IST).
+Inquiring about solar power market offerings and product range suitability to support company business expansion.
+"""
+
+assessment = evaluate_lead(lead_text, deal_size_usd=75000)
+
+print(f"Company: {assessment.company_name}")
+print(f"Tier: {assessment.priority_tier}")
+print(f"Master ICP Score: {assessment.scores.master_icp_score}")
+print(f"Fit: {assessment.icp_fit_score} | Intent: {assessment.intent_score} | Readiness: {assessment.readiness_score} | Value: {assessment.value_score}")
+print(f"Next Action: {assessment.sales_action}")
+print(f"Cold Outreach Opener: {assessment.outreach_hook}")
+```
 
 

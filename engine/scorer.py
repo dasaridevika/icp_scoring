@@ -60,6 +60,7 @@ class MasterScoringEngine:
         cfg = config or active_config
         strategy = strategy_data or {}
         req_id = request_id or f"req_{int(datetime.now(timezone.utc).timestamp()*1000)}"
+        valid_deal_size = max(5000.0, float(deal_size_usd or 50000.0))
 
         # 1. Parse & Sanitize Account Info
         def clean_val(v: Any) -> Optional[str]:
@@ -261,11 +262,11 @@ class MasterScoringEngine:
             propensity = 0.0
 
         expansion_potential = "High" if value_final >= 75 else ("Moderate" if value_final >= 50 else "Limited")
-        expected_arr = deal_size_usd
+        expected_arr = valid_deal_size
         expected_val_usd = round(propensity * expected_arr, 2)
 
         commercial_info = CommercialInfo(
-            deal_size_usd=deal_size_usd,
+            deal_size_usd=valid_deal_size,
             estimated_arr=expected_arr,
             win_propensity_pct=round(propensity * 100, 1),
             expected_value_usd=expected_val_usd,
@@ -300,7 +301,7 @@ class MasterScoringEngine:
             model_version=cfg.model_version,
             prompt_version="1.0.0",
             scored_at=datetime.now(timezone.utc).isoformat(),
-            evaluation_engine="Deterministic Revenue Scorer + Worker AI",
+            evaluation_engine="Deterministic Pure Python Revenue Scorer",
             success=True
         )
 
@@ -312,6 +313,33 @@ class MasterScoringEngine:
             decision=decision_info,
             commercial=commercial_info,
             metadata=metadata
+        )
+
+    @classmethod
+    def evaluate_lead(
+        cls,
+        prospect_text: str,
+        deal_size_usd: float = 50000.0,
+        config: Optional[EngineConfiguration] = None
+    ) -> AccountAssessment:
+        """
+        Pure Python End-to-End Extraction & Evaluation Entry Point.
+        Extracts evidence from prospect text, runs eligibility rules,
+        and computes deterministic 4D scores with zero network calls.
+        """
+        from .extractor import LeadEvidenceExtractor
+        parsed = LeadEvidenceExtractor.extract_and_parse(prospect_text, deal_size_usd)
+        return cls.evaluate_assessment(
+            account_data=parsed["account"],
+            evidence_data=parsed["evidence"],
+            deal_size_usd=deal_size_usd,
+            strategy_data=parsed["strategy"],
+            discovery_questions=parsed["discovery_questions"],
+            key_strengths=parsed["key_strengths"],
+            key_risks=parsed["key_risks"],
+            is_disqualified=parsed["is_disqualified"],
+            disqualification_reason=parsed["disqualification_reason"],
+            config=config
         )
 
     @classmethod

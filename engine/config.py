@@ -103,8 +103,10 @@ class TierThresholds(BaseModel):
 class DisqualificationRuleConfig(BaseModel):
     blocked_email_domains: List[str] = Field(
         default_factory=lambda: [
-            "gmail.com", "yahoo.com", "hotmail.com", "outlook.com",
-            "icloud.com", "protonmail.com", "mail.ru", "163.com"
+            "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk", "hotmail.com",
+            "outlook.com", "live.com", "msn.com", "icloud.com", "protonmail.com",
+            "proton.me", "pm.me", "mail.ru", "163.com", "tempmail.com", "mailinator.com",
+            "yopmail.com", "guerrillamail.com", "10minutemail.com"
         ]
     )
     blocked_industries: List[str] = Field(

@@ -1,7 +1,7 @@
 """
 Enterprise ICP Revenue Intelligence Studio
-Powered by Cloudflare Worker AI Edge Engine.
-Worker AI performs full end-to-end qualification: Fit, Intent, Readiness, Value,
+Pure Python Deterministic Revenue Qualification & Scoring Engine.
+Performs full end-to-end qualification: Fit, Intent, Readiness, Value,
 Disqualification, Confidence, Next Best Action, and Sales Discovery Prompts.
 """
 
@@ -14,8 +14,7 @@ import sys
 ROOT_DIR = Path(__file__).parent
 sys.path.append(str(ROOT_DIR))
 
-from engine.models import ComprehensiveAIWorkerResponse
-from workers.base_worker import WorkerAIClient
+from engine import evaluate_lead, AccountAssessment
 
 # Page Configuration
 st.set_page_config(
@@ -110,12 +109,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize Worker AI Client (exclusively reads CLOUDFLARE_WORKER_URL from secrets/env)
-worker_client = WorkerAIClient()
-
 # Header
 st.markdown('<div class="title-gradient">⚡ Enterprise ICP Revenue Intelligence</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle-text">Cloudflare Worker AI Edge Engine • Fit, Intent, Readiness & Value Qualification</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle-text">Pure Python Deterministic Engine • Fit, Intent, Readiness & Value Qualification</div>', unsafe_allow_html=True)
 
 # Main Input Section
 col_in1, col_in2 = st.columns([3, 1])
@@ -132,18 +128,18 @@ with col_in2:
     st.markdown("#### Parameters")
     deal_size = st.number_input("Target Contract Size ($)", min_value=5000, max_value=2000000, value=75000, step=5000)
     st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-    eval_btn = st.button("🚀 Qualify on Worker AI", type="primary", use_container_width=True)
+    eval_btn = st.button("🚀 Qualify Lead Instantly", type="primary", use_container_width=True)
 
 if eval_btn:
     if not prospect_text.strip():
         st.error("Please paste account details to qualify.")
     else:
-        with st.spinner("Executing Worker AI Analysis on Edge..."):
-            res: ComprehensiveAIWorkerResponse = worker_client.evaluate_account(prospect_text, float(deal_size))
+        with st.spinner("Analyzing Lead Evidence & Calculating Deterministic Revenue Scores..."):
+            res: AccountAssessment = evaluate_lead(prospect_text, float(deal_size))
             st.session_state["live_worker_res"] = res
 
 if "live_worker_res" in st.session_state:
-    res: ComprehensiveAIWorkerResponse = st.session_state["live_worker_res"]
+    res: AccountAssessment = st.session_state["live_worker_res"]
     
     st.markdown("---")
     
@@ -180,8 +176,8 @@ if "live_worker_res" in st.session_state:
             if res.is_disqualified:
                 st.error(f"Disqualification: {res.disqualification_reason}")
 
-        # 4 Core Engine KPI Cards Evaluated Deterministically from Worker AI Evidence
-        st.markdown("#### ⚡ 4-Dimensional AI Intelligence Engines")
+        # 4 Core Engine KPI Cards Evaluated Deterministically from Extracted Evidence
+        st.markdown("#### ⚡ 4-Dimensional Revenue Intelligence Engines")
         k1, k2, k3, k4 = st.columns(4)
         
         def format_snippet(text: str, max_len: int = 120) -> str:
@@ -190,7 +186,10 @@ if "live_worker_res" in st.session_state:
             t = text.strip()
             if len(t) <= max_len:
                 return t
-            return t[:max_len].rsplit(" ", 1)[0] + "..."
+            chunk = t[:max_len]
+            if " " in chunk:
+                return chunk.rsplit(" ", 1)[0] + "..."
+            return chunk + "..."
 
         with k1:
             st.markdown(f"""

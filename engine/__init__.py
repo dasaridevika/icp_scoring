@@ -34,7 +34,10 @@ from .models import (
 
 from .disqualifier import DisqualificationEngine
 from .calibration import ModelCalibrator, global_calibrator
+from .extractor import LeadEvidenceExtractor
 from .scorer import MasterScoringEngine
+
+evaluate_lead = MasterScoringEngine.evaluate_lead
 
 
 __all__ = [
@@ -65,5 +68,7 @@ __all__ = [
     "DisqualificationEngine",
     "ModelCalibrator",
     "global_calibrator",
-    "MasterScoringEngine"
+    "LeadEvidenceExtractor",
+    "MasterScoringEngine",
+    "evaluate_lead"
 ]
