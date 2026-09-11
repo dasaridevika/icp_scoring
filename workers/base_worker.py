@@ -32,9 +32,12 @@ from engine.scorer import MasterScoringEngine
 from pathlib import Path
 
 
+DEFAULT_WORKER_URL = "https://icp-scoring-worker-ai.devika-worker.workers.dev"
+
+
 def get_worker_url() -> str:
-    """Retrieve CLOUDFLARE_WORKER_URL strictly from Streamlit secrets, OS environment, or .streamlit/secrets.toml."""
-    # 1. Check Streamlit runtime secrets
+    """Retrieve CLOUDFLARE_WORKER_URL from Streamlit secrets, OS environment, .streamlit/secrets.toml, or default fallback."""
+    # 1. Check Streamlit runtime secrets (direct + case-insensitive + nested dicts)
     try:
         import streamlit as st
         if hasattr(st, "secrets"):
@@ -43,15 +46,24 @@ def get_worker_url() -> str:
                 if val:
                     return val
             for k, v in st.secrets.items():
-                if k.lower() == "cloudflare_worker_url" and str(v).strip():
-                    return str(v).strip().rstrip("/")
+                if isinstance(v, dict):
+                    for sub_k, sub_v in v.items():
+                        if "worker" in sub_k.lower() or "cloudflare" in sub_k.lower():
+                            cand = str(sub_v).strip().rstrip("/")
+                            if cand.startswith("http"):
+                                return cand
+                elif "worker" in k.lower() or "cloudflare" in k.lower():
+                    cand = str(v).strip().rstrip("/")
+                    if cand.startswith("http"):
+                        return cand
     except Exception:
         pass
 
-    # 2. Check OS environment variable
-    env_val = os.environ.get("CLOUDFLARE_WORKER_URL", "").strip().rstrip("/")
-    if env_val:
-        return env_val
+    # 2. Check OS environment variables
+    for env_k in ["CLOUDFLARE_WORKER_URL", "WORKER_URL", "CF_WORKER_URL"]:
+        env_val = os.environ.get(env_k, "").strip().rstrip("/")
+        if env_val and env_val.startswith("http"):
+            return env_val
 
     # 3. Direct read of local or global .streamlit/secrets.toml
     candidate_paths = [
@@ -64,15 +76,16 @@ def get_worker_url() -> str:
             if p.exists() and p.is_file():
                 for line in p.read_text(encoding="utf-8").splitlines():
                     line = line.strip()
-                    if line.startswith("CLOUDFLARE_WORKER_URL") and "=" in line:
+                    if ("CLOUDFLARE_WORKER_URL" in line or "WORKER_URL" in line) and "=" in line:
                         _, raw_v = line.split("=", 1)
                         val = raw_v.strip().strip("\"'").rstrip("/")
-                        if val:
+                        if val and val.startswith("http"):
                             return val
         except Exception:
             pass
 
-    return ""
+    # 4. Canonical Production Worker Fallback
+    return DEFAULT_WORKER_URL
 
 
 class WorkerAIClient:
@@ -86,7 +99,7 @@ class WorkerAIClient:
         self.timeout_sec = 25
 
     def is_connected(self) -> bool:
-        return bool(self.worker_url)
+        return bool(self.worker_url or get_worker_url())
 
     def _clean_json_response(self, text: str) -> str:
         """Strips markdown code fences and whitespace from LLM output."""
@@ -108,6 +121,7 @@ class WorkerAIClient:
         4. If Worker fails, returns an un-scored AccountAssessment with success=False and request_id.
         """
         req_id = f"req_{int(time.time() * 1000)}_{os.urandom(3).hex()}"
+        endpoint = (self.worker_url or get_worker_url()).strip().rstrip("/")
 
         if not prospect_text.strip():
             return AccountAssessment(
@@ -119,7 +133,7 @@ class WorkerAIClient:
                 )
             )
 
-        if not self.worker_url:
+        if not endpoint:
             return AccountAssessment(
                 metadata=AssessmentMetadata(
                     request_id=req_id,
@@ -145,7 +159,7 @@ class WorkerAIClient:
         try:
             data_bytes = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(
-                self.worker_url,
+                endpoint,
                 data=data_bytes,
                 headers=headers,
                 method="POST"
