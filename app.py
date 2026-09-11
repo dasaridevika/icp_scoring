@@ -157,13 +157,19 @@ if "live_worker_res" in st.session_state:
     else:
         # Account Header
         c_head1, c_head2 = st.columns([3, 1])
-        company_disp = res.company_name or "Unspecified Account"
-        domain_disp = f"({res.domain})" if res.domain else ""
-        contact_disp = res.contact_name or "Unspecified Contact"
-        title_disp = res.job_title or "Unspecified Role"
-        industry_disp = res.industry or "Unspecified Industry"
-        scale_disp = res.scale or "Unspecified Scale"
-        loc_disp = f" | Location: **{res.location}**" if res.location else ""
+        def safe_label(val: Optional[str], default: str) -> str:
+            if not val or str(val).strip().lower() in ("null", "none", "undefined", "n/a", ""):
+                return default
+            return str(val).strip()
+
+        company_disp = safe_label(res.company_name, "Unspecified Account")
+        domain_disp = f"({res.domain})" if (res.domain and str(res.domain).strip().lower() not in ("null", "none", "undefined", "n/a", "")) else ""
+        contact_disp = safe_label(res.contact_name, "Unspecified Contact")
+        title_disp = safe_label(res.job_title, "Unspecified Role")
+        industry_disp = safe_label(res.industry, "Unspecified Industry")
+        scale_disp = safe_label(res.scale, "Unspecified Scale")
+        clean_loc = safe_label(res.location, "")
+        loc_disp = f" | Location: **{clean_loc}**" if clean_loc else ""
 
         with c_head1:
             st.markdown(f"## **{company_disp}** `{domain_disp}`")

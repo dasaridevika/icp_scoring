@@ -280,19 +280,26 @@ Respond ONLY with valid JSON.`;
       value: sanitizePillar("value")
     };
 
+    function cleanStr(v) {
+      if (!v) return null;
+      const s = String(v).trim();
+      if (["null", "none", "undefined", "n/a", ""].includes(s.toLowerCase())) return null;
+      return s;
+    }
+
     return jsonResponse({
       success: true,
       request_id: requestId,
       account: {
-        company_name: account.company_name || null,
-        domain: account.domain || null,
-        contact_name: account.contact_name || null,
-        job_title: account.job_title || null,
-        industry: account.industry || null,
-        location: account.location || null,
-        scale: account.scale || null,
-        tech_stack: account.tech_stack || null,
-        intent_timeline: account.intent_timeline || null
+        company_name: cleanStr(account.company_name),
+        domain: cleanStr(account.domain),
+        contact_name: cleanStr(account.contact_name),
+        job_title: cleanStr(account.job_title),
+        industry: cleanStr(account.industry),
+        location: cleanStr(account.location),
+        scale: cleanStr(account.scale),
+        tech_stack: cleanStr(account.tech_stack),
+        intent_timeline: cleanStr(account.intent_timeline)
       },
       evidence: validatedEvidence,
       is_disqualified: Boolean(aiResult.is_disqualified),

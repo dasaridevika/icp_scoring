@@ -61,16 +61,24 @@ class MasterScoringEngine:
         strategy = strategy_data or {}
         req_id = request_id or f"req_{int(datetime.now(timezone.utc).timestamp()*1000)}"
 
-        # 1. Parse Account Info
-        company_name = account_data.get("company_name")
-        domain = account_data.get("domain") or ""
-        contact_name = account_data.get("contact_name")
-        job_title = account_data.get("job_title")
-        industry = account_data.get("industry")
-        location = account_data.get("location")
-        scale = account_data.get("scale")
-        tech_stack = account_data.get("tech_stack")
-        intent_timeline = account_data.get("intent_timeline")
+        # 1. Parse & Sanitize Account Info
+        def clean_val(v: Any) -> Optional[str]:
+            if v is None:
+                return None
+            s = str(v).strip()
+            if s.lower() in ("null", "none", "undefined", "n/a", ""):
+                return None
+            return s
+
+        company_name = clean_val(account_data.get("company_name"))
+        domain = clean_val(account_data.get("domain")) or ""
+        contact_name = clean_val(account_data.get("contact_name"))
+        job_title = clean_val(account_data.get("job_title"))
+        industry = clean_val(account_data.get("industry"))
+        location = clean_val(account_data.get("location"))
+        scale = clean_val(account_data.get("scale"))
+        tech_stack = clean_val(account_data.get("tech_stack"))
+        intent_timeline = clean_val(account_data.get("intent_timeline"))
 
         account_info = AccountInfo(
             company_name=company_name,
