@@ -39,13 +39,11 @@ from .scorer import MasterScoringEngine
 from .gtm_engine import (
     MASTER_INDUSTRY_SECTORS,
     CompanyStandardsConfig,
+    StreamlinedLeadForm,
     LeadFormSubmission,
-    FirmographicsForm,
-    TechnographicsForm,
-    QualifyingForm,
-    ReadinessForm,
     GTMScoringEngine,
     GTMScoringResult,
+    StreamlinedScoringResult,
     FieldScoreReceipt,
     PillarScoreSummary
 )
@@ -86,13 +84,11 @@ __all__ = [
     "evaluate_lead",
     "MASTER_INDUSTRY_SECTORS",
     "CompanyStandardsConfig",
+    "StreamlinedLeadForm",
     "LeadFormSubmission",
-    "FirmographicsForm",
-    "TechnographicsForm",
-    "QualifyingForm",
-    "ReadinessForm",
     "GTMScoringEngine",
     "GTMScoringResult",
+    "StreamlinedScoringResult",
     "FieldScoreReceipt",
     "PillarScoreSummary"
 ]
