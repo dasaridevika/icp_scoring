@@ -55,33 +55,43 @@ export default {
       });
     }
 
-    let payload = {};
     try {
-      payload = await request.json();
-    } catch (err) {
-      return jsonResponse({
-        success: false,
-        error: {
-          code: "INVALID_JSON_PAYLOAD",
-          message: "Request body must be valid JSON.",
-          request_id: requestId
-        }
-      }, 400);
-    }
+      let payload = {};
+      let prospectInput = "";
+      let dealSize = 50000;
 
-    const prospectInput = (payload.text || payload.prospect_text || "").trim() || JSON.stringify(payload);
-    if (!prospectInput || prospectInput === "{}") {
-      return jsonResponse({
-        success: false,
-        error: {
-          code: "EMPTY_PROSPECT_INPUT",
-          message: "Prospect text or account payload is required.",
-          request_id: requestId
+      try {
+        const contentType = request.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          payload = await request.json();
+          prospectInput = (payload.text || payload.prospect_text || "").trim() || JSON.stringify(payload);
+          dealSize = Number(payload.deal_size_usd) || 50000;
+        } else {
+          const rawText = await request.text();
+          try {
+            payload = JSON.parse(rawText);
+            prospectInput = (payload.text || payload.prospect_text || rawText).trim();
+            dealSize = Number(payload.deal_size_usd) || 50000;
+          } catch (e) {
+            prospectInput = rawText.trim();
+          }
         }
-      }, 400);
-    }
+      } catch (err) {
+        try {
+          prospectInput = (await request.text()).trim();
+        } catch (e2) {}
+      }
 
-    const dealSize = Number(payload.deal_size_usd) || 50000;
+      if (!prospectInput || prospectInput === "{}") {
+        return jsonResponse({
+          success: false,
+          error: {
+            code: "EMPTY_PROSPECT_INPUT",
+            message: "Prospect text or account payload is required.",
+            request_id: requestId
+          }
+        }, 400);
+      }
     
     // Standard production model with exactly 1 fallback
     const primaryModel = env.AI_MODEL || "@cf/meta/llama-3.1-8b-instruct";
@@ -305,6 +315,16 @@ Respond ONLY with valid JSON.`;
       key_strengths: Array.isArray(aiResult.key_strengths) ? aiResult.key_strengths.map(String) : [],
       key_risks: Array.isArray(aiResult.key_risks) ? aiResult.key_risks.map(String) : []
     });
+    } catch (fatalErr) {
+      return jsonResponse({
+        success: false,
+        error: {
+          code: "WORKER_INTERNAL_ERROR",
+          message: fatalErr.message || String(fatalErr),
+          request_id: requestId
+        }
+      }, 500);
+    }
   }
 };
 
