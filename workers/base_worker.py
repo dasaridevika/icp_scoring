@@ -88,6 +88,45 @@ def get_worker_url() -> str:
     return DEFAULT_WORKER_URL
 
 
+def get_serpapi_key() -> str:
+    """Retrieve SERPAPI_API_KEY from Streamlit secrets, OS environment, or .streamlit/secrets.toml."""
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets"):
+            if "SERPAPI_API_KEY" in st.secrets:
+                return str(st.secrets["SERPAPI_API_KEY"]).strip()
+            for k, v in st.secrets.items():
+                if k.lower() in ("serpapi_api_key", "serp_api_key", "serper_api_key"):
+                    return str(v).strip()
+    except Exception:
+        pass
+
+    for env_k in ["SERPAPI_API_KEY", "SERP_API_KEY", "SERPER_API_KEY"]:
+        env_v = os.environ.get(env_k, "").strip()
+        if env_v:
+            return env_v
+
+    candidate_paths = [
+        Path(__file__).resolve().parent.parent / ".streamlit" / "secrets.toml",
+        Path.cwd() / ".streamlit" / "secrets.toml",
+        Path.home() / ".streamlit" / "secrets.toml"
+    ]
+    for p in candidate_paths:
+        try:
+            if p.exists() and p.is_file():
+                for line in p.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if ("SERPAPI_API_KEY" in line or "SERP_API_KEY" in line or "SERPER_API_KEY" in line) and "=" in line:
+                        _, raw_v = line.split("=", 1)
+                        val = raw_v.strip().strip("\"'")
+                        if val:
+                            return val
+        except Exception:
+            pass
+
+    return ""
+
+
 class WorkerAIClient:
     """
     Client connecting to Cloudflare Worker AI for structured evidence extraction.
@@ -143,10 +182,12 @@ class WorkerAIClient:
                 )
             )
 
+        serp_key = get_serpapi_key()
         payload = {
             "text": prospect_text,
             "prospect_text": prospect_text,
-            "deal_size_usd": deal_size_usd
+            "deal_size_usd": deal_size_usd,
+            "serpapi_api_key": serp_key
         }
 
         headers = {
@@ -155,6 +196,8 @@ class WorkerAIClient:
             "Accept": "application/json",
             "X-Request-ID": req_id
         }
+        if serp_key:
+            headers["X-SerpApi-Key"] = serp_key
 
         try:
             data_bytes = json.dumps(payload).encode("utf-8")

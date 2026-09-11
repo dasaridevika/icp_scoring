@@ -41,7 +41,7 @@ function clampScore(val) {
 }
 
 // Live Web & SerpAPI Enrichment Helper
-async function searchWebIntelligence(prospectText, env) {
+async function searchWebIntelligence(prospectText, env, request = null, payload = null) {
   let webData = "";
 
   // 1. Extract domain or company keywords for search query
@@ -56,8 +56,8 @@ async function searchWebIntelligence(prospectText, env) {
   const querySubject = company || domain;
   if (!querySubject) return "";
 
-  // 2. SerpAPI Integration (if SERPAPI_API_KEY is configured in env / secrets)
-  const serpApiKey = env.SERPAPI_API_KEY || env.SERP_API_KEY;
+  // 2. SerpAPI Integration (env, request header, or payload)
+  const serpApiKey = env.SERPAPI_API_KEY || env.SERP_API_KEY || request?.headers?.get("X-SerpApi-Key") || payload?.serpapi_api_key;
   if (serpApiKey) {
     try {
       const serpUrl = `https://serpapi.com/search.json?q=${encodeURIComponent(querySubject + " company overview headcount revenue industry")}&api_key=${serpApiKey}&num=3`;
@@ -75,8 +75,8 @@ async function searchWebIntelligence(prospectText, env) {
     }
   }
 
-  // 3. Serper.dev Integration (if SERPER_API_KEY is configured in env / secrets)
-  const serperKey = env.SERPER_API_KEY;
+  // 3. Serper.dev Integration (env, request header, or payload)
+  const serperKey = env.SERPER_API_KEY || request?.headers?.get("X-Serper-Key") || payload?.serper_api_key;
   if (!webData && serperKey) {
     try {
       const serperRes = await fetch("https://google.serper.dev/search", {
@@ -288,7 +288,7 @@ SCHEMA TO RETURN (Strict JSON only):
 Respond ONLY with valid JSON.`;
 
     // Enrich prospect data with SerpAPI / Live Web Intelligence
-    const liveWebContext = await searchWebIntelligence(prospectInput, env);
+    const liveWebContext = await searchWebIntelligence(prospectInput, env, request, payload);
     const enrichedProspect = liveWebContext ? `${prospectInput}\n\n--- LIVE WEB & SEARCH INTELLIGENCE ---${liveWebContext}\n--------------------------------------` : prospectInput;
 
     const userPromptContent = `Prospect Text to Evaluate:\n${enrichedProspect}\n\nTarget Contract Size: $${dealSize.toLocaleString()} USD`;
