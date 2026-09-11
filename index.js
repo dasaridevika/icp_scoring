@@ -18,7 +18,10 @@ function jsonResponse(data, status = 200) {
   });
 }
 
-function parseJsonSafely(rawText) {
+function parseJsonSafely(raw) {
+  if (!raw) return null;
+  if (typeof raw === "object") return raw;
+  const rawText = String(raw).trim();
   try {
     return JSON.parse(rawText);
   } catch (e) {
@@ -232,7 +235,14 @@ Respond ONLY with valid JSON.`;
           });
         }
 
-        aiRaw = typeof aiResponse === "string" ? aiResponse : (aiResponse.response || JSON.stringify(aiResponse));
+        if (typeof aiResponse === "string") {
+          aiRaw = aiResponse;
+        } else if (aiResponse && typeof aiResponse.response === "string") {
+          aiRaw = aiResponse.response;
+        } else {
+          aiRaw = JSON.stringify(aiResponse || "");
+        }
+
         aiResult = parseJsonSafely(aiRaw);
         if (aiResult) {
           break; // Successfully got structured JSON
@@ -245,13 +255,14 @@ Respond ONLY with valid JSON.`;
 
     // 3. Handle inference failure
     if (!aiResult) {
+      const safeRawStr = typeof aiRaw === "string" ? aiRaw : JSON.stringify(aiRaw || "");
       return jsonResponse({
         success: false,
         error: {
           code: aiErrorMsg ? "AI_EXECUTION_FAILED" : "AI_PARSE_FAILED",
           message: aiErrorMsg || "Failed to parse structured JSON from Workers AI output.",
           request_id: requestId,
-          raw_output: aiRaw ? aiRaw.substring(0, 500) : null
+          raw_output: safeRawStr ? safeRawStr.substring(0, 500) : null
         }
       }, 502);
     }
