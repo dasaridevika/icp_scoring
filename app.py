@@ -46,46 +46,36 @@ st.markdown("""
     .main .block-container {
         padding-top: 1.5rem;
         padding-bottom: 3.5rem;
-        max-width: 1400px;
+        max-width: 1350px;
     }
 
     /* Page Header */
     .hero-title {
-        font-size: 2.3rem;
+        font-size: 2.2rem;
         font-weight: 800;
         letter-spacing: -0.8px;
         background: linear-gradient(135deg, #1E1B4B 0%, #4F46E5 50%, #7C3AED 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.15rem;
     }
 
     .hero-subtitle {
         color: #475569 !important;
-        font-size: 0.98rem;
+        font-size: 0.95rem;
         font-weight: 500;
         margin-bottom: 1.2rem;
     }
 
     /* Form Section Headers */
     .form-section-title {
-        font-size: 1.15rem;
+        font-size: 1.1rem;
         font-weight: 700;
         color: #0F172A !important;
         border-left: 4px solid #4F46E5;
         padding-left: 10px;
-        margin-top: 8px;
+        margin-top: 6px;
         margin-bottom: 14px;
-    }
-
-    /* Status Bar Card */
-    .status-bar-box {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 12px;
-        padding: 12px 18px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        margin-bottom: 16px;
     }
 
     /* Sleek Output Cards */
@@ -135,14 +125,6 @@ st.markdown("""
         box-shadow: 0 8px 24px rgba(236, 72, 153, 0.18);
         margin-top: 15px;
         margin-bottom: 20px;
-    }
-
-    .intel-driver-card {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 14px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
     /* Badges */
@@ -368,12 +350,11 @@ with tab_form:
             st.session_state["streamlined_res"] = res
             st.rerun()
 
-    st.markdown("---")
-
     # ==============================================================================
     # OUTPUT: SLEEK CARD DESIGN
     # ==============================================================================
     if "streamlined_res" in st.session_state:
+        st.markdown("---")
         res: StreamlinedScoringResult = st.session_state["streamlined_res"]
 
         badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier else "badge-b1"))
@@ -602,37 +583,6 @@ with tab_form:
             with st.expander("❓ Sales Discovery Prompts (Targeted Questions for SDRs)", expanded=False):
                 for q in res.discovery_questions:
                     st.markdown(f"• **Discovery Prompt:** *{q}*")
-    else:
-        # Framework Ready State
-        st.markdown("### ⚡ System Readiness & Active ICP Framework")
-        r1, r2, r3, r4 = st.columns(4)
-        with r1:
-            with st.container(border=True):
-                st.markdown("#### 1. FIRMOGRAPHIC SCALE")
-                st.markdown(f"Min ARR: **${cfg.min_company_revenue_usd:,.0f}**")
-                st.markdown(f"Min Headcount: **{cfg.min_headcount}**")
-                st.caption(f"Weight: {cfg.weight_firmographics*100:.0f}%")
-        with r2:
-            with st.container(border=True):
-                st.markdown("#### 2. DECISION AUTHORITY")
-                st.markdown("AI Role Classifier: **Online**")
-                st.markdown("Freemail Filter: **Active**")
-                st.caption(f"Weight: {cfg.weight_authority*100:.0f}%")
-        with r3:
-            with st.container(border=True):
-                st.markdown("#### 3. BUYING INTENT")
-                st.markdown("Timeline Extraction: **Active**")
-                st.markdown("Urgency Signal: **Active**")
-                st.caption(f"Weight: {cfg.weight_intent*100:.0f}%")
-        with r4:
-            with st.container(border=True):
-                st.markdown("#### 4. CONTRACT VALUE")
-                st.markdown(f"Target ACV: **${cfg.target_deal_size_usd:,.0f}**")
-                st.markdown("Ecosystem Synergies: **Active**")
-                st.caption(f"Weight: {cfg.weight_value*100:.0f}%")
-
-        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-        st.info("💡 Fill in the prospect signals in the form above and click **🚀 Run AI Analysis & Score Lead** to calculate the real-time ICP qualification score and targeted outreach strategy.")
 
 
 # ==============================================================================
