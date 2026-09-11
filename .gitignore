@@ -1,8 +1,9 @@
-﻿__pycache__/
+__pycache__/
 *.pyc
 .env
 .streamlit/secrets.toml
 node_modules/
 .wrangler/
+.pytest_cache/
 dist/
 .DS_Store

@@ -322,7 +322,11 @@ class MasterScoringEngine:
                 "domain": extracted_data.get("domain"),
                 "contact_name": extracted_data.get("contact_name"),
                 "job_title": extracted_data.get("job_title"),
-                "industry": extracted_data.get("industry")
+                "industry": extracted_data.get("industry"),
+                "location": extracted_data.get("location"),
+                "scale": extracted_data.get("scale"),
+                "tech_stack": extracted_data.get("tech_stack"),
+                "intent_timeline": extracted_data.get("intent_timeline")
             },
             evidence_data=extracted_data.get("evidence_fields") or {},
             deal_size_usd=deal_size_usd,

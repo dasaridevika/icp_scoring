@@ -289,6 +289,7 @@ Respond ONLY with valid JSON.`;
         contact_name: account.contact_name || null,
         job_title: account.job_title || null,
         industry: account.industry || null,
+        location: account.location || null,
         scale: account.scale || null,
         tech_stack: account.tech_stack || null,
         intent_timeline: account.intent_timeline || null

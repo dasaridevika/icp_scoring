@@ -79,7 +79,7 @@ class IntentScore(BaseModel):
 class ReadinessScore(BaseModel):
     score: float = Field(default=0.0, ge=0.0, le=100.0)
     total_score: float = Field(default=0.0, ge=0.0, le=100.0)
-    confidence: float = Field(default=0.0, ge=0.0, le=100.0)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     dimensions: Dict[str, DimensionScore] = Field(default_factory=dict)
     rationale: List[str] = Field(default_factory=list)
     missing_information: List[str] = Field(default_factory=list)
