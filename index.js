@@ -85,7 +85,7 @@ export default {
     
     // Standard production model with exactly 1 fallback
     const primaryModel = env.AI_MODEL || "@cf/meta/llama-3.1-8b-instruct";
-    const candidateModels = [primaryModel, "@cf/meta/llama-3-8b-instruct"];
+    const candidateModels = [primaryModel, "@cf/meta/llama-3.2-3b-instruct"];
 
     // 1. Check if Cloudflare Workers AI binding is attached
     if (!env.AI) {
