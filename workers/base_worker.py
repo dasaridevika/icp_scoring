@@ -29,19 +29,50 @@ from engine.config import active_config
 from engine.scorer import MasterScoringEngine
 
 
+from pathlib import Path
+
+
 def get_worker_url() -> str:
-    """Retrieve CLOUDFLARE_WORKER_URL strictly from Streamlit secrets or OS environment."""
+    """Retrieve CLOUDFLARE_WORKER_URL strictly from Streamlit secrets, OS environment, or .streamlit/secrets.toml."""
+    # 1. Check Streamlit runtime secrets
     try:
         import streamlit as st
         if hasattr(st, "secrets"):
             if "CLOUDFLARE_WORKER_URL" in st.secrets:
-                return str(st.secrets["CLOUDFLARE_WORKER_URL"]).strip().rstrip("/")
-            for k, val in st.secrets.items():
-                if k.lower() == "cloudflare_worker_url":
-                    return str(val).strip().rstrip("/")
+                val = str(st.secrets["CLOUDFLARE_WORKER_URL"]).strip().rstrip("/")
+                if val:
+                    return val
+            for k, v in st.secrets.items():
+                if k.lower() == "cloudflare_worker_url" and str(v).strip():
+                    return str(v).strip().rstrip("/")
     except Exception:
         pass
-    return os.environ.get("CLOUDFLARE_WORKER_URL", "").strip().rstrip("/")
+
+    # 2. Check OS environment variable
+    env_val = os.environ.get("CLOUDFLARE_WORKER_URL", "").strip().rstrip("/")
+    if env_val:
+        return env_val
+
+    # 3. Direct read of local or global .streamlit/secrets.toml
+    candidate_paths = [
+        Path(__file__).resolve().parent.parent / ".streamlit" / "secrets.toml",
+        Path.cwd() / ".streamlit" / "secrets.toml",
+        Path.home() / ".streamlit" / "secrets.toml"
+    ]
+    for p in candidate_paths:
+        try:
+            if p.exists() and p.is_file():
+                for line in p.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if line.startswith("CLOUDFLARE_WORKER_URL") and "=" in line:
+                        _, raw_v = line.split("=", 1)
+                        val = raw_v.strip().strip("\"'").rstrip("/")
+                        if val:
+                            return val
+        except Exception:
+            pass
+
+    return ""
 
 
 class WorkerAIClient:
