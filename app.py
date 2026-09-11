@@ -110,29 +110,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar Configuration
-with st.sidebar:
-    st.markdown("### ⚙️ Engine Settings")
-    default_url = os.environ.get("CLOUDFLARE_WORKER_URL", "")
-    try:
-        if hasattr(st, "secrets") and "CLOUDFLARE_WORKER_URL" in st.secrets:
-            default_url = str(st.secrets["CLOUDFLARE_WORKER_URL"])
-    except Exception:
-        pass
-    
-    worker_url_input = st.text_input(
-        "Cloudflare Worker URL:",
-        value=default_url,
-        placeholder="https://<worker>.<subdomain>.workers.dev",
-        help="Deployed Cloudflare Worker endpoint URL."
-    )
-    if worker_url_input.strip():
-        st.caption("🟢 **Worker AI Endpoint Connected**")
-    else:
-        st.caption("⚠️ **Endpoint not set.** Enter your Worker URL above or set `CLOUDFLARE_WORKER_URL` in secrets.")
-
-# Initialize Worker AI Client
-worker_client = WorkerAIClient(worker_url=worker_url_input.strip())
+# Initialize Worker AI Client (exclusively reads CLOUDFLARE_WORKER_URL from secrets/env)
+worker_client = WorkerAIClient()
 
 # Header
 st.markdown('<div class="title-gradient">⚡ Enterprise ICP Revenue Intelligence</div>', unsafe_allow_html=True)
