@@ -226,7 +226,7 @@ export default {
         "Analyze the prospect input dynamically using deep contextual AI reasoning. DO NOT rely on static rules, crude keyword matches, or artificial revenue caps.\n\n" +
         "EVALUATE THE 4 GTM PARTNERS ICP PILLARS (Score each 0 to 100):\n\n" +
         "1. FIRMOGRAPHICS (0-100):\n" +
-        "   - Company Revenue & ARR scale (supports any scale from early-stage to mega-cap enterprise $100B+ ARR)\n" +
+        "   - Company Revenue & ARR scale: dynamically evaluate scale across ANY client-stated currency and unit (e.g. INR ₹ Crores/Lakhs, USD $ Millions/Billions, EUR €, GBP £, JPY ¥) and compare against organization standards.\n" +
         "   - Industry macro-sector & sub-vertical niche complexity\n" +
         "   - Employee Headcount & organizational maturity\n" +
         "   - Primary Headquarters & Multi-Branch Regional Footprint (Single-Market, Cross-Border, or Global Enterprise)\n\n" +

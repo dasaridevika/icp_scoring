@@ -108,6 +108,12 @@ class StreamlinedLeadForm(BaseModel):
     company_name: str = ""
     currency_symbol: str = "$"
     currency_code: str = "USD"
+    revenue_entered_value: float = 0.0
+    revenue_unit: str = "Standard"
+    revenue_display_str: str = ""
+    deal_entered_value: float = 0.0
+    deal_unit: str = "Standard"
+    deal_display_str: str = ""
     industry_sector: str = ""
     sub_vertical: str = ""
     annual_revenue_usd: float = 0.0
@@ -228,12 +234,19 @@ class GTMScoringEngine:
     ) -> StreamlinedScoringResult:
         cfg = config or CompanyStandardsConfig()
 
+        prospect_rev_str = form.revenue_display_str or f"{form.currency_symbol}{form.annual_revenue_usd:,.0f}"
+        prospect_deal_str = form.deal_display_str or f"{form.currency_symbol}{form.target_deal_size_usd:,.0f}"
+
         # Build payload for Cloudflare Workers AI
         worker_payload = {
             "company_name": form.company_name,
             "industry_sector": form.industry_sector,
             "sub_vertical": form.sub_vertical,
             "annual_revenue_usd": form.annual_revenue_usd,
+            "stated_annual_revenue": prospect_rev_str,
+            "currency_code": form.currency_code,
+            "currency_symbol": form.currency_symbol,
+            "revenue_unit": form.revenue_unit,
             "employee_count": form.employee_count,
             "location": form.location,
             "branch_locations": form.branch_locations,
@@ -242,7 +255,14 @@ class GTMScoringEngine:
             "contact_role_title": form.contact_role_title,
             "buying_intent": form.buying_intent,
             "target_deal_size_usd": form.target_deal_size_usd,
-            "tech_stack_notes": form.tech_stack_notes
+            "stated_deal_size": prospect_deal_str,
+            "deal_unit": form.deal_unit,
+            "tech_stack_notes": form.tech_stack_notes,
+            "company_standards": {
+                "org_name": cfg.company_name,
+                "target_arr": f"{cfg.currency_symbol}{cfg.ideal_revenue_usd:,.0f}",
+                "min_deal_size": f"{cfg.currency_symbol}{cfg.min_deal_size_usd:,.0f}"
+            }
         }
 
         # Query Cloudflare Workers AI
@@ -337,14 +357,12 @@ class GTMScoringEngine:
         firmo_pts = max(1, min(5, int(round(firmo_score / 20.0))))
         techno_pts = max(1, min(5, int(round(techno_score / 20.0))))
 
-        sym = form.currency_symbol or cfg.currency_symbol or "$"
-
         pillar_firmo = PillarScoreSummary(
             pillar_name="Firmographics Scale",
             score=firmo_score,
             weight_pct=cfg.weight_firmographics,
             field_receipts=[
-                FieldScoreReceipt(field_name="Company Revenue", pillar="Firmographics", raw_value=f"{sym}{form.annual_revenue_usd:,.0f}", gtm_points=firmo_pts, rationale=f"ARR: {sym}{form.annual_revenue_usd:,.0f}"),
+                FieldScoreReceipt(field_name="Company Revenue", pillar="Firmographics", raw_value=prospect_rev_str, gtm_points=firmo_pts, rationale=f"ARR: {prospect_rev_str}"),
                 FieldScoreReceipt(field_name="Employee Headcount", pillar="Firmographics", raw_value=f"{form.employee_count:,} employees", gtm_points=firmo_pts, rationale=f"Headcount: {form.employee_count:,}"),
                 FieldScoreReceipt(field_name="Industry & AI Niche", pillar="Firmographics", raw_value=f"{form.industry_sector} • {form.sub_vertical or 'General'}", gtm_points=ai_niche.fit_points, rationale=ai_niche.rationale),
                 FieldScoreReceipt(field_name="Global Footprint (AI)", pillar="Firmographics", raw_value=geo_reach, gtm_points=ai_footprint.footprint_points, rationale=ai_footprint.rationale)
@@ -374,7 +392,7 @@ class GTMScoringEngine:
             score=techno_score,
             weight_pct=cfg.weight_value,
             field_receipts=[
-                FieldScoreReceipt(field_name=f"Contract Size ({sym})", pillar="Contract Value", raw_value=f"{sym}{form.target_deal_size_usd:,.0f}", gtm_points=techno_pts, rationale=f"ACV: {sym}{form.target_deal_size_usd:,.0f}"),
+                FieldScoreReceipt(field_name="Contract Size", pillar="Contract Value", raw_value=prospect_deal_str, gtm_points=techno_pts, rationale=f"ACV: {prospect_deal_str}"),
                 FieldScoreReceipt(field_name="Tech Stack Ecosystem (AI)", pillar="Contract Value", raw_value=form.tech_stack_notes or "Cloud Baseline", gtm_points=ai_tech.tech_points, rationale=ai_tech.rationale)
             ]
         )

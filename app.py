@@ -422,6 +422,16 @@ CURRENCY_OPTIONS = {
     "JPY (¥)": "¥"
 }
 
+# Metric Scale Multipliers (Global & Regional)
+SCALE_UNITS = {
+    "Millions (M)": 1_000_000,
+    "Crores (Cr)": 10_000_000,
+    "Billions (B)": 1_000_000_000,
+    "Lakhs (L)": 100_000,
+    "Thousands (k)": 1_000,
+    "Exact / Standard": 1
+}
+
 if "selected_curr" not in st.session_state:
     st.session_state["selected_curr"] = "USD ($)"
 
@@ -518,7 +528,48 @@ with st.form("lead_qualification_form"):
             # Row 4: Annual Revenue & Headcount
             c1_r4_a, c1_r4_b = st.columns(2)
             with c1_r4_a:
-                f_rev = st.number_input(f"Annual Revenue ({curr_sym} {curr_code})", min_value=0, max_value=100_000_000_000, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d", help=f"Max allowed entry: {curr_sym}100 Billion {curr_code}")
+                st.markdown("<label style='font-size:0.82rem; font-weight:700; color:#0F172A;'>Annual Revenue Scale</label>", unsafe_allow_html=True)
+                c_r_val, c_r_cur, c_r_unit = st.columns([1.5, 1.2, 1.3])
+                with c_r_val:
+                    f_rev_val = st.number_input(
+                        "Revenue",
+                        min_value=0.0,
+                        max_value=100_000_000_000.0,
+                        value=float(st.session_state.get("f_rev_val", 0.0)),
+                        step=1.0,
+                        format="%.2f",
+                        label_visibility="collapsed",
+                        help="Enter numerical amount in client's native unit"
+                    )
+                with c_r_cur:
+                    f_rev_curr = st.selectbox(
+                        "Rev Currency",
+                        list(CURRENCY_OPTIONS.keys()),
+                        index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_rev_curr", curr_label)),
+                        label_visibility="collapsed"
+                    )
+                with c_r_unit:
+                    f_rev_unit = st.selectbox(
+                        "Rev Unit",
+                        list(SCALE_UNITS.keys()),
+                        index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_rev_unit", "Millions (M)")),
+                        label_visibility="collapsed"
+                    )
+
+                rev_mult = SCALE_UNITS.get(f_rev_unit, 1)
+                f_rev_total = float(f_rev_val) * rev_mult
+                rev_sym = CURRENCY_OPTIONS.get(f_rev_curr, "$")
+                rev_code = f_rev_curr.split()[0]
+                
+                if f_rev_val > 0:
+                    if f_rev_unit != "Exact / Standard":
+                        rev_stated_str = f"{rev_sym}{f_rev_val:g} {f_rev_unit} ({rev_sym}{f_rev_total:,.0f} {rev_code})"
+                    else:
+                        rev_stated_str = f"{rev_sym}{f_rev_total:,.0f} {rev_code}"
+                    st.caption(f"💡 Evaluated Scale: **{rev_stated_str}**")
+                else:
+                    rev_stated_str = f"{rev_sym}0 {rev_code}"
+
             with c1_r4_b:
                 f_hc = st.number_input("Employee Headcount", min_value=0, max_value=10_000_000, value=max(0, int(st.session_state.get("f_hc", 0))), step=25, format="%d", help="Max allowed entry: 10 Million employees")
 
@@ -548,7 +599,48 @@ with st.form("lead_qualification_form"):
             # Row 3: Deal Size & Timeline
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
-                f_deal = st.number_input(f"Target Contract Value ({curr_sym} {curr_code})", min_value=0, max_value=1_000_000_000, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d", help=f"Max allowed entry: {curr_sym}1 Billion {curr_code}")
+                st.markdown("<label style='font-size:0.82rem; font-weight:700; color:#0F172A;'>Target Contract Value</label>", unsafe_allow_html=True)
+                c_d_val, c_d_cur, c_d_unit = st.columns([1.5, 1.2, 1.3])
+                with c_d_val:
+                    f_deal_val = st.number_input(
+                        "Deal Value",
+                        min_value=0.0,
+                        max_value=1_000_000_000.0,
+                        value=float(st.session_state.get("f_deal_val", 0.0)),
+                        step=1.0,
+                        format="%.2f",
+                        label_visibility="collapsed",
+                        help="Enter contract size in client's native unit"
+                    )
+                with c_d_cur:
+                    f_deal_curr = st.selectbox(
+                        "Deal Currency",
+                        list(CURRENCY_OPTIONS.keys()),
+                        index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label)),
+                        label_visibility="collapsed"
+                    )
+                with c_d_unit:
+                    f_deal_unit = st.selectbox(
+                        "Deal Unit",
+                        list(SCALE_UNITS.keys()),
+                        index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_deal_unit", "Thousands (k)")),
+                        label_visibility="collapsed"
+                    )
+
+                deal_mult = SCALE_UNITS.get(f_deal_unit, 1)
+                f_deal_total = float(f_deal_val) * deal_mult
+                deal_sym = CURRENCY_OPTIONS.get(f_deal_curr, "$")
+                deal_code = f_deal_curr.split()[0]
+                
+                if f_deal_val > 0:
+                    if f_deal_unit != "Exact / Standard":
+                        deal_stated_str = f"{deal_sym}{f_deal_val:g} {f_deal_unit} ({deal_sym}{f_deal_total:,.0f} {deal_code})"
+                    else:
+                        deal_stated_str = f"{deal_sym}{f_deal_total:,.0f} {deal_code}"
+                    st.caption(f"🎯 Evaluated ACV: **{deal_stated_str}**")
+                else:
+                    deal_stated_str = f"{deal_sym}0 {deal_code}"
+
             with c2_r3_b:
                 f_timeline = st.text_input("Buying Timeline / Horizon", value=st.session_state.get("f_timeline", ""))
 
@@ -573,13 +665,15 @@ if clear_btn:
     st.session_state["f_branches"] = ""
     st.session_state["f_ind"] = "Technology, SaaS & IT"
     st.session_state["f_subv"] = ""
-    st.session_state["f_rev"] = 0
+    st.session_state["f_rev_val"] = 0.0
+    st.session_state["f_rev_unit"] = "Millions (M)"
+    st.session_state["f_deal_val"] = 0.0
+    st.session_state["f_deal_unit"] = "Thousands (k)"
     st.session_state["f_hc"] = 50
     st.session_state["f_name"] = ""
     st.session_state["f_email"] = ""
     st.session_state["f_role"] = ""
     st.session_state["f_intent"] = ""
-    st.session_state["f_deal"] = 0
     st.session_state["f_timeline"] = ""
     st.session_state["f_tech"] = ""
     st.session_state["f_notes"] = ""
@@ -598,13 +692,17 @@ if calc_btn:
         st.session_state["f_branches"] = f_branches
         st.session_state["f_ind"] = f_ind
         st.session_state["f_subv"] = f_subv
-        st.session_state["f_rev"] = f_rev
+        st.session_state["f_rev_val"] = f_rev_val
+        st.session_state["f_rev_curr"] = f_rev_curr
+        st.session_state["f_rev_unit"] = f_rev_unit
+        st.session_state["f_deal_val"] = f_deal_val
+        st.session_state["f_deal_curr"] = f_deal_curr
+        st.session_state["f_deal_unit"] = f_deal_unit
         st.session_state["f_hc"] = f_hc
         st.session_state["f_name"] = f_name
         st.session_state["f_email"] = f_email
         st.session_state["f_role"] = f_role
         st.session_state["f_intent"] = f_intent
-        st.session_state["f_deal"] = f_deal
         st.session_state["f_timeline"] = f_timeline
         st.session_state["f_tech"] = f_tech
         st.session_state["f_notes"] = f_notes
@@ -615,11 +713,17 @@ if calc_btn:
 
         submission = StreamlinedLeadForm(
             company_name=f_company.strip(),
-            currency_symbol=curr_sym,
-            currency_code=curr_code,
+            currency_symbol=rev_sym,
+            currency_code=rev_code,
+            revenue_entered_value=float(f_rev_val),
+            revenue_unit=f_rev_unit,
+            revenue_display_str=rev_stated_str,
+            deal_entered_value=float(f_deal_val),
+            deal_unit=f_deal_unit,
+            deal_display_str=deal_stated_str,
             industry_sector=f_ind,
             sub_vertical=f_subv.strip(),
-            annual_revenue_usd=float(f_rev),
+            annual_revenue_usd=float(f_rev_total),
             employee_count=int(f_hc),
             location=f_loc.strip(),
             branch_locations=branches_list,
@@ -627,7 +731,7 @@ if calc_btn:
             contact_email=f_email.strip(),
             contact_role_title=f_role.strip(),
             buying_intent=combined_intent,
-            target_deal_size_usd=float(f_deal),
+            target_deal_size_usd=float(f_deal_total),
             tech_stack_notes=combined_tech
         )
         res: StreamlinedScoringResult = GTMScoringEngine.evaluate(submission, cfg)
