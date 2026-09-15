@@ -347,15 +347,14 @@ def show_settings_dialog():
                     value=", ".join(cfg.prohibited_countries)
                 )
 
-            with st.container(border=True):
-                st.markdown('<div class="settings-section-title">⚖️ Pillar Weights & Margins (Must = 100%)</div>', unsafe_allow_html=True)
+                st.markdown('<div class="settings-section-title">⚖️ GTM Partners 4-Pillar Weights (Must = 100%)</div>', unsafe_allow_html=True)
                 c_w1, c_w2 = st.columns(2)
                 with c_w1:
-                    s_w_firmo = st.slider("Firmographics Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_firmographics * 100), step=5)
-                    s_w_auth = st.slider("Decision Authority Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_authority * 100), step=5)
+                    s_w_firmo = st.slider("1. Firmographics Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_firmographics * 100), step=5)
+                    s_w_auth = st.slider("3. Qualifying Characteristics (%)", min_value=5, max_value=60, value=int(cfg.weight_authority * 100), step=5)
                 with c_w2:
-                    s_w_intent = st.slider("Buying Intent Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_intent * 100), step=5)
-                    s_w_val = st.slider("Contract Value Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_value * 100), step=5)
+                    s_w_val = st.slider("2. Technographics Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_value * 100), step=5)
+                    s_w_intent = st.slider("4. Readiness to Buy Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_intent * 100), step=5)
 
                 total_w = s_w_firmo + s_w_auth + s_w_intent + s_w_val
                 if total_w != 100:
@@ -642,36 +641,11 @@ if "streamlined_res" in st.session_state:
     if res.is_disqualified:
         st.error(f"❌ **Hard Disqualification Detected**: {res.disqualification_reason}")
 
-    # 2. 🤖 AI Semantic Text Intelligence Grid
-    st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>🤖 AI Semantic Strategic Intelligence</h4>", unsafe_allow_html=True)
+    # 2. 🤖 AI Semantic Strategic Intelligence Grid (GTM Partners Taxonomy)
+    st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>🤖 AI Strategic Intelligence & GTM Readiness</h4>", unsafe_allow_html=True)
     ai_col1, ai_col2, ai_col3, ai_col4 = st.columns(4)
 
     with ai_col1:
-        persona_str = res.ai_role.persona_type if res.ai_role else "End User"
-        sen_str = res.ai_role.seniority_level if res.ai_role else "Standard"
-        dept_str = res.ai_role.department if res.ai_role else "General"
-        rat_str = res.ai_role.rationale if res.ai_role else ""
-        st.markdown(f"""
-        <div class="ai-feature-card">
-            <div>
-                <div style="font-size:0.75rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:0.8px;">
-                    👤 Authority & Persona
-                </div>
-                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-                    {persona_str}
-                </div>
-                <div style="margin-top:8px;">
-                    <span class="tag-chip tag-purple">{sen_str}</span>
-                </div>
-            </div>
-            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="color:#94A3B8; font-size:0.76rem;">Dept: <strong style="color:#E2E8F0;">{dept_str}</strong></div>
-                <div style="font-style:italic; margin-top:4px; color:#A78BFA;">"{rat_str}"</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with ai_col2:
         market_str = res.ai_niche.market_complexity if res.ai_niche else "Established Market"
         niche_rat = res.ai_niche.rationale if res.ai_niche else ""
         reach_str = res.ai_footprint.geographic_reach if res.ai_footprint else "Single Market"
@@ -679,7 +653,7 @@ if "streamlined_res" in st.session_state:
         <div class="ai-feature-card">
             <div>
                 <div style="font-size:0.75rem; font-weight:700; color:#38BDF8; text-transform:uppercase; letter-spacing:0.8px;">
-                    🏢 Vertical & Market Footprint
+                    🏢 1. Firmographics
                 </div>
                 <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
                     {market_str}
@@ -695,37 +669,14 @@ if "streamlined_res" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
 
-    with ai_col3:
-        urgency_str = res.ai_intent.urgency_tier if res.ai_intent else "Moderate Urgency"
-        timeline_str = res.ai_intent.timeline_detected or "Standard Inbound"
-        intent_rat = res.ai_intent.rationale if res.ai_intent else ""
-        st.markdown(f"""
-        <div class="ai-feature-card">
-            <div>
-                <div style="font-size:0.75rem; font-weight:700; color:#FBBF24; text-transform:uppercase; letter-spacing:0.8px;">
-                    ⚡ Intent & Urgency
-                </div>
-                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-                    {urgency_str}
-                </div>
-                <div style="margin-top:8px;">
-                    <span class="tag-chip tag-amber">{timeline_str}</span>
-                </div>
-            </div>
-            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="font-style:italic; color:#FDE68A;">"{intent_rat}"</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with ai_col4:
+    with ai_col2:
         fit_str = res.ai_tech.ecosystem_fit if res.ai_tech else "Standard Fit"
         tech_rat = res.ai_tech.rationale if res.ai_tech else ""
         st.markdown(f"""
         <div class="ai-feature-card">
             <div>
                 <div style="font-size:0.75rem; font-weight:700; color:#34D399; text-transform:uppercase; letter-spacing:0.8px;">
-                    💻 Tech Synergy
+                    💻 2. Technographics
                 </div>
                 <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
                     {fit_str}
@@ -740,16 +691,64 @@ if "streamlined_res" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
 
+    with ai_col3:
+        persona_str = res.ai_role.persona_type if res.ai_role else "End User"
+        sen_str = res.ai_role.seniority_level if res.ai_role else "Standard"
+        dept_str = res.ai_role.department if res.ai_role else "General"
+        rat_str = res.ai_role.rationale if res.ai_role else ""
+        st.markdown(f"""
+        <div class="ai-feature-card">
+            <div>
+                <div style="font-size:0.75rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:0.8px;">
+                    👤 3. Qualifying Characteristics
+                </div>
+                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+                    {persona_str}
+                </div>
+                <div style="margin-top:8px;">
+                    <span class="tag-chip tag-purple">{sen_str}</span>
+                </div>
+            </div>
+            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                <div style="color:#94A3B8; font-size:0.76rem;">Dept: <strong style="color:#E2E8F0;">{dept_str}</strong></div>
+                <div style="font-style:italic; margin-top:4px; color:#A78BFA;">"{rat_str}"</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with ai_col4:
+        urgency_str = res.ai_intent.urgency_tier if res.ai_intent else "Moderate Urgency"
+        timeline_str = res.ai_intent.timeline_detected or "Standard Inbound"
+        intent_rat = res.ai_intent.rationale if res.ai_intent else ""
+        st.markdown(f"""
+        <div class="ai-feature-card">
+            <div>
+                <div style="font-size:0.75rem; font-weight:700; color:#FBBF24; text-transform:uppercase; letter-spacing:0.8px;">
+                    ⚡ 4. Readiness to Buy
+                </div>
+                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+                    {urgency_str}
+                </div>
+                <div style="margin-top:8px;">
+                    <span class="tag-chip tag-amber">{timeline_str}</span>
+                </div>
+            </div>
+            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                <div style="font-style:italic; color:#FDE68A;">"{intent_rat}"</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     # 3. ⚡ 4-Dimensional Revenue Intelligence Score Cards
     st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-    st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>⚡ 4-Dimensional Revenue Intelligence Scores</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>⚡ GTM Partners 4-Pillar Revenue Scores</h4>", unsafe_allow_html=True)
     p1, p2, p3, p4 = st.columns(4)
 
     pillars = [
-        (p1, "1. FIRMOGRAPHIC SCALE", res.pillar_firmographics, cfg.weight_firmographics, "#38BDF8"),
-        (p2, "2. DECISION AUTHORITY", res.pillar_authority, cfg.weight_authority, "#A78BFA"),
-        (p3, "3. BUYING INTENT", res.pillar_intent, cfg.weight_intent, "#FBBF24"),
-        (p4, "4. CONTRACT VALUE", res.pillar_value, cfg.weight_value, "#34D399")
+        (p1, "1. FIRMOGRAPHICS", res.pillar_firmographics, cfg.weight_firmographics, "#38BDF8"),
+        (p2, "2. TECHNOGRAPHICS", res.pillar_value, cfg.weight_value, "#34D399"),
+        (p3, "3. QUALIFYING FIT", res.pillar_authority, cfg.weight_authority, "#A78BFA"),
+        (p4, "4. READINESS TO BUY", res.pillar_intent, cfg.weight_intent, "#FBBF24")
     ]
 
     for col, title, p_res, weight, col_accent in pillars:
