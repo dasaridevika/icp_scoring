@@ -84,6 +84,8 @@ class FootprintAIAnalysis(BaseModel):
 
 class CompanyStandardsConfig(BaseModel):
     company_name: str = ""
+    currency_symbol: str = "$"
+    currency_code: str = "USD"
     min_deal_size_usd: float = 0.0
     target_deal_size_usd: float = 0.0
     min_company_revenue_usd: float = 0.0
@@ -104,6 +106,8 @@ class CompanyStandardsConfig(BaseModel):
 
 class StreamlinedLeadForm(BaseModel):
     company_name: str = ""
+    currency_symbol: str = "$"
+    currency_code: str = "USD"
     industry_sector: str = ""
     sub_vertical: str = ""
     annual_revenue_usd: float = 0.0
@@ -333,12 +337,14 @@ class GTMScoringEngine:
         firmo_pts = max(1, min(5, int(round(firmo_score / 20.0))))
         techno_pts = max(1, min(5, int(round(techno_score / 20.0))))
 
+        sym = form.currency_symbol or cfg.currency_symbol or "$"
+
         pillar_firmo = PillarScoreSummary(
             pillar_name="Firmographics Scale",
             score=firmo_score,
             weight_pct=cfg.weight_firmographics,
             field_receipts=[
-                FieldScoreReceipt(field_name="Company Revenue", pillar="Firmographics", raw_value=f"${form.annual_revenue_usd:,.0f}", gtm_points=firmo_pts, rationale=f"ARR: ${form.annual_revenue_usd:,.0f}"),
+                FieldScoreReceipt(field_name="Company Revenue", pillar="Firmographics", raw_value=f"{sym}{form.annual_revenue_usd:,.0f}", gtm_points=firmo_pts, rationale=f"ARR: {sym}{form.annual_revenue_usd:,.0f}"),
                 FieldScoreReceipt(field_name="Employee Headcount", pillar="Firmographics", raw_value=f"{form.employee_count:,} employees", gtm_points=firmo_pts, rationale=f"Headcount: {form.employee_count:,}"),
                 FieldScoreReceipt(field_name="Industry & AI Niche", pillar="Firmographics", raw_value=f"{form.industry_sector} • {form.sub_vertical or 'General'}", gtm_points=ai_niche.fit_points, rationale=ai_niche.rationale),
                 FieldScoreReceipt(field_name="Global Footprint (AI)", pillar="Firmographics", raw_value=geo_reach, gtm_points=ai_footprint.footprint_points, rationale=ai_footprint.rationale)
@@ -368,7 +374,7 @@ class GTMScoringEngine:
             score=techno_score,
             weight_pct=cfg.weight_value,
             field_receipts=[
-                FieldScoreReceipt(field_name="Contract Size ($)", pillar="Contract Value", raw_value=f"${form.target_deal_size_usd:,.0f}", gtm_points=techno_pts, rationale=f"ACV: ${form.target_deal_size_usd:,.0f}"),
+                FieldScoreReceipt(field_name=f"Contract Size ({sym})", pillar="Contract Value", raw_value=f"{sym}{form.target_deal_size_usd:,.0f}", gtm_points=techno_pts, rationale=f"ACV: {sym}{form.target_deal_size_usd:,.0f}"),
                 FieldScoreReceipt(field_name="Tech Stack Ecosystem (AI)", pillar="Contract Value", raw_value=form.tech_stack_notes or "Cloud Baseline", gtm_points=ai_tech.tech_points, rationale=ai_tech.rationale)
             ]
         )
@@ -434,8 +440,8 @@ class GTMScoringEngine:
                 allotted_score=firmo_score,
                 weight_pct=round(cfg.weight_firmographics * 100, 1),
                 points_contributed=round(firmo_score * cfg.weight_firmographics, 2),
-                basis_criterion=f"Annual ARR (${form.annual_revenue_usd:,.0f}), Headcount ({form.employee_count:,}), Niche Complexity ({ai_niche.market_complexity}), and Branch Footprint ({geo_reach}).",
-                verified_signals=ev_firmo.get("evidence_points", [f"ARR: ${form.annual_revenue_usd:,.0f}", f"Headcount: {form.employee_count:,} FTEs", f"Footprint: {geo_reach}"]),
+                basis_criterion=f"Annual ARR ({sym}{form.annual_revenue_usd:,.0f}), Headcount ({form.employee_count:,}), Niche Complexity ({ai_niche.market_complexity}), and Branch Footprint ({geo_reach}).",
+                verified_signals=ev_firmo.get("evidence_points", [f"ARR: {sym}{form.annual_revenue_usd:,.0f}", f"Headcount: {form.employee_count:,} FTEs", f"Footprint: {geo_reach}"]),
                 deduction_gaps=ev_firmo.get("missing_points", []),
                 decision_rationale=ev_firmo.get("rationale", "") or f"High-scale firmographic evaluation based on {form.company_name or 'account'}."
             ),

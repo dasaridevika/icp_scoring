@@ -320,15 +320,15 @@ def show_settings_dialog():
 
                 c_s1, c_s2 = st.columns(2)
                 with c_s1:
-                     s_min_deal = st.number_input("Minimum Viable Deal ($)", min_value=0, max_value=1_000_000_000, value=int(cfg.min_deal_size_usd), step=5000, format="%d")
+                     s_min_deal = st.number_input(f"Minimum Viable Deal ({curr_sym})", min_value=0, max_value=1_000_000_000, value=int(cfg.min_deal_size_usd), step=5000, format="%d")
                 with c_s2:
-                     s_target_deal = st.number_input("Target Ideal Deal ($)", min_value=0, max_value=1_000_000_000, value=int(cfg.target_deal_size_usd), step=10000, format="%d")
+                     s_target_deal = st.number_input(f"Target Ideal Deal ({curr_sym})", min_value=0, max_value=1_000_000_000, value=int(cfg.target_deal_size_usd), step=10000, format="%d")
 
                 c_s3, c_s4 = st.columns(2)
                 with c_s3:
-                     s_min_rev = st.number_input("Minimum Prospect Revenue ($)", min_value=0, max_value=100_000_000_000, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
+                     s_min_rev = st.number_input(f"Minimum Prospect Revenue ({curr_sym})", min_value=0, max_value=100_000_000_000, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
                 with c_s4:
-                     s_ideal_rev = st.number_input("Ideal Prospect Target ARR ($)", min_value=0, max_value=100_000_000_000, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
+                     s_ideal_rev = st.number_input(f"Ideal Prospect Target ARR ({curr_sym})", min_value=0, max_value=100_000_000_000, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
 
                 c_s5, c_s6 = st.columns(2)
                 with c_s5:
@@ -409,10 +409,30 @@ def show_settings_dialog():
         st.rerun()
 
 
+# Currency Configuration Map
+CURRENCY_OPTIONS = {
+    "USD ($)": "$",
+    "INR (₹)": "₹",
+    "EUR (€)": "€",
+    "GBP (£)": "£",
+    "CAD (C$)": "C$",
+    "AUD (A$)": "A$",
+    "AED (AED)": "AED ",
+    "SGD (S$)": "S$",
+    "JPY (¥)": "¥"
+}
+
+if "selected_curr" not in st.session_state:
+    st.session_state["selected_curr"] = "USD ($)"
+
+curr_label = st.session_state["selected_curr"]
+curr_sym = CURRENCY_OPTIONS.get(curr_label, "$")
+curr_code = curr_label.split()[0]
+
 # ==============================================================================
 # HERO HEADER BAR & CONTROLS
 # ==============================================================================
-head_col1, head_col2 = st.columns([5, 2])
+head_col1, head_col2 = st.columns([5, 3])
 
 with head_col1:
     st.markdown("""
@@ -430,9 +450,20 @@ with head_col1:
 
 with head_col2:
     st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-    btn_c1, btn_c2 = st.columns([1, 1])
-    with btn_c2:
-        if st.button("⚙️ ICP Settings", use_container_width=True, help="Configure company standards, margins, and weights"):
+    c_cur, c_sett = st.columns([1.3, 1])
+    with c_cur:
+        selected_curr = st.selectbox(
+            "Currency",
+            options=list(CURRENCY_OPTIONS.keys()),
+            index=list(CURRENCY_OPTIONS.keys()).index(st.session_state["selected_curr"]),
+            label_visibility="collapsed",
+            help="Select reporting and evaluation currency (USD $, INR ₹, EUR €, GBP £, etc.)"
+        )
+        if selected_curr != st.session_state["selected_curr"]:
+            st.session_state["selected_curr"] = selected_curr
+            st.rerun()
+    with c_sett:
+        if st.button("⚙️ Settings", use_container_width=True, help="Configure company standards, margins, and weights"):
             show_settings_dialog()
 
 # Clean Status Indicator Bar
@@ -441,11 +472,11 @@ with st.container(border=True):
     with bar_c1:
         st.markdown(f"🏢 **Standards Org**: `{cfg.company_name}`")
     with bar_c2:
-        st.markdown(f"🎯 **Min ACV Floor**: `${cfg.min_deal_size_usd:,.0f}`")
+        st.markdown(f"🎯 **Min ACV Floor**: `{curr_sym}{cfg.min_deal_size_usd:,.0f}`")
     with bar_c3:
-        st.markdown(f"📈 **Target ARR**: `${cfg.ideal_revenue_usd:,.0f}`")
+        st.markdown(f"📈 **Target ARR**: `{curr_sym}{cfg.ideal_revenue_usd:,.0f}`")
     with bar_c4:
-        st.markdown("🤖 **AI Worker**: `Cloudflare AI Llama-3.1 Active`")
+        st.markdown(f"💱 **Currency**: `{curr_label}` &bull; 🤖 **AI Active**")
 
 
 # ==============================================================================
@@ -487,7 +518,7 @@ with st.form("lead_qualification_form"):
             # Row 4: Annual Revenue & Headcount
             c1_r4_a, c1_r4_b = st.columns(2)
             with c1_r4_a:
-                f_rev = st.number_input("Annual Revenue ($ USD)", min_value=0, max_value=100_000_000_000, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d", help="Max allowed entry: $100 Billion USD")
+                f_rev = st.number_input(f"Annual Revenue ({curr_sym} {curr_code})", min_value=0, max_value=100_000_000_000, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d", help=f"Max allowed entry: {curr_sym}100 Billion {curr_code}")
             with c1_r4_b:
                 f_hc = st.number_input("Employee Headcount", min_value=0, max_value=10_000_000, value=max(0, int(st.session_state.get("f_hc", 0))), step=25, format="%d", help="Max allowed entry: 10 Million employees")
 
@@ -517,7 +548,7 @@ with st.form("lead_qualification_form"):
             # Row 3: Deal Size & Timeline
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
-                f_deal = st.number_input("Target Contract Value ($ USD)", min_value=0, max_value=1_000_000_000, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d", help="Max allowed entry: $1 Billion USD")
+                f_deal = st.number_input(f"Target Contract Value ({curr_sym} {curr_code})", min_value=0, max_value=1_000_000_000, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d", help=f"Max allowed entry: {curr_sym}1 Billion {curr_code}")
             with c2_r3_b:
                 f_timeline = st.text_input("Buying Timeline / Horizon", value=st.session_state.get("f_timeline", ""))
 
@@ -584,6 +615,8 @@ if calc_btn:
 
         submission = StreamlinedLeadForm(
             company_name=f_company.strip(),
+            currency_symbol=curr_sym,
+            currency_code=curr_code,
             industry_sector=f_ind,
             sub_vertical=f_subv.strip(),
             annual_revenue_usd=float(f_rev),
