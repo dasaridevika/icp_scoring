@@ -361,11 +361,11 @@ def show_settings_dialog():
                 st.markdown('<div class="settings-section-title">⚖️ GTM Partners 4-Pillar Weights (Must = 100%)</div>', unsafe_allow_html=True)
                 c_w1, c_w2 = st.columns(2)
                 with c_w1:
-                    s_w_firmo = st.slider("1. Firmographics Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_firmographics * 100), step=5)
-                    s_w_auth = st.slider("3. Qualifying Characteristics (%)", min_value=5, max_value=60, value=int(cfg.weight_authority * 100), step=5)
+                    s_w_firmo = st.number_input("1. Firmographics Weight (%)", min_value=0, max_value=100, value=int(cfg.weight_firmographics * 100), step=1, format="%d")
+                    s_w_auth = st.number_input("3. Qualifying Characteristics (%)", min_value=0, max_value=100, value=int(cfg.weight_authority * 100), step=1, format="%d")
                 with c_w2:
-                    s_w_val = st.slider("2. Technographics Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_value * 100), step=5)
-                    s_w_intent = st.slider("4. Readiness to Buy Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_intent * 100), step=5)
+                    s_w_val = st.number_input("2. Technographics Weight (%)", min_value=0, max_value=100, value=int(cfg.weight_value * 100), step=1, format="%d")
+                    s_w_intent = st.number_input("4. Readiness to Buy Weight (%)", min_value=0, max_value=100, value=int(cfg.weight_intent * 100), step=1, format="%d")
 
                 total_w = s_w_firmo + s_w_auth + s_w_intent + s_w_val
                 if total_w != 100:
