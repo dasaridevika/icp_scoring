@@ -1,3 +1,9 @@
+Created index.js
+Ran command: `git add index.js ; git commit -m "fix(worker): remove 50000 fallback deal size and make prompt evaluation unrestricted" ; git push origin main`
+
+Here is the modified and cleaned up code for [`index.js`](file:///C:/Users/Telan/.gemini/antigravity/scratch/icp-scoring-model/index.js). All hardcoded fallback deal sizes (`dealSize = 50000`), artificial constraints, and static limits have been removed:
+
+```javascript
 function resolveEnum(val, options, fallback) {
   if (!val) return fallback;
   const s = String(val).trim();
@@ -164,7 +170,7 @@ export default {
     try {
       let payload = {};
       let prospectInput = "";
-      let dealSize = 50000;
+      let dealSize = null;
 
       try {
         const contentType = request.headers.get("content-type") || "";
@@ -174,13 +180,19 @@ export default {
           if (!prospectInput) {
             prospectInput = JSON.stringify(payload, null, 2);
           }
-          dealSize = Number(payload.target_deal_size_usd || payload.deal_size || payload.deal_size_usd) || 50000;
+          const rawDeal = payload.target_deal_size_usd ?? payload.deal_size ?? payload.deal_size_usd;
+          if (rawDeal !== undefined && rawDeal !== null && rawDeal !== "") {
+            dealSize = Number(rawDeal);
+          }
         } else {
           const rawText = await request.text();
           try {
             payload = JSON.parse(rawText);
             prospectInput = (payload.text || payload.prospect_text || rawText).trim();
-            dealSize = Number(payload.target_deal_size_usd || payload.deal_size || payload.deal_size_usd) || 50000;
+            const rawDeal = payload.target_deal_size_usd ?? payload.deal_size ?? payload.deal_size_usd;
+            if (rawDeal !== undefined && rawDeal !== null && rawDeal !== "") {
+              dealSize = Number(rawDeal);
+            }
           } catch (e) {
             prospectInput = rawText.trim();
           }
@@ -217,10 +229,10 @@ export default {
       }
 
       const systemPrompt = "You are an elite Senior Director of RevOps & GTM Strategist implementing the official GTM Partners ICP Scoring Framework.\n" +
-        "Analyze the prospect input dynamically using deep contextual AI reasoning. DO NOT rely on static rules or crude keyword matches.\n\n" +
+        "Analyze the prospect input dynamically using deep contextual AI reasoning. DO NOT rely on static rules, crude keyword matches, or artificial revenue caps.\n\n" +
         "EVALUATE THE 4 GTM PARTNERS ICP PILLARS (Score each 0 to 100):\n\n" +
         "1. FIRMOGRAPHICS (0-100):\n" +
-        "   - Company Revenue & ARR scale\n" +
+        "   - Company Revenue & ARR scale (supports any scale from early-stage to mega-cap enterprise $100B+ ARR)\n" +
         "   - Industry macro-sector & sub-vertical niche complexity\n" +
         "   - Employee Headcount & organizational maturity\n" +
         "   - Primary Headquarters & Multi-Branch Regional Footprint (Single-Market, Cross-Border, or Global Enterprise)\n\n" +
@@ -231,7 +243,7 @@ export default {
         "3. QUALIFYING CHARACTERISTICS (0-100):\n" +
         "   - Typical Roles & Decision Authority (C-Suite / Founder, VP / Head, Director = High Authority; Student / Intern = Disqualified)\n" +
         "   - Buyer Persona: Economic Buyer, Technical Champion, End User, Non-Buyer\n" +
-        "   - Budget Line Item & Target Contract Value ($ USD vs.  min /  ideal ACV)\n" +
+        "   - Budget Line Item & Target Contract Value ($ USD)\n" +
         "   - Pricing inhibitors vs. expansion potential\n\n" +
         "4. READINESS TO BUY (0-100):\n" +
         "   - Buying Signals & Intent Velocity (Immediate RFP, pricing inquiry, migration mandate <30 days = 85-100; 30-60 days = 70-85; exploratory = 40-60)\n" +
@@ -320,7 +332,10 @@ export default {
       const liveWebContext = await searchWebIntelligence(prospectInput, env, request, payload);
       const enrichedProspect = liveWebContext ? prospectInput + "\n\n--- LIVE WEB & SEARCH INTELLIGENCE ---" + liveWebContext + "\n--------------------------------------" : prospectInput;
 
-      const userPromptContent = "Prospect Text / Payload to Evaluate:\n" + enrichedProspect + "\nTarget Contract Size: $" + dealSize.toLocaleString() + " USD";
+      let userPromptContent = "Prospect Text / Payload to Evaluate:\n" + enrichedProspect;
+      if (dealSize !== null && !isNaN(dealSize) && dealSize > 0) {
+        userPromptContent += "\nTarget Contract Size: $" + dealSize.toLocaleString() + " USD";
+      }
 
       let aiRaw = null;
       let aiErrorMsg = "";
@@ -570,3 +585,4 @@ export default {
     }
   }
 };
+```
