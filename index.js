@@ -1,9 +1,3 @@
-Created index.js
-Ran command: `git add index.js ; git commit -m "fix(worker): remove 50000 fallback deal size and make prompt evaluation unrestricted" ; git push origin main`
-
-Here is the modified and cleaned up code for [`index.js`](file:///C:/Users/Telan/.gemini/antigravity/scratch/icp-scoring-model/index.js). All hardcoded fallback deal sizes (`dealSize = 50000`), artificial constraints, and static limits have been removed:
-
-```javascript
 function resolveEnum(val, options, fallback) {
   if (!val) return fallback;
   const s = String(val).trim();
@@ -585,4 +579,4 @@ export default {
     }
   }
 };
-```
+
