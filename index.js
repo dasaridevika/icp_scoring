@@ -115,7 +115,7 @@ async function searchWebIntelligence(prospectText, env, request = null, payload 
         }
       }
     } catch (serperErr) {
-      console.warn("Serper search warning:", serperErr);
+      console.warn("Serper search warning:", serpErr);
     }
   }
 
