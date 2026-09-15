@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Enterprise ICP Revenue Intelligence - Cloudflare Worker API
  * 
  * Features:
@@ -300,6 +300,57 @@ function analyzeTechStack(stackNotes) {
   };
 }
 
+function analyzeFootprint(hq, branches = [], tier1List = [], prohibitedList = []) {
+  const allLocs = [hq, ...(Array.isArray(branches) ? branches : [])].map(l => (l || "").trim()).filter(Boolean);
+  const prohibitedMatches = [];
+  const tier1Matches = [];
+
+  for (const loc of allLocs) {
+    for (const p of prohibitedList) {
+      if (loc.toLowerCase().includes(p.toLowerCase()) && !prohibitedMatches.includes(loc)) {
+        prohibitedMatches.push(loc);
+      }
+    }
+    for (const t of tier1List) {
+      if (loc.toLowerCase().includes(t.toLowerCase()) && !tier1Matches.includes(loc)) {
+        tier1Matches.push(loc);
+      }
+    }
+  }
+
+  const branchCount = Array.isArray(branches) ? branches.filter(b => b && b.trim()).length : 0;
+  let reach = "Single-Market Hub";
+  if (branchCount >= 3) {
+    reach = "Global Multi-Region Enterprise";
+  } else if (branchCount >= 1) {
+    reach = "Cross-Border Multi-Branch";
+  }
+
+  let pts = 3;
+  let rationale = `Footprint across ${allLocs.length || 1} territory hub(s).`;
+  if (prohibitedMatches.length > 0) {
+    pts = -5;
+    rationale = `Detected sanctioned prohibited territory: ${prohibitedMatches.join(", ")}.`;
+  } else if (tier1Matches.length > 0 && branchCount >= 1) {
+    pts = 5;
+    rationale = `Tier 1 enterprise footprint (${tier1Matches.join(", ")}) across ${branchCount} branch office(s).`;
+  } else if (tier1Matches.length > 0) {
+    pts = 5;
+    rationale = `Direct Tier 1 supported market: ${tier1Matches.join(", ")}.`;
+  }
+
+  return {
+    headquarters: hq,
+    branch_locations: Array.isArray(branches) ? branches : [],
+    total_locations: allLocs.length || 1,
+    geographic_reach: reach,
+    tier1_matches: tier1Matches,
+    prohibited_matches: prohibitedMatches,
+    footprint_points: pts,
+    rationale: rationale
+  };
+}
+
 function pointsToScore(pointsArray) {
   if (!pointsArray || pointsArray.length === 0) return 50.0;
   const n = pointsArray.length;
@@ -333,6 +384,7 @@ export default {
           "AI Sub-Vertical & Market Complexity Analysis",
           "AI Buying Intent & Timeline Extraction",
           "AI Technographics Ecosystem Parsing",
+          "Multi-Branch Regional Footprint Analysis",
           "Dynamic Settings-Driven Threshold Evaluation"
         ]
       }), { headers: corsHeaders });
@@ -344,6 +396,10 @@ export default {
       // 1. Prospect Input Data
       const companyName = body.company_name || body.company || "";
       const location = body.location || body.territory || "";
+      let branchLocations = body.branch_locations || body.branches || [];
+      if (typeof branchLocations === "string") {
+        branchLocations = branchLocations.split(",").map(b => b.trim()).filter(Boolean);
+      }
       const industrySector = body.industry_sector || body.industry || "Technology, SaaS & IT";
       const subVertical = body.sub_vertical || body.niche || "";
       const annualRevenue = Number(body.annual_revenue_usd || body.revenue || 0);
@@ -388,6 +444,7 @@ export default {
       const aiNiche = analyzeNiche(subVertical, industrySector);
       const aiIntent = analyzeIntent(buyingIntent);
       const aiTech = analyzeTechStack(techStackNotes);
+      const aiFootprint = analyzeFootprint(location, branchLocations, cfg.tier1_territories, cfg.prohibited_countries);
 
       let isDisqualified = false;
       const disqReasons = [];
@@ -428,16 +485,22 @@ export default {
       }
       firmoReceipts.push({ field: "Industry & Niche (AI)", points: pInd, rationale: rInd });
 
-      let pLoc = 3, rLoc = `Supported territory: ${location || 'Global'}`;
-      const isProhibited = cfg.prohibited_countries.some(p => (location || '').toLowerCase().includes(p.toLowerCase()));
-      if (isProhibited) {
-        pLoc = -5; rLoc = `Prohibited sanctioned territory: ${location}`;
-        isDisqualified = true; disqReasons.push(rLoc);
-      } else if (cfg.tier1_territories.some(t => (location || '').toLowerCase().includes(t.toLowerCase()))) {
-        pLoc = 5; rLoc = `Tier 1 supported direct market: ${location}`;
-        keyStrengths.push(`Tier 1 Territory: ${location}`);
+      let pLoc = aiFootprint.footprint_points;
+      let rLoc = aiFootprint.rationale;
+      if (aiFootprint.prohibited_matches.length > 0) {
+        isDisqualified = true;
+        disqReasons.push(`Prohibited territory match: ${aiFootprint.prohibited_matches.join(", ")}`);
+      } else {
+        if (aiFootprint.tier1_matches.length > 0) {
+          keyStrengths.push(`Tier 1 Regional Presence: ${aiFootprint.tier1_matches.join(", ")}`);
+        }
+        if (branchLocations.length > 0) {
+          keyStrengths.push(`Multi-Branch Footprint: HQ in ${location || 'Primary'} + ${branchLocations.length} regional hub(s) (${branchLocations.join(", ")})`);
+        }
       }
-      firmoReceipts.push({ field: "Location / Territory", points: pLoc, rationale: rLoc });
+
+      const locDisplay = branchLocations.length > 0 ? `${location} (+ ${branchLocations.length} branches: ${branchLocations.join(", ")})` : (location || "Unspecified");
+      firmoReceipts.push({ field: "Location & Multi-Branch Footprint", points: pLoc, rationale: rLoc, raw_value: locDisplay });
 
       const firmoScore = pointsToScore(firmoReceipts.map(r => r.points));
 
@@ -544,6 +607,7 @@ export default {
         account: {
           company_name: companyName,
           location: location,
+          branch_locations: branchLocations,
           industry_sector: industrySector,
           sub_vertical: subVertical,
           annual_revenue_usd: annualRevenue,
@@ -568,7 +632,8 @@ export default {
           role: aiRole,
           niche: aiNiche,
           intent: aiIntent,
-          tech_stack: aiTech
+          tech_stack: aiTech,
+          footprint: aiFootprint
         },
         strategy: {
           urgency_sla: urgencySla,

@@ -442,7 +442,12 @@ with st.form("lead_qualification_form"):
             """, unsafe_allow_html=True)
             
             f_company = st.text_input("Company Name", value=st.session_state.get("f_company", ""))
-            f_loc = st.text_input("Geographic Location / Territory", value=st.session_state.get("f_loc", ""))
+            
+            c_loc1, c_loc2 = st.columns(2)
+            with c_loc1:
+                f_loc = st.text_input("Primary Headquarters Location", value=st.session_state.get("f_loc", ""))
+            with c_loc2:
+                f_branches = st.text_input("Branch Locations / Hubs (Comma-separated)", value=st.session_state.get("f_branches", ""))
 
             c_ind1, c_ind2 = st.columns(2)
             with c_ind1:
@@ -493,6 +498,7 @@ with st.form("lead_qualification_form"):
 if clear_btn:
     st.session_state["f_company"] = ""
     st.session_state["f_loc"] = ""
+    st.session_state["f_branches"] = ""
     st.session_state["f_ind"] = MASTER_INDUSTRY_SECTORS[0]
     st.session_state["f_subv"] = ""
     st.session_state["f_rev"] = 0
@@ -514,6 +520,7 @@ if calc_btn:
     else:
         st.session_state["f_company"] = f_company
         st.session_state["f_loc"] = f_loc
+        st.session_state["f_branches"] = f_branches
         st.session_state["f_ind"] = f_ind
         st.session_state["f_subv"] = f_subv
         st.session_state["f_rev"] = f_rev
@@ -525,6 +532,8 @@ if calc_btn:
         st.session_state["f_deal"] = f_deal
         st.session_state["f_tech"] = f_tech
 
+        branches_list = [b.strip() for b in f_branches.split(",") if b.strip()]
+
         submission = StreamlinedLeadForm(
             company_name=f_company.strip(),
             industry_sector=f_ind,
@@ -532,6 +541,7 @@ if calc_btn:
             annual_revenue_usd=float(f_rev),
             employee_count=int(f_hc),
             location=f_loc.strip(),
+            branch_locations=branches_list,
             contact_name=f_name.strip(),
             contact_email=f_email.strip(),
             contact_role_title=f_role.strip(),
@@ -565,10 +575,11 @@ if "streamlined_res" in st.session_state:
                 <div style="font-size:1.9rem; font-weight:800; color:#FFFFFF; letter-spacing:-0.5px; margin-bottom:6px;">
                     {res.company_name or 'Unspecified Account'}
                 </div>
-                <div style="display:flex; align-items:center; gap:18px; font-size:0.92rem; color:#CBD5E1;">
+                <div style="display:flex; align-items:center; gap:18px; font-size:0.92rem; color:#CBD5E1; flex-wrap:wrap;">
                     <span>Industry: <strong style="color:#FFFFFF;">{res.lead_summary.get('industry', 'N/A')}</strong></span>
                     <span>&bull;</span>
-                    <span>Location: <strong style="color:#FFFFFF;">{res.lead_summary.get('location', 'Global')}</strong></span>
+                    <span>HQ: <strong style="color:#FFFFFF;">{res.lead_summary.get('location') or 'Global'}</strong></span>
+                    {f"<span>&bull;</span><span>Branches: <strong style='color:#38BDF8;'>{len(res.lead_summary.get('branches', []))} Locations</strong></span>" if res.lead_summary.get('branches') else ""}
                     <span>&bull;</span>
                     <span>SLA: <strong style="color:#38BDF8;">{res.urgency_sla}</strong></span>
                 </div>
@@ -623,17 +634,19 @@ if "streamlined_res" in st.session_state:
     with ai_col2:
         market_str = res.ai_niche.market_complexity if res.ai_niche else "Established Market"
         niche_rat = res.ai_niche.rationale if res.ai_niche else ""
+        reach_str = res.ai_footprint.geographic_reach if res.ai_footprint else "Single Market"
         st.markdown(f"""
         <div class="ai-feature-card">
             <div>
                 <div style="font-size:0.75rem; font-weight:700; color:#38BDF8; text-transform:uppercase; letter-spacing:0.8px;">
-                    🏢 Vertical & Market
+                    🏢 Vertical & Market Footprint
                 </div>
                 <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
                     {market_str}
                 </div>
-                <div style="margin-top:8px;">
+                <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
                     <span class="tag-chip tag-cyan">{res.lead_summary.get('industry', 'General')}</span>
+                    <span class="tag-chip tag-emerald">{reach_str}</span>
                 </div>
             </div>
             <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">

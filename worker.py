@@ -44,6 +44,10 @@ class ICPWorkerHandler(BaseHTTPRequestHandler):
         try:
             body = json.loads(post_data.decode("utf-8")) if post_data else {}
             
+            branches = body.get("branch_locations", body.get("branches", []))
+            if isinstance(branches, str):
+                branches = [b.strip() for b in branches.split(",") if b.strip()]
+
             # Extract prospect form submission
             submission = StreamlinedLeadForm(
                 company_name=body.get("company_name", body.get("company", "")),
@@ -52,6 +56,7 @@ class ICPWorkerHandler(BaseHTTPRequestHandler):
                 annual_revenue_usd=float(body.get("annual_revenue_usd", body.get("revenue", 0.0))),
                 employee_count=int(body.get("employee_count", body.get("headcount", 50))),
                 location=body.get("location", body.get("territory", "")),
+                branch_locations=branches,
                 contact_name=body.get("contact_name", body.get("name", "")),
                 contact_email=body.get("contact_email", body.get("email", "")),
                 contact_role_title=body.get("contact_role_title", body.get("role_title", "")),

@@ -18,7 +18,8 @@ from .ai_analyzer import (
     RoleAIAnalysis,
     NicheAIAnalysis,
     IntentAIAnalysis,
-    TechStackAIAnalysis
+    TechStackAIAnalysis,
+    FootprintAIAnalysis
 )
 
 
@@ -84,6 +85,7 @@ class StreamlinedLeadForm(BaseModel):
     annual_revenue_usd: float = 0.0
     employee_count: int = 1
     location: str = ""
+    branch_locations: List[str] = Field(default_factory=list)
     contact_name: str = ""
     contact_email: str = ""
     contact_role_title: str = ""
@@ -130,6 +132,8 @@ class StreamlinedScoringResult(BaseModel):
     ai_niche: Optional[NicheAIAnalysis] = None
     ai_intent: Optional[IntentAIAnalysis] = None
     ai_tech: Optional[TechStackAIAnalysis] = None
+    ai_footprint: Optional[FootprintAIAnalysis] = None
+    lead_summary: Dict[str, Any] = Field(default_factory=dict)
     discovery_questions: List[str] = Field(default_factory=list)
     key_strengths: List[str] = Field(default_factory=list)
     key_risks: List[str] = Field(default_factory=list)
@@ -173,6 +177,12 @@ class GTMScoringEngine:
         ai_niche = AITextAnalyzer.analyze_niche(form.sub_vertical, form.industry_sector)
         ai_intent = AITextAnalyzer.analyze_intent(form.buying_intent)
         ai_tech = AITextAnalyzer.analyze_tech_stack(form.tech_stack_notes or "")
+        ai_footprint = AITextAnalyzer.analyze_footprint(
+            form.location,
+            form.branch_locations,
+            cfg.tier1_territories,
+            cfg.prohibited_countries
+        )
 
         # -------------------------------------------------------------
         # 1. FIRMOGRAPHICS (Scale, Geography & Niche Fit)
@@ -239,28 +249,30 @@ class GTMScoringEngine:
             field_name="Industry & Niche Fit (AI)", pillar="Firmographics", raw_value=f"{ind} • {form.sub_vertical or 'General'}", gtm_points=p_ind, rationale=r_ind
         ))
 
-        # Location
+        # Location & Multi-Branch Footprint (AI Analyzed)
         loc = form.location.strip()
-        is_proh = any(p.lower() in loc.lower() for p in cfg.prohibited_countries)
-        if is_proh:
+        branches = [b.strip() for b in form.branch_locations if b.strip()]
+        if ai_footprint.prohibited_matches:
             p_loc = -5
-            r_loc = f"Located in prohibited/sanctioned territory: {loc}"
+            r_loc = ai_footprint.rationale
             is_disqualified = True
-            disq_reasons.append(r_loc)
-        elif any(t.lower() in loc.lower() for t in cfg.tier1_territories):
-            p_loc = 5
-            r_loc = f"Tier 1 supported direct market: {loc}"
-            key_strengths.append(f"Tier 1 Geography: {loc}")
-        elif loc:
-            p_loc = 3
-            r_loc = f"Supported global territory: {loc}"
+            disq_reasons.append(f"Prohibited territory match: {', '.join(ai_footprint.prohibited_matches)}")
         else:
-            p_loc = -1
-            r_loc = "Location unstated"
-            discovery_questions.append("Where is your operational headquarters located?")
+            p_loc = ai_footprint.footprint_points
+            r_loc = ai_footprint.rationale
+            if ai_footprint.tier1_matches:
+                key_strengths.append(f"Tier 1 Regional Presence: {', '.join(ai_footprint.tier1_matches)}")
+            if branches:
+                key_strengths.append(f"Multi-Branch Scale: HQ in {loc or 'Primary Region'} + {len(branches)} branch offices ({', '.join(branches)})")
 
+        loc_display = f"{loc} (+ {len(branches)} branch offices: {', '.join(branches)})" if branches else (loc or "Unspecified")
         firmo_receipts.append(FieldScoreReceipt(
-            field_name="Location / Territory", pillar="Firmographics", raw_value=loc or "Unspecified", gtm_points=p_loc, rationale=r_loc, is_disqualifier=is_proh
+            field_name="Location & Multi-Branch Footprint",
+            pillar="Firmographics",
+            raw_value=loc_display,
+            gtm_points=p_loc,
+            rationale=r_loc,
+            is_disqualifier=bool(ai_footprint.prohibited_matches)
         ))
 
         firmo_score = points_to_score([r.gtm_points for r in firmo_receipts])
@@ -452,6 +464,16 @@ class GTMScoringEngine:
             ai_niche=ai_niche,
             ai_intent=ai_intent,
             ai_tech=ai_tech,
+            ai_footprint=ai_footprint,
+            lead_summary={
+                "industry": ind,
+                "sub_vertical": form.sub_vertical,
+                "location": loc,
+                "branches": branches,
+                "contact_title": form.contact_role_title,
+                "buying_intent": form.buying_intent,
+                "tech_stack": form.tech_stack_notes
+            },
             discovery_questions=discovery_questions,
             key_strengths=key_strengths,
             key_risks=key_risks

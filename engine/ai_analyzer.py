@@ -1,4 +1,4 @@
-﻿"""
+"""
 Enterprise ICP Revenue Intelligence - AI Text Intelligence Analyzer.
 High-precision semantic analysis for unstructured text fields:
 1. Role Title & Hierarchy Classification (Seniority + Buyer Persona + Department)
@@ -53,11 +53,87 @@ class TechStackAIAnalysis(BaseModel):
     rationale: str
 
 
+class FootprintAIAnalysis(BaseModel):
+    headquarters: str
+    branch_locations: List[str] = Field(default_factory=list)
+    total_locations: int = 1
+    geographic_reach: str  # Global Multi-Region Enterprise, Cross-Border Multi-Branch, Single-Market Hub
+    tier1_matches: List[str] = Field(default_factory=list)
+    prohibited_matches: List[str] = Field(default_factory=list)
+    footprint_points: int = 3
+    rationale: str
+
+
 # ==============================================================================
 # 2. AI Semantic Text Analyzer Engine
 # ==============================================================================
 
 class AITextAnalyzer:
+
+    @classmethod
+    def analyze_footprint(
+        cls,
+        hq: str,
+        branches: Optional[List[str]] = None,
+        tier1_list: Optional[List[str]] = None,
+        prohibited_list: Optional[List[str]] = None
+    ) -> FootprintAIAnalysis:
+        tier1 = tier1_list or [
+            "United States", "United Kingdom", "United Arab Emirates", "European Union",
+            "Canada", "Australia", "Singapore", "India", "Germany", "France", "UAE", "UK", "USA"
+        ]
+        prohibited = prohibited_list or ["North Korea", "Iran", "Syria", "Cuba"]
+
+        clean_branches = [b.strip() for b in (branches or []) if b and b.strip()]
+        all_locs = [hq.strip()] + clean_branches if hq.strip() else clean_branches
+        total_count = max(1, len(all_locs))
+
+        # Check prohibited matches
+        proh_matches = []
+        for loc in all_locs:
+            for p in prohibited:
+                if p.lower() in loc.lower() and p not in proh_matches:
+                    proh_matches.append(p)
+
+        # Check Tier 1 matches
+        t1_matches = []
+        for loc in all_locs:
+            for t in tier1:
+                if t.lower() in loc.lower() and t not in t1_matches:
+                    t1_matches.append(t)
+
+        if proh_matches:
+            pts = -5
+            reach = "Sanctioned Territory Risk"
+            rat = f"Operating branch detected in prohibited/sanctioned territory: {', '.join(proh_matches)}"
+        elif total_count >= 4 or len(t1_matches) >= 3:
+            pts = 5
+            reach = "Global Multi-Region Enterprise"
+            rat = f"Extensive global footprint across {total_count} locations including {len(t1_matches)} Tier 1 markets"
+        elif total_count >= 2 or len(t1_matches) >= 1:
+            pts = 5 if t1_matches else 3
+            reach = "Cross-Border Multi-Branch"
+            rat = f"Multi-branch footprint with HQ in {hq or 'Primary Region'} and {len(clean_branches)} regional offices"
+        elif hq.strip():
+            pts = 5 if t1_matches else 3
+            reach = "Single-Market Hub"
+            rat = f"Operating from single primary market: {hq}"
+        else:
+            pts = -1
+            reach = "Unstated Location"
+            rat = "No primary headquarters or branch locations provided"
+
+        return FootprintAIAnalysis(
+            headquarters=hq or "Unspecified HQ",
+            branch_locations=clean_branches,
+            total_locations=total_count,
+            geographic_reach=reach,
+            tier1_matches=t1_matches,
+            prohibited_matches=proh_matches,
+            footprint_points=pts,
+            rationale=rat
+        )
+
     """
     Intelligent semantic parser and classifier for unstructured B2B text fields.
     """
