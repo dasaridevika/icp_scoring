@@ -71,21 +71,16 @@ class FootprintAIAnalysis(BaseModel):
 
 
 class CompanyStandardsConfig(BaseModel):
-    company_name: str = "Enterprise Revenue Org"
-    min_deal_size_usd: float = 10000.0
-    target_deal_size_usd: float = 50000.0
-    min_company_revenue_usd: float = 2000000.0
-    ideal_revenue_usd: float = 20000000.0
-    min_headcount: int = 50
-    ideal_headcount: int = 250
+    company_name: str = ""
+    min_deal_size_usd: float = 0.0
+    target_deal_size_usd: float = 0.0
+    min_company_revenue_usd: float = 0.0
+    ideal_revenue_usd: float = 0.0
+    min_headcount: int = 0
+    ideal_headcount: int = 0
     target_focus_industries: List[str] = Field(default_factory=list)
-    tier1_territories: List[str] = Field(default_factory=lambda: [
-        "United States", "United Kingdom", "United Arab Emirates", "European Union",
-        "Canada", "Australia", "Singapore", "India", "Germany", "France"
-    ])
-    prohibited_countries: List[str] = Field(default_factory=lambda: [
-        "North Korea", "Iran", "Syria", "Cuba"
-    ])
+    tier1_territories: List[str] = Field(default_factory=list)
+    prohibited_countries: List[str] = Field(default_factory=list)
     weight_firmographics: float = 0.30
     weight_authority: float = 0.25
     weight_intent: float = 0.25
@@ -97,26 +92,26 @@ class CompanyStandardsConfig(BaseModel):
 
 class StreamlinedLeadForm(BaseModel):
     company_name: str = ""
-    industry_sector: str = "Technology, SaaS & IT"
+    industry_sector: str = ""
     sub_vertical: str = ""
     annual_revenue_usd: float = 0.0
-    employee_count: int = 1
+    employee_count: int = 0
     location: str = ""
     branch_locations: List[str] = Field(default_factory=list)
     contact_name: str = ""
     contact_email: str = ""
     contact_role_title: str = ""
-    buying_intent: str = "Active Pricing Inquiry (+3)"
+    buying_intent: str = ""
     target_deal_size_usd: float = 0.0
     tech_stack_notes: Optional[str] = ""
 
 
 class FieldScoreReceipt(BaseModel):
-    field_name: str
-    pillar: str
-    raw_value: Any
-    gtm_points: int
-    rationale: str
+    field_name: str = ""
+    pillar: str = ""
+    raw_value: Any = None
+    gtm_points: int = 0
+    rationale: str = ""
     is_disqualifier: bool = False
 
 
@@ -311,13 +306,16 @@ class GTMScoringEngine:
         qual_score = float(raw_evidence.get("qualifying", {}).get("score", 75.0))
         readiness_score = float(raw_evidence.get("readiness", {}).get("score", 80.0))
 
+        firmo_pts = max(1, min(5, int(round(firmo_score / 20.0))))
+        techno_pts = max(1, min(5, int(round(techno_score / 20.0))))
+
         pillar_firmo = PillarScoreSummary(
             pillar_name="Firmographics Scale",
             score=firmo_score,
             weight_pct=cfg.weight_firmographics,
             field_receipts=[
-                FieldScoreReceipt(field_name="Company Revenue", pillar="Firmographics", raw_value=f"${form.annual_revenue_usd:,.0f}", gtm_points=5 if form.annual_revenue_usd >= cfg.ideal_revenue_usd else 3, rationale=f"ARR: ${form.annual_revenue_usd:,.0f}"),
-                FieldScoreReceipt(field_name="Employee Headcount", pillar="Firmographics", raw_value=f"{form.employee_count:,} employees", gtm_points=5 if form.employee_count >= cfg.ideal_headcount else 3, rationale=f"Headcount: {form.employee_count:,}"),
+                FieldScoreReceipt(field_name="Company Revenue", pillar="Firmographics", raw_value=f"${form.annual_revenue_usd:,.0f}", gtm_points=firmo_pts, rationale=f"ARR: ${form.annual_revenue_usd:,.0f}"),
+                FieldScoreReceipt(field_name="Employee Headcount", pillar="Firmographics", raw_value=f"{form.employee_count:,} employees", gtm_points=firmo_pts, rationale=f"Headcount: {form.employee_count:,}"),
                 FieldScoreReceipt(field_name="Industry & AI Niche", pillar="Firmographics", raw_value=f"{form.industry_sector} • {form.sub_vertical or 'General'}", gtm_points=ai_niche.fit_points, rationale=ai_niche.rationale),
                 FieldScoreReceipt(field_name="Global Footprint (AI)", pillar="Firmographics", raw_value=geo_reach, gtm_points=ai_footprint.footprint_points, rationale=ai_footprint.rationale)
             ]
@@ -346,7 +344,7 @@ class GTMScoringEngine:
             score=techno_score,
             weight_pct=cfg.weight_value,
             field_receipts=[
-                FieldScoreReceipt(field_name="Contract Size ($)", pillar="Contract Value", raw_value=f"${form.target_deal_size_usd:,.0f}", gtm_points=5 if form.target_deal_size_usd >= cfg.target_deal_size_usd else 3, rationale=f"ACV: ${form.target_deal_size_usd:,.0f}"),
+                FieldScoreReceipt(field_name="Contract Size ($)", pillar="Contract Value", raw_value=f"${form.target_deal_size_usd:,.0f}", gtm_points=techno_pts, rationale=f"ACV: ${form.target_deal_size_usd:,.0f}"),
                 FieldScoreReceipt(field_name="Tech Stack Ecosystem (AI)", pillar="Contract Value", raw_value=form.tech_stack_notes or "Cloud Baseline", gtm_points=ai_tech.tech_points, rationale=ai_tech.rationale)
             ]
         )
