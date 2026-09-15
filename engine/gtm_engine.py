@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 
 from .ai_analyzer import (
     AITextAnalyzer,
+    AIWorkerClient,
+    DEFAULT_WORKER_URL,
     RoleAIAnalysis,
     NicheAIAnalysis,
     IntentAIAnalysis,
@@ -156,7 +158,8 @@ class GTMScoringEngine:
     def evaluate(
         cls,
         form: StreamlinedLeadForm,
-        config: Optional[CompanyStandardsConfig] = None
+        config: Optional[CompanyStandardsConfig] = None,
+        worker_url: Optional[str] = None
     ) -> StreamlinedScoringResult:
         cfg = config or CompanyStandardsConfig()
         is_disqualified = False
@@ -172,17 +175,45 @@ class GTMScoringEngine:
             norm = ((sum(pts) - (-5.0 * n)) / (10.0 * n)) * 100.0
             return max(0.0, min(100.0, norm))
 
-        # Execute AI Semantic Analysis on Text Input Fields
-        ai_role = AITextAnalyzer.analyze_role(form.contact_role_title)
-        ai_niche = AITextAnalyzer.analyze_niche(form.sub_vertical, form.industry_sector)
-        ai_intent = AITextAnalyzer.analyze_intent(form.buying_intent)
-        ai_tech = AITextAnalyzer.analyze_tech_stack(form.tech_stack_notes or "")
+        # Query Cloudflare Workers AI Engine dynamically
+        worker_payload = {
+            "company_name": form.company_name,
+            "industry_sector": form.industry_sector,
+            "sub_vertical": form.sub_vertical,
+            "annual_revenue_usd": form.annual_revenue_usd,
+            "employee_count": form.employee_count,
+            "location": form.location,
+            "branch_locations": form.branch_locations,
+            "contact_name": form.contact_name,
+            "contact_email": form.contact_email,
+            "contact_role_title": form.contact_role_title,
+            "buying_intent": form.buying_intent,
+            "target_deal_size_usd": form.target_deal_size_usd,
+            "tech_stack_notes": form.tech_stack_notes
+        }
+        worker_res = AIWorkerClient.evaluate_lead(worker_payload, worker_url=worker_url)
+
+        # Execute Dynamic AI Semantic Analysis
+        ai_role = AITextAnalyzer.analyze_role(form.contact_role_title, worker_res=worker_res)
+        ai_niche = AITextAnalyzer.analyze_niche(form.sub_vertical, form.industry_sector, worker_res=worker_res)
+        ai_intent = AITextAnalyzer.analyze_intent(form.buying_intent, worker_res=worker_res)
+        ai_tech = AITextAnalyzer.analyze_tech_stack(form.tech_stack_notes or "", worker_res=worker_res)
         ai_footprint = AITextAnalyzer.analyze_footprint(
             form.location,
             form.branch_locations,
             cfg.tier1_territories,
-            cfg.prohibited_countries
+            cfg.prohibited_countries,
+            worker_res=worker_res
         )
+
+        # Ingest AI Worker questions, strengths, and risks if available
+        if worker_res:
+            if worker_res.get("discovery_questions"):
+                discovery_questions.extend(worker_res["discovery_questions"])
+            if worker_res.get("key_strengths"):
+                key_strengths.extend(worker_res["key_strengths"])
+            if worker_res.get("key_risks"):
+                key_risks.extend(worker_res["key_risks"])
 
         # -------------------------------------------------------------
         # 1. FIRMOGRAPHICS (Scale, Geography & Niche Fit)
@@ -438,13 +469,18 @@ class GTMScoringEngine:
                 urgency_sla = "Automated Marketing Nurture"
                 recommended_channel = "Marketing Newsletter & Documentation"
 
-            # Dynamic Value Wedge & Hook
+            # Dynamic Value Wedge & Hook (AI Worker or Dynamic Generator)
             sub_niche = form.sub_vertical or form.industry_sector
             comp = form.company_name or "your team"
             contact = form.contact_name or "there"
             
-            value_wedge = f"Accelerate operational throughput for {sub_niche} initiatives at {comp}."
-            outreach_hook = f"Hi {contact}, saw your initiative around {sub_niche} at {comp}—wanted to share how we support similar {ai_role.department} teams with tailored integration for your stack."
+            ai_strategy = worker_res.get("strategy", {}) if worker_res else {}
+            value_wedge = ai_strategy.get("value_wedge") or f"Accelerate operational throughput for {sub_niche} initiatives at {comp}."
+            outreach_hook = ai_strategy.get("outreach_hook") or f"Hi {contact}, saw your initiative around {sub_niche} at {comp}—wanted to share how we support similar {ai_role.department} teams with tailored integration for your stack."
+            if ai_strategy.get("urgency_sla"):
+                urgency_sla = ai_strategy["urgency_sla"]
+            if ai_strategy.get("recommended_channel"):
+                recommended_channel = ai_strategy["recommended_channel"]
 
         return StreamlinedScoringResult(
             company_name=form.company_name,

@@ -434,7 +434,7 @@ with st.container(border=True):
     with bar_c3:
         st.markdown(f"📈 **Target ARR**: `${cfg.ideal_revenue_usd:,.0f}`")
     with bar_c4:
-        st.markdown("🤖 **AI Semantics**: `Classifiers Active`")
+        st.markdown("🤖 **AI Worker**: `Cloudflare AI Llama-3.1 Active`")
 
 
 # ==============================================================================
