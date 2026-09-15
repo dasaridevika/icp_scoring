@@ -1,46 +1,19 @@
 """
-Enterprise ICP Intelligence Engine - Production Package Entry Point.
+Enterprise ICP Revenue Intelligence Engine - Production Package.
+GTM Partners 4-Pillar ICP Scoring Engine with Cloudflare Workers AI Semantic Intelligence.
 """
 
-from .config import (
-    active_config,
-    EngineConfiguration,
-    ICPFitWeights,
-    IntentWeights,
-    ReadinessWeights,
-    MasterWeights,
-    TierThresholds,
-    DisqualificationRuleConfig,
-    CURRENT_MODEL_VERSION,
-    MODEL_CHANGELOG
-)
-
-from .models import (
-    AccountAssessment,
-    AssessmentMetadata,
-    AccountInfo,
-    ScoresBreakdown,
-    ConfidenceBreakdown,
-    EvidenceBreakdown,
-    DecisionInfo,
-    CommercialInfo,
-    EvidencePillar,
-    EvidenceStatus,
-    DataStatus,
-    EligibilityResult,
-    ComprehensiveAIWorkerResponse,
-    MasterAccountIntelligence
-)
-
-from .disqualifier import DisqualificationEngine
-from .scorer import MasterScoringEngine
 from .ai_analyzer import (
     AITextAnalyzer,
+    AIWorkerClient,
+    DEFAULT_WORKER_URL,
     RoleAIAnalysis,
     NicheAIAnalysis,
     IntentAIAnalysis,
-    TechStackAIAnalysis
+    TechStackAIAnalysis,
+    FootprintAIAnalysis
 )
+
 from .gtm_engine import (
     MASTER_INDUSTRY_SECTORS,
     CompanyStandardsConfig,
@@ -53,40 +26,15 @@ from .gtm_engine import (
     PillarScoreSummary
 )
 
-evaluate_lead = MasterScoringEngine.evaluate_lead
-
-
 __all__ = [
-    "active_config",
-    "EngineConfiguration",
-    "ICPFitWeights",
-    "IntentWeights",
-    "ReadinessWeights",
-    "MasterWeights",
-    "TierThresholds",
-    "DisqualificationRuleConfig",
-    "CURRENT_MODEL_VERSION",
-    "MODEL_CHANGELOG",
-    "AccountAssessment",
-    "AssessmentMetadata",
-    "AccountInfo",
-    "ScoresBreakdown",
-    "ConfidenceBreakdown",
-    "EvidenceBreakdown",
-    "DecisionInfo",
-    "CommercialInfo",
-    "EvidencePillar",
-    "EvidenceStatus",
-    "DataStatus",
-    "EligibilityResult",
-    "ComprehensiveAIWorkerResponse",
-    "MasterAccountIntelligence",
-    "DisqualificationEngine",
-    "ModelCalibrator",
-    "global_calibrator",
-    "LeadEvidenceExtractor",
-    "MasterScoringEngine",
-    "evaluate_lead",
+    "AITextAnalyzer",
+    "AIWorkerClient",
+    "DEFAULT_WORKER_URL",
+    "RoleAIAnalysis",
+    "NicheAIAnalysis",
+    "IntentAIAnalysis",
+    "TechStackAIAnalysis",
+    "FootprintAIAnalysis",
     "MASTER_INDUSTRY_SECTORS",
     "CompanyStandardsConfig",
     "StreamlinedLeadForm",
@@ -97,3 +45,4 @@ __all__ = [
     "FieldScoreReceipt",
     "PillarScoreSummary"
 ]
+
