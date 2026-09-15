@@ -338,7 +338,7 @@ def show_settings_dialog():
             with st.container(border=True):
                 st.markdown('<div class="settings-section-title">🌍 Geographic Parameters</div>', unsafe_allow_html=True)
                 s_t1_geo = st.text_area(
-                    "Tier 1 Supported Territories (Comma-separated)",
+                    "Tier 1 Supported Territories",
                     value=", ".join(cfg.tier1_territories),
                     height=65
                 )
@@ -464,7 +464,7 @@ with st.form("lead_qualification_form"):
             with c1_r2_a:
                 f_loc = st.text_input("Primary Headquarters", value=st.session_state.get("f_loc", ""))
             with c1_r2_b:
-                f_branches = st.text_input("Branch Hubs (Comma-separated)", value=st.session_state.get("f_branches", ""))
+                f_branches = st.text_input("Regional Branch Hubs", value=st.session_state.get("f_branches", ""))
 
             # Row 3: Industry Macro Sector & Sub-Vertical Niche
             c1_r3_a, c1_r3_b = st.columns(2)
