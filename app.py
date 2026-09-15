@@ -1,5 +1,5 @@
 """
-Enterprise ICP Revenue Intelligence Studio (v3.0)
+Enterprise ICP Revenue Intelligence Studio (v3.2)
 High-Velocity AI Lead Qualifier & Dynamic Company Standards Studio.
 100% Pure Python • Deterministic {-5 to +5} Scoring • AI Text Field Intelligence.
 """
@@ -30,13 +30,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Professional RevOps High-Contrast Design System
+# Professional RevOps UI Styling with High Visual Hierarchy
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"], .stMarkdown, p, div, label {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
     code, pre, .mono {
@@ -50,45 +50,106 @@ st.markdown("""
     }
 
     /* Hero Header */
+    .hero-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.2rem;
+        border-bottom: 1px solid #E2E8F0;
+        padding-bottom: 1rem;
+    }
+
     .hero-title {
-        font-size: 2.1rem;
+        font-size: 2.15rem;
         font-weight: 800;
         letter-spacing: -0.6px;
-        background: linear-gradient(135deg, #0F172A 0%, #4338CA 60%, #6D28D9 100%);
+        background: linear-gradient(135deg, #0F172A 0%, #4338CA 50%, #7C3AED 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 0.1rem;
+        margin-bottom: 0.15rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .hero-subtitle {
         color: #475569 !important;
         font-size: 0.95rem;
         font-weight: 500;
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.4rem;
     }
 
-    /* Form Section Headers */
-    .form-panel-header {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #0F172A !important;
-        border-left: 4px solid #4F46E5;
-        padding-left: 10px;
-        margin-bottom: 14px;
+    .pill-badge-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
         margin-top: 4px;
     }
 
-    /* Top Bar Status Card */
-    .top-status-bar {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
-        padding: 10px 16px;
+    .hero-pill {
+        background: #F1F5F9;
+        color: #334155;
+        border: 1px solid #CBD5E1;
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    .hero-pill-ai {
+        background: #EEF2FF;
+        color: #4338CA;
+        border: 1px solid #C7D2FE;
+    }
+
+    /* Field Labels */
+    label[data-testid="stWidgetLabel"] p {
+        font-size: 0.84rem !important;
+        font-weight: 700 !important;
+        color: #1E293B !important;
+        letter-spacing: 0.2px;
+        margin-bottom: 3px !important;
+    }
+
+    /* Form Container Card Headers */
+    .form-card-header {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #0F172A !important;
+        background: #F8FAFC;
+        padding: 10px 14px;
+        border-radius: 8px;
+        border-left: 4px solid #4F46E5;
+        margin-bottom: 16px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 18px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        justify-content: space-between;
+    }
+
+    .form-card-header span.tag {
+        font-size: 0.72rem;
+        font-weight: 700;
+        background: #EEF2FF;
+        color: #4F46E5;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid #C7D2FE;
+        text-transform: uppercase;
+    }
+
+    /* Section Card Header in Settings Dialog */
+    .settings-section-title {
+        font-size: 0.92rem;
+        font-weight: 800;
+        color: #1E293B !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #E2E8F0;
+        padding-bottom: 6px;
+        margin-top: 2px;
+        margin-bottom: 12px;
     }
 
     /* Sleek Output Cards */
@@ -96,17 +157,17 @@ st.markdown("""
         background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 60%, #311042 100%);
         border: 1px solid rgba(167, 139, 250, 0.35);
         border-radius: 16px;
-        padding: 24px 28px;
+        padding: 26px 30px;
         color: #FFFFFF !important;
         box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.4), 0 8px 10px -6px rgba(15, 23, 42, 0.4);
-        margin-bottom: 20px;
+        margin-bottom: 22px;
     }
 
     .ai-feature-card {
         background: linear-gradient(145deg, #0F172A 0%, #1E1B4B 100%);
         border: 1px solid rgba(139, 92, 246, 0.3);
         border-radius: 14px;
-        padding: 18px;
+        padding: 20px;
         color: #F8FAFC !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         height: 100%;
@@ -124,7 +185,7 @@ st.markdown("""
         background: linear-gradient(145deg, #0F172A 0%, #1A2238 100%);
         border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 14px;
-        padding: 18px;
+        padding: 20px;
         color: #FFFFFF !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.18);
     }
@@ -133,18 +194,18 @@ st.markdown("""
         background: linear-gradient(135deg, #1E1B4B 0%, #2E1065 50%, #4C0519 100%);
         border: 1px solid rgba(244, 114, 182, 0.4);
         border-radius: 16px;
-        padding: 22px 26px;
+        padding: 24px 28px;
         color: #FFFFFF !important;
         box-shadow: 0 8px 24px rgba(236, 72, 153, 0.18);
-        margin-top: 15px;
-        margin-bottom: 20px;
+        margin-top: 18px;
+        margin-bottom: 22px;
     }
 
     /* Badges */
     .badge-a1 {
         background: linear-gradient(135deg, #10B981 0%, #059669 100%);
         color: #FFFFFF !important;
-        padding: 8px 18px;
+        padding: 8px 20px;
         border-radius: 24px;
         font-weight: 800;
         font-size: 0.95rem;
@@ -155,7 +216,7 @@ st.markdown("""
     .badge-a2 {
         background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
         color: #FFFFFF !important;
-        padding: 8px 18px;
+        padding: 8px 20px;
         border-radius: 24px;
         font-weight: 800;
         font-size: 0.95rem;
@@ -166,7 +227,7 @@ st.markdown("""
     .badge-b1 {
         background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
         color: #FFFFFF !important;
-        padding: 8px 18px;
+        padding: 8px 20px;
         border-radius: 24px;
         font-weight: 800;
         font-size: 0.95rem;
@@ -177,7 +238,7 @@ st.markdown("""
     .badge-disq {
         background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
         color: #FFFFFF !important;
-        padding: 8px 18px;
+        padding: 8px 20px;
         border-radius: 24px;
         font-weight: 800;
         font-size: 0.95rem;
@@ -187,7 +248,7 @@ st.markdown("""
 
     .tag-chip {
         display: inline-block;
-        padding: 3px 9px;
+        padding: 4px 10px;
         border-radius: 6px;
         font-size: 0.76rem;
         font-weight: 700;
@@ -230,92 +291,96 @@ cfg: CompanyStandardsConfig = st.session_state["company_config"]
 
 
 # ==============================================================================
-# SETTINGS MODAL DIALOG
+# SETTINGS MODAL DIALOG (UNIFORMLY ALIGNED & PROFESSIONAL)
 # ==============================================================================
 @st.dialog("⚙️ Company ICP Standards & Thresholds", width="large")
 def show_settings_dialog():
-    st.caption("Configure dynamic commercial floors, focus industries, territory parameters, and 4-pillar percentage weights:")
+    st.caption("Configure dynamic commercial revenue thresholds, focus industries, territory whitelists, and 4-pillar percentage weights:")
 
     with st.form("modal_company_standards_form"):
-        col_s1, col_s2 = st.columns(2, gap="medium")
+        col_s1, col_s2 = st.columns(2, gap="large")
 
         with col_s1:
-            st.markdown("##### 🏢 Commercial & Scale Margins")
-            s_name = st.text_input("Company / Organization Name", value=cfg.company_name)
+            with st.container(border=True):
+                st.markdown('<div class="settings-section-title">🏢 Commercial Margins & Scale Sweet-Spots</div>', unsafe_allow_html=True)
+                s_name = st.text_input("Company / Org Identifier", value=cfg.company_name, placeholder="e.g. Acme Enterprise Org")
 
-            c_s1, c_s2 = st.columns(2)
-            with c_s1:
-                s_min_deal = st.number_input("Minimum Deal Size ($ USD)", min_value=1000.0, max_value=500000.0, value=cfg.min_deal_size_usd, step=5000.0)
-            with c_s2:
-                s_target_deal = st.number_input("Target Deal Size ($ USD)", min_value=5000.0, max_value=2000000.0, value=cfg.target_deal_size_usd, step=10000.0)
+                c_s1, c_s2 = st.columns(2)
+                with c_s1:
+                    s_min_deal = st.number_input("Minimum Viable Deal ($)", min_value=1000, max_value=500000, value=int(cfg.min_deal_size_usd), step=5000, format="%d")
+                with c_s2:
+                    s_target_deal = st.number_input("Target Ideal Deal ($)", min_value=5000, max_value=2000000, value=int(cfg.target_deal_size_usd), step=10000, format="%d")
 
-            c_s3, c_s4 = st.columns(2)
-            with c_s3:
-                s_min_rev = st.number_input("Minimum Revenue ($ USD)", min_value=0.0, max_value=50000000.0, value=cfg.min_company_revenue_usd, step=500000.0)
-            with c_s4:
-                s_ideal_rev = st.number_input("Ideal Revenue Target ($ USD)", min_value=1000000.0, max_value=500000000.0, value=cfg.ideal_revenue_usd, step=5000000.0)
+                c_s3, c_s4 = st.columns(2)
+                with c_s3:
+                    s_min_rev = st.number_input("Minimum Prospect Revenue ($)", min_value=0, max_value=50000000, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
+                with c_s4:
+                    s_ideal_rev = st.number_input("Ideal Prospect Target ARR ($)", min_value=1000000, max_value=500000000, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
 
-            c_s5, c_s6 = st.columns(2)
-            with c_s5:
-                s_min_hc = st.number_input("Minimum Employee Count", min_value=1, max_value=1000, value=cfg.min_headcount, step=10)
-            with c_s6:
-                s_ideal_hc = st.number_input("Ideal Employee Count", min_value=20, max_value=10000, value=cfg.ideal_headcount, step=50)
+                c_s5, c_s6 = st.columns(2)
+                with c_s5:
+                    s_min_hc = st.number_input("Min Headcount Floor", min_value=1, max_value=1000, value=int(cfg.min_headcount), step=10, format="%d")
+                with c_s6:
+                    s_ideal_hc = st.number_input("Ideal Headcount Target", min_value=20, max_value=10000, value=int(cfg.ideal_headcount), step=50, format="%d")
 
-            st.markdown("##### 🎯 Target Focus Industries")
-            s_focus_ind = st.multiselect(
-                "Primary Focus Verticals (+5 pts)",
-                options=MASTER_INDUSTRY_SECTORS,
-                default=[i for i in cfg.target_focus_industries if i in MASTER_INDUSTRY_SECTORS]
-            )
+            with st.container(border=True):
+                st.markdown('<div class="settings-section-title">🎯 Primary Focus Verticals (+5 Pts)</div>', unsafe_allow_html=True)
+                s_focus_ind = st.multiselect(
+                    "Select Sweet-Spot Verticals",
+                    options=MASTER_INDUSTRY_SECTORS,
+                    default=[i for i in cfg.target_focus_industries if i in MASTER_INDUSTRY_SECTORS]
+                )
 
         with col_s2:
-            st.markdown("##### 🌍 Geographic Parameters")
-            s_t1_geo = st.text_area(
-                "Tier 1 Supported Territories (Comma-separated)",
-                value=", ".join(cfg.tier1_territories),
-                height=68
-            )
-            s_proh_geo = st.text_input(
-                "Prohibited / Sanctioned Territories (Hard Disqualification)",
-                value=", ".join(cfg.prohibited_countries)
-            )
+            with st.container(border=True):
+                st.markdown('<div class="settings-section-title">🌍 Geographic Parameters</div>', unsafe_allow_html=True)
+                s_t1_geo = st.text_area(
+                    "Tier 1 Supported Territories (Comma-separated)",
+                    value=", ".join(cfg.tier1_territories),
+                    height=65
+                )
+                s_proh_geo = st.text_input(
+                    "Sanctioned / Prohibited Territories (Hard Disqualification)",
+                    value=", ".join(cfg.prohibited_countries)
+                )
 
-            st.markdown("##### ⚖️ Pillar Percentage Weights (Must Sum to 100%)")
-            c_w1, c_w2 = st.columns(2)
-            with c_w1:
-                s_w_firmo = st.slider("Firmographics Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_firmographics * 100), step=5)
-                s_w_auth = st.slider("Decision Authority Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_authority * 100), step=5)
-            with c_w2:
-                s_w_intent = st.slider("Buying Intent Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_intent * 100), step=5)
-                s_w_val = st.slider("Contract Value Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_value * 100), step=5)
+            with st.container(border=True):
+                st.markdown('<div class="settings-section-title">⚖️ Pillar Weights & Margins (Must = 100%)</div>', unsafe_allow_html=True)
+                c_w1, c_w2 = st.columns(2)
+                with c_w1:
+                    s_w_firmo = st.slider("Firmographics Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_firmographics * 100), step=5)
+                    s_w_auth = st.slider("Decision Authority Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_authority * 100), step=5)
+                with c_w2:
+                    s_w_intent = st.slider("Buying Intent Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_intent * 100), step=5)
+                    s_w_val = st.slider("Contract Value Weight (%)", min_value=5, max_value=60, value=int(cfg.weight_value * 100), step=5)
 
-            total_w = s_w_firmo + s_w_auth + s_w_intent + s_w_val
-            if total_w != 100:
-                st.warning(f"⚠️ Total weight sum is {total_w}%. Must equal 100%.")
-            else:
-                st.success("✓ Total weights sum to 100%.")
+                total_w = s_w_firmo + s_w_auth + s_w_intent + s_w_val
+                if total_w != 100:
+                    st.warning(f"⚠️ Current weight sum is {total_w}%. Must equal 100%.")
+                else:
+                    st.success("✓ Total weights sum to 100%.")
 
-            st.markdown("##### 🏷️ Priority Tier Cutoffs")
-            c_t_a1, c_t_a2, c_t_b1 = st.columns(3)
-            with c_t_a1:
-                s_tier_a1 = st.number_input("Tier A1 Cutoff", min_value=70.0, max_value=95.0, value=cfg.tier_a1_threshold, step=5.0)
-            with c_t_a2:
-                s_tier_a2 = st.number_input("Tier A2 Cutoff", min_value=55.0, max_value=85.0, value=cfg.tier_a2_threshold, step=5.0)
-            with c_t_b1:
-                s_tier_b1 = st.number_input("Tier B1 Cutoff", min_value=40.0, max_value=70.0, value=cfg.tier_b1_threshold, step=5.0)
+                st.markdown('<div style="margin-top: 8px; font-weight:700; font-size:0.84rem; color:#1E293B;">Priority Tier Cutoff Margins:</div>', unsafe_allow_html=True)
+                c_t_a1, c_t_a2, c_t_b1 = st.columns(3)
+                with c_t_a1:
+                    s_tier_a1 = st.number_input("Tier A1 Cutoff", min_value=70.0, max_value=95.0, value=float(cfg.tier_a1_threshold), step=5.0, format="%.0f")
+                with c_t_a2:
+                    s_tier_a2 = st.number_input("Tier A2 Cutoff", min_value=55.0, max_value=85.0, value=float(cfg.tier_a2_threshold), step=5.0, format="%.0f")
+                with c_t_b1:
+                    s_tier_b1 = st.number_input("Tier B1 Cutoff", min_value=40.0, max_value=70.0, value=float(cfg.tier_b1_threshold), step=5.0, format="%.0f")
 
-        st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         save_btn = st.form_submit_button("💾 Save ICP Standards & Recalibrate", type="primary", use_container_width=True)
 
     if save_btn:
         new_cfg = CompanyStandardsConfig(
             company_name=s_name,
-            min_deal_size_usd=s_min_deal,
-            target_deal_size_usd=s_target_deal,
-            min_company_revenue_usd=s_min_rev,
-            ideal_revenue_usd=s_ideal_rev,
-            min_headcount=s_min_hc,
-            ideal_headcount=s_ideal_hc,
+            min_deal_size_usd=float(s_min_deal),
+            target_deal_size_usd=float(s_target_deal),
+            min_company_revenue_usd=float(s_min_rev),
+            ideal_revenue_usd=float(s_ideal_rev),
+            min_headcount=int(s_min_hc),
+            ideal_headcount=int(s_ideal_hc),
             target_focus_industries=s_focus_ind,
             tier1_territories=[t.strip() for t in s_t1_geo.split(",") if t.strip()],
             prohibited_countries=[p.strip() for p in s_proh_geo.split(",") if p.strip()],
@@ -332,16 +397,26 @@ def show_settings_dialog():
 
 
 # ==============================================================================
-# HEADER BAR & CONTROLS
+# HERO HEADER BAR & CONTROLS
 # ==============================================================================
 head_col1, head_col2 = st.columns([5, 2])
 
 with head_col1:
-    st.markdown('<div class="hero-title">⚡ Enterprise ICP Revenue Intelligence Studio</div>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-subtitle">AI Semantic Text Field Analysis • Dynamic ICP Thresholds • Deterministic GTM Scoring</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div>
+        <div class="hero-title">⚡ Enterprise ICP Revenue Intelligence Studio</div>
+        <div class="hero-subtitle">High-Velocity Lead Qualification • AI Semantic Text Field Analysis • Deterministic GTM Scoring Engine</div>
+        <div class="pill-badge-row">
+            <span class="hero-pill hero-pill-ai">🤖 AI Role & Persona Classifier</span>
+            <span class="hero-pill hero-pill-ai">⚡ AI Timeline & Urgency Signal</span>
+            <span class="hero-pill">⚖️ 4-Pillar Weighted Score</span>
+            <span class="hero-pill">🎯 Dynamic Org Thresholds</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with head_col2:
-    st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
     btn_c1, btn_c2 = st.columns([1, 1])
     with btn_c2:
         if st.button("⚙️ ICP Settings", use_container_width=True, help="Configure company standards, margins, and weights"):
@@ -361,47 +436,61 @@ with st.container(border=True):
 
 
 # ==============================================================================
-# MAIN LEAD QUALIFICATION FORM (CLEAN & UNIFORMLY ALIGNED)
+# MAIN LEAD QUALIFICATION FORM (CLEAN, BOLD HEADINGS & UNIFORM ALIGNMENT)
 # ==============================================================================
 with st.form("lead_qualification_form"):
     col_f1, col_f2 = st.columns(2, gap="large")
 
     with col_f1:
-        st.markdown('<div class="form-panel-header">🏢 1. Account Scale & Firmographics</div>', unsafe_allow_html=True)
-        f_company = st.text_input("Company Name", value=st.session_state.get("f_company", ""), placeholder="e.g. Acme Corporation")
-        f_loc = st.text_input("Geographic Location / Territory", value=st.session_state.get("f_loc", ""), placeholder="e.g. United States, United Kingdom, UAE")
+        with st.container(border=True):
+            st.markdown("""
+            <div class="form-card-header">
+                <span>🏢 1. Account Scale & Firmographics</span>
+                <span class="tag">Firmographic Pillar</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            f_company = st.text_input("Company Name", value=st.session_state.get("f_company", ""), placeholder="e.g. Acme Corporation")
+            f_loc = st.text_input("Geographic Location / Territory", value=st.session_state.get("f_loc", ""), placeholder="e.g. United States, United Kingdom, UAE")
 
-        c_ind1, c_ind2 = st.columns(2)
-        with c_ind1:
-            cur_ind = st.session_state.get("f_ind", MASTER_INDUSTRY_SECTORS[0])
-            ind_idx = MASTER_INDUSTRY_SECTORS.index(cur_ind) if cur_ind in MASTER_INDUSTRY_SECTORS else 0
-            f_ind = st.selectbox("Industry Sector", options=MASTER_INDUSTRY_SECTORS, index=ind_idx)
-        with c_ind2:
-            f_subv = st.text_input("Sub-Vertical / Niche (AI Analyzed)", value=st.session_state.get("f_subv", ""), placeholder="e.g. Solar Energy Farm Infrastructure")
+            c_ind1, c_ind2 = st.columns(2)
+            with c_ind1:
+                cur_ind = st.session_state.get("f_ind", MASTER_INDUSTRY_SECTORS[0])
+                ind_idx = MASTER_INDUSTRY_SECTORS.index(cur_ind) if cur_ind in MASTER_INDUSTRY_SECTORS else 0
+                f_ind = st.selectbox("Industry Macro Sector", options=MASTER_INDUSTRY_SECTORS, index=ind_idx)
+            with c_ind2:
+                f_subv = st.text_input("Sub-Vertical / Niche (AI Analyzed)", value=st.session_state.get("f_subv", ""), placeholder="e.g. Solar Energy Farm Infrastructure")
 
-        c_sc1, c_sc2 = st.columns(2)
-        with c_sc1:
-            f_rev = st.number_input("Annual Revenue ($ USD)", min_value=0.0, max_value=1000000000.0, value=float(st.session_state.get("f_rev", 0.0)), step=500000.0)
-        with c_sc2:
-            f_hc = st.number_input("Employee Headcount", min_value=1, max_value=500000, value=int(st.session_state.get("f_hc", 50)), step=25)
+            c_sc1, c_sc2 = st.columns(2)
+            with c_sc1:
+                f_rev = st.number_input("Annual Revenue ($ USD)", min_value=0, max_value=1000000000, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d")
+            with c_sc2:
+                f_hc = st.number_input("Employee Headcount", min_value=1, max_value=500000, value=int(st.session_state.get("f_hc", 50)), step=25, format="%d")
 
     with col_f2:
-        st.markdown('<div class="form-panel-header">👤 2. Decision Authority, Intent & Ecosystem</div>', unsafe_allow_html=True)
-        c_ct1, c_ct2 = st.columns(2)
-        with c_ct1:
-            f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""), placeholder="e.g. Jane Doe")
-        with c_ct2:
-            f_email = st.text_input("Work Email Address", value=st.session_state.get("f_email", ""), placeholder="e.g. jane@company.com")
+        with st.container(border=True):
+            st.markdown("""
+            <div class="form-card-header">
+                <span>👤 2. Decision Authority, Intent & Ecosystem</span>
+                <span class="tag">AI Signal Engine</span>
+            </div>
+            """, unsafe_allow_html=True)
 
-        f_role = st.text_input("Role Title (AI Analyzes Seniority & Persona)", value=st.session_state.get("f_role", ""), placeholder="e.g. VP of Global Supply Chain, Principal DevOps Architect, Intern")
+            c_ct1, c_ct2 = st.columns(2)
+            with c_ct1:
+                f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""), placeholder="e.g. Jane Doe")
+            with c_ct2:
+                f_email = st.text_input("Work Email Address", value=st.session_state.get("f_email", ""), placeholder="e.g. jane@company.com")
 
-        c_in1, c_in2 = st.columns(2)
-        with c_in1:
-            f_intent = st.text_input("Buying Intent & Notes (AI Urgency Signal)", value=st.session_state.get("f_intent", ""), placeholder="e.g. Need pricing for 50 seats before Q4 renewal")
-        with c_in2:
-            f_deal = st.number_input("Target Contract Value ($ USD)", min_value=0.0, max_value=5000000.0, value=float(st.session_state.get("f_deal", 0.0)), step=5000.0)
+            f_role = st.text_input("Role Title (AI Analyzes Seniority & Persona)", value=st.session_state.get("f_role", ""), placeholder="e.g. VP of Global Supply Chain, Principal DevOps Architect, Intern")
 
-        f_tech = st.text_input("Current Tech Stack & Tools (AI Synergy Analysis)", value=st.session_state.get("f_tech", ""), placeholder="e.g. SAP S/4HANA, AWS, Snowflake, Salesforce")
+            c_in1, c_in2 = st.columns(2)
+            with c_in1:
+                f_intent = st.text_input("Buying Intent & Notes (AI Urgency Signal)", value=st.session_state.get("f_intent", ""), placeholder="e.g. Need pricing for 50 seats before Q4 renewal")
+            with c_in2:
+                f_deal = st.number_input("Target Contract Value ($ USD)", min_value=0, max_value=5000000, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d")
+
+            f_tech = st.text_input("Current Tech Stack & Tools (AI Synergy Analysis)", value=st.session_state.get("f_tech", ""), placeholder="e.g. SAP S/4HANA, AWS, Snowflake, Salesforce")
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c_btn1, c_btn2, _ = st.columns([2, 1, 3])
@@ -415,13 +504,13 @@ if clear_btn:
     st.session_state["f_loc"] = ""
     st.session_state["f_ind"] = MASTER_INDUSTRY_SECTORS[0]
     st.session_state["f_subv"] = ""
-    st.session_state["f_rev"] = 0.0
+    st.session_state["f_rev"] = 0
     st.session_state["f_hc"] = 50
     st.session_state["f_name"] = ""
     st.session_state["f_email"] = ""
     st.session_state["f_role"] = ""
     st.session_state["f_intent"] = ""
-    st.session_state["f_deal"] = 0.0
+    st.session_state["f_deal"] = 0
     st.session_state["f_tech"] = ""
     if "streamlined_res" in st.session_state:
         del st.session_state["streamlined_res"]
@@ -449,14 +538,14 @@ if calc_btn:
             company_name=f_company.strip(),
             industry_sector=f_ind,
             sub_vertical=f_subv.strip(),
-            annual_revenue_usd=f_rev,
-            employee_count=f_hc,
+            annual_revenue_usd=float(f_rev),
+            employee_count=int(f_hc),
             location=f_loc.strip(),
             contact_name=f_name.strip(),
             contact_email=f_email.strip(),
             contact_role_title=f_role.strip(),
             buying_intent=f_intent.strip(),
-            target_deal_size_usd=f_deal,
+            target_deal_size_usd=float(f_deal),
             tech_stack_notes=f_tech.strip()
         )
         res: StreamlinedScoringResult = GTMScoringEngine.evaluate(submission, cfg)
