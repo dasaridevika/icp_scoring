@@ -784,7 +784,7 @@ if "streamlined_res" in st.session_state:
             <strong>Strategic Value Wedge:</strong> {res.value_wedge}
         </div>
         <div style="background:rgba(0,0,0,0.3); border-left:4px solid #F472B6; padding:12px 16px; border-radius:8px;">
-            <div style="font-size:0.76rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:0.5px;">🔥 Recommended 1-Sentence Outreach Hook:</div>
+            <div style="font-size:0.76rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:0.5px;">🔥 Recommended 1-Sentence Outreach Hook (Ready to Copy):</div>
             <div style="font-size:0.92rem; color:#FFFFFF; font-style:italic; margin-top:4px;">"{res.outreach_hook}"</div>
         </div>
     </div>
@@ -794,23 +794,27 @@ if "streamlined_res" in st.session_state:
     c_why, c_risk = st.columns(2)
     with c_why:
         with st.container(border=True):
-            st.markdown("#### 🟢 Key Strengths & Value Drivers")
+            st.markdown("#### 🟢 Verified ICP Strengths & Scale Drivers")
             if res.key_strengths:
                 for s in res.key_strengths:
-                    st.success(f"✓ {s}")
+                    clean_s = s.lstrip("✓").lstrip("•").strip()
+                    st.success(f"✓ {clean_s}")
             else:
                 st.info("Standard baseline profile.")
     with c_risk:
         with st.container(border=True):
-            st.markdown("#### ⚠️ Risks & Missing Evidence")
+            st.markdown("#### ⚠️ Enterprise Discovery Risks & Considerations")
             if res.key_risks:
                 for r in res.key_risks:
-                    st.warning(f"⚠ {r}")
+                    clean_r = r.lstrip("⚠").lstrip("•").strip()
+                    st.warning(f"⚠ {clean_r}")
             else:
-                st.success("Zero critical risks detected.")
+                st.success("✓ Zero critical risks detected.")
 
-    # 6. Discovery Prompts
+    # 6. Structured Consultative Discovery Prompts
     if res.discovery_questions:
-        with st.expander("❓ Sales Discovery Prompts (Targeted Questions for SDRs)", expanded=False):
-            for q in res.discovery_questions:
-                st.markdown(f"• **Discovery Prompt:** *{q}*")
+        with st.expander("❓ Consultative Discovery Questions (For SDR & AE Qualification Calls)", expanded=True):
+            for i, q in enumerate(res.discovery_questions, 1):
+                clean_q = q.lstrip("•").lstrip(f"{i}.").strip()
+                st.markdown(f"**{i}. Discovery Prompt:** *{clean_q}*")
+

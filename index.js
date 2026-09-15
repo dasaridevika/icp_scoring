@@ -249,12 +249,12 @@ export default {
         "   - Buying Signals & Intent Velocity (Immediate RFP, pricing inquiry, migration mandate <30 days = 85-100; 30-60 days = 70-85; exploratory = 40-60)\n" +
         "   - Hiring & organizational triggers\n" +
         "   - Funding rounds, growth investments, new branch hub launches\n\n" +
-        "COPYWRITING DELIVERABLES:\n" +
-        "- outreach_hook: A highly personalized, bespoke 1-sentence cold email opener referencing the prospect's exact role, stack tools, scale, and multi-branch hubs. NEVER output generic clichés.\n" +
-        "- value_wedge: A sharp executive 1-2 sentence positioning thesis proving ROI and operational acceleration for their specific infrastructure.\n" +
-        "- discovery_questions: 3 consultative questions for SDR discovery calls to uncover gaps.\n" +
-        "- key_strengths: 3 to 5 concrete, data-backed bullet points.\n" +
-        "- key_risks: 1 to 3 realistic enterprise implementation or discovery risks.\n\n" +
+        "HIGH-QUALITY COPYWRITING & DELIVERABLES RULES:\n" +
+        "- outreach_hook: A razor-sharp, natural, executive-grade 1-sentence cold email opener. Directly reference the contact's exact role/name, company, named tech tools, and stated timeline/initiative without cheesy greetings or robot clichés.\n" +
+        "- value_wedge: A grounded 1-2 sentence executive ROI thesis anchored to their real infrastructure and operational scale (do not invent unverified percentage figures).\n" +
+        "- discovery_questions: Exactly 3 high-impact consultative questions structured across: 1) Architecture & API Integration, 2) Procurement & Timeline Checkpoints, 3) Target Business Metrics.\n" +
+        "- key_strengths: 3 to 4 concrete, data-backed bullet points. MUST explicitly include actual ARR ($), employee numbers, named tech stack tools, and named branch cities from the input (NEVER use generic phrases like 'high employee count' or 'significant revenue').\n" +
+        "- key_risks: 2 to 3 genuine, realistic enterprise discovery risks (e.g. multi-region data sync, tight 30-day procurement/infosec window, multi-team stakeholder buy-in). NEVER claim 'legacy blockers' if the prospect already uses modern cloud technologies.\n\n" +
         "CRITICAL INSTRUCTIONS FOR ENUM FIELDS:\n" +
         "- For seniority_level, select EXACTLY ONE of: \"C-Suite / Founder (+5)\", \"VP / Head of (+5)\", \"Director (+3)\", \"Manager (+1)\", \"Individual Contributor (+1)\", \"Student / Intern (-5)\".\n" +
         "- For persona_type, select EXACTLY ONE of: \"Economic Buyer\", \"Technical Champion\", \"End User / Practitioner\", \"Non-Buyer\".\n" +
