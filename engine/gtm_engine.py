@@ -9,8 +9,20 @@ import os
 import json
 import urllib.request
 import urllib.error
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, Any, List, Optional, Union
+try:
+    from pydantic import BaseModel, Field
+except (ImportError, ModuleNotFoundError):
+    class BaseModel:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+        def dict(self):
+            return self.__dict__
+    def Field(default=None, default_factory=None):
+        if default_factory is not None:
+            return default_factory()
+        return default
 
 DEFAULT_WORKER_URL = os.environ.get(
     "ICP_WORKER_URL",

@@ -10,16 +10,27 @@ import os
 from pathlib import Path
 import sys
 
-ROOT_DIR = Path(__file__).parent
-sys.path.append(str(ROOT_DIR))
+ROOT_DIR = Path(__file__).resolve().parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
-from engine.gtm_engine import (
-    CompanyStandardsConfig,
-    StreamlinedLeadForm,
-    GTMScoringEngine,
-    StreamlinedScoringResult,
-    ScoringTrackerItem
-)
+try:
+    from engine.gtm_engine import (
+        CompanyStandardsConfig,
+        StreamlinedLeadForm,
+        GTMScoringEngine,
+        StreamlinedScoringResult,
+        ScoringTrackerItem
+    )
+except (ImportError, ModuleNotFoundError):
+    sys.path.insert(0, str(ROOT_DIR / "engine"))
+    from gtm_engine import (
+        CompanyStandardsConfig,
+        StreamlinedLeadForm,
+        GTMScoringEngine,
+        StreamlinedScoringResult,
+        ScoringTrackerItem
+    )
 
 # Page Configuration
 st.set_page_config(
