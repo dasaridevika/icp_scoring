@@ -122,6 +122,17 @@ class PillarScoreSummary(BaseModel):
     field_receipts: List[FieldScoreReceipt] = Field(default_factory=list)
 
 
+class ScoringTrackerItem(BaseModel):
+    pillar_name: str
+    allotted_score: float
+    weight_pct: float
+    points_contributed: float
+    basis_criterion: str
+    verified_signals: List[str] = Field(default_factory=list)
+    deduction_gaps: List[str] = Field(default_factory=list)
+    decision_rationale: str
+
+
 class StreamlinedScoringResult(BaseModel):
     company_name: str
     master_icp_score: float
@@ -141,6 +152,7 @@ class StreamlinedScoringResult(BaseModel):
     ai_intent: Optional[IntentAIAnalysis] = None
     ai_tech: Optional[TechStackAIAnalysis] = None
     ai_footprint: Optional[FootprintAIAnalysis] = None
+    scoring_tracker: List[ScoringTrackerItem] = Field(default_factory=list)
     lead_summary: Dict[str, Any] = Field(default_factory=dict)
     discovery_questions: List[str] = Field(default_factory=list)
     key_strengths: List[str] = Field(default_factory=list)
@@ -398,6 +410,55 @@ class GTMScoringEngine:
         ]
         key_risks = ai_res.get("key_risks", []) if ai_res else []
 
+        # Construct 4-Pillar Scoring Audit Trail & Decision Tracker
+        ev_firmo = raw_evidence.get("firmographic", {})
+        ev_techno = raw_evidence.get("technographic", {})
+        ev_qual = raw_evidence.get("qualifying", {})
+        ev_readiness = raw_evidence.get("readiness", {})
+
+        tracker = [
+            ScoringTrackerItem(
+                pillar_name="1. Firmographics Scale",
+                allotted_score=firmo_score,
+                weight_pct=round(cfg.weight_firmographics * 100, 1),
+                points_contributed=round(firmo_score * cfg.weight_firmographics, 2),
+                basis_criterion=f"Annual ARR (${form.annual_revenue_usd:,.0f}), Headcount ({form.employee_count:,}), Niche Complexity ({ai_niche.market_complexity}), and Branch Footprint ({geo_reach}).",
+                verified_signals=ev_firmo.get("evidence_points", [f"ARR: ${form.annual_revenue_usd:,.0f}", f"Headcount: {form.employee_count:,} FTEs", f"Footprint: {geo_reach}"]),
+                deduction_gaps=ev_firmo.get("missing_points", []),
+                decision_rationale=ev_firmo.get("rationale", "") or f"High-scale firmographic evaluation based on {form.company_name or 'account'}."
+            ),
+            ScoringTrackerItem(
+                pillar_name="2. Technographics Ecosystem",
+                allotted_score=techno_score,
+                weight_pct=round(cfg.weight_value * 100, 1),
+                points_contributed=round(techno_score * cfg.weight_value, 2),
+                basis_criterion=f"Cloud ecosystem synergy ({ai_tech.ecosystem_fit}), modern stack tools, and absence of blocker legacy monoliths.",
+                verified_signals=ev_techno.get("evidence_points", [f"Modern Stack Tools: {', '.join(ai_tech.modern_tools) if ai_tech.modern_tools else 'Cloud Baseline'}"]),
+                deduction_gaps=ev_techno.get("missing_points", []),
+                decision_rationale=ev_techno.get("rationale", "") or ai_tech.rationale
+            ),
+            ScoringTrackerItem(
+                pillar_name="3. Decision Authority",
+                allotted_score=qual_score,
+                weight_pct=round(cfg.weight_authority * 100, 1),
+                points_contributed=round(qual_score * cfg.weight_authority, 2),
+                basis_criterion=f"Organizational seniority ({ai_role.seniority_level}), Buyer Persona ({ai_role.persona_type}), and budget ownership in {ai_role.department}.",
+                verified_signals=ev_qual.get("evidence_points", [f"Contact: {form.contact_name or 'Unspecified'} ({ai_role.seniority_level})", f"Persona Archetype: {ai_role.persona_type}"]),
+                deduction_gaps=ev_qual.get("missing_points", []),
+                decision_rationale=ev_qual.get("rationale", "") or ai_role.rationale
+            ),
+            ScoringTrackerItem(
+                pillar_name="4. Readiness to Buy",
+                allotted_score=readiness_score,
+                weight_pct=round(cfg.weight_intent * 100, 1),
+                points_contributed=round(readiness_score * cfg.weight_intent, 2),
+                basis_criterion=f"Commercial intent velocity ({ai_intent.urgency_tier}), stated buying horizon ({ai_intent.timeline_detected or '< 60 Days'}), and project triggers.",
+                verified_signals=ev_readiness.get("evidence_points", [f"Buying Velocity: {ai_intent.urgency_tier}", f"Timeline: {ai_intent.timeline_detected or 'Immediate'}"]),
+                deduction_gaps=ev_readiness.get("missing_points", []),
+                decision_rationale=ev_readiness.get("rationale", "") or ai_intent.rationale
+            )
+        ]
+
         return StreamlinedScoringResult(
             company_name=form.company_name,
             master_icp_score=master_score,
@@ -417,6 +478,7 @@ class GTMScoringEngine:
             ai_intent=ai_intent,
             ai_tech=ai_tech,
             ai_footprint=ai_footprint,
+            scoring_tracker=tracker,
             lead_summary={
                 "industry": form.industry_sector,
                 "sub_vertical": form.sub_vertical,

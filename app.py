@@ -17,7 +17,8 @@ from engine.gtm_engine import (
     CompanyStandardsConfig,
     StreamlinedLeadForm,
     GTMScoringEngine,
-    StreamlinedScoringResult
+    StreamlinedScoringResult,
+    ScoringTrackerItem
 )
 
 # Page Configuration
@@ -770,6 +771,38 @@ if "streamlined_res" in st.session_state:
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
+    # 3.5 📊 Scoring Audit Trail & Decision Tracker (Why & On What Basis Points Were Allotted)
+    if res.scoring_tracker:
+        st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+        with st.expander("📊 4-Pillar Scoring Audit Trail & Decision Tracker (Why & On What Basis Score Was Allotted)", expanded=True):
+            st.caption("Detailed GTM audit ledger documenting exact criteria, positive scoring drivers, and deduction factors for every pillar:")
+            for item in res.scoring_tracker:
+                with st.container(border=True):
+                    tc1, tc2, tc3 = st.columns([3, 1, 1])
+                    with tc1:
+                        st.markdown(f"**{item.pillar_name}**")
+                        st.markdown(f"<div style='font-size:0.82rem; color:#475569;'><strong>Decision Basis:</strong> {item.basis_criterion}</div>", unsafe_allow_html=True)
+                    with tc2:
+                        st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#4338CA;'>{item.allotted_score:.0f}</span> / 100<br/><span style='font-size:0.75rem; color:#64748B;'>Weight: {item.weight_pct:.0f}%</span></div>", unsafe_allow_html=True)
+                    with tc3:
+                        st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#059669;'>+{item.points_contributed:.1f}</span> pts<br/><span style='font-size:0.75rem; color:#64748B;'>to Master Score</span></div>", unsafe_allow_html=True)
+
+                    st.markdown(f"<div style='font-size:0.84rem; color:#334155; margin-top:4px;'><em>💡 {item.decision_rationale}</em></div>", unsafe_allow_html=True)
+                    
+                    if item.verified_signals or item.deduction_gaps:
+                        sc_a, sc_b = st.columns(2)
+                        with sc_a:
+                            if item.verified_signals:
+                                st.markdown("<div style='font-size:0.78rem; font-weight:700; color:#059669;'>✓ Verified Positive Drivers:</div>", unsafe_allow_html=True)
+                                for sig in item.verified_signals:
+                                    st.markdown(f"<div style='font-size:0.78rem; color:#065F46;'>• {sig}</div>", unsafe_allow_html=True)
+                        with sc_b:
+                            if item.deduction_gaps:
+                                st.markdown("<div style='font-size:0.78rem; font-weight:700; color:#D97706;'>⚠ Missing / Deduction Factors:</div>", unsafe_allow_html=True)
+                                for gap in item.deduction_gaps:
+                                    st.markdown(f"<div style='font-size:0.78rem; color:#92400E;'>• {gap}</div>", unsafe_allow_html=True)
+
 
     # 4. 🎯 Next Best Action & Routing Card
     st.markdown(f"""
