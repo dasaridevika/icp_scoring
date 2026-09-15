@@ -309,21 +309,21 @@ def show_settings_dialog():
 
                 c_s1, c_s2 = st.columns(2)
                 with c_s1:
-                     s_min_deal = st.number_input("Minimum Viable Deal ($)", min_value=0, value=int(cfg.min_deal_size_usd), step=5000, format="%d")
+                     s_min_deal = st.number_input("Minimum Viable Deal ($)", min_value=0, max_value=1_000_000_000, value=int(cfg.min_deal_size_usd), step=5000, format="%d")
                 with c_s2:
-                     s_target_deal = st.number_input("Target Ideal Deal ($)", min_value=0, value=int(cfg.target_deal_size_usd), step=10000, format="%d")
+                     s_target_deal = st.number_input("Target Ideal Deal ($)", min_value=0, max_value=1_000_000_000, value=int(cfg.target_deal_size_usd), step=10000, format="%d")
 
                 c_s3, c_s4 = st.columns(2)
                 with c_s3:
-                     s_min_rev = st.number_input("Minimum Prospect Revenue ($)", min_value=0, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
+                     s_min_rev = st.number_input("Minimum Prospect Revenue ($)", min_value=0, max_value=100_000_000_000, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
                 with c_s4:
-                     s_ideal_rev = st.number_input("Ideal Prospect Target ARR ($)", min_value=0, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
+                     s_ideal_rev = st.number_input("Ideal Prospect Target ARR ($)", min_value=0, max_value=100_000_000_000, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
 
                 c_s5, c_s6 = st.columns(2)
                 with c_s5:
-                     s_min_hc = st.number_input("Min Headcount Floor", min_value=0, value=max(0, int(cfg.min_headcount)), step=10, format="%d")
+                     s_min_hc = st.number_input("Min Headcount Floor", min_value=0, max_value=10_000_000, value=max(0, int(cfg.min_headcount)), step=10, format="%d")
                 with c_s6:
-                     s_ideal_hc = st.number_input("Ideal Headcount Target", min_value=0, value=max(0, int(cfg.ideal_headcount)), step=50, format="%d")
+                     s_ideal_hc = st.number_input("Ideal Headcount Target", min_value=0, max_value=10_000_000, value=max(0, int(cfg.ideal_headcount)), step=50, format="%d")
 
             with st.container(border=True):
                 st.markdown('<div class="settings-section-title">🎯 Primary Focus Verticals (+5 Pts)</div>', unsafe_allow_html=True)
@@ -476,9 +476,9 @@ with st.form("lead_qualification_form"):
             # Row 4: Annual Revenue & Headcount
             c1_r4_a, c1_r4_b = st.columns(2)
             with c1_r4_a:
-                f_rev = st.number_input("Annual Revenue ($ USD)", min_value=0, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d")
+                f_rev = st.number_input("Annual Revenue ($ USD)", min_value=0, max_value=100_000_000_000, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d", help="Max allowed entry: $100 Billion USD")
             with c1_r4_b:
-                f_hc = st.number_input("Employee Headcount", min_value=0, value=max(0, int(st.session_state.get("f_hc", 0))), step=25, format="%d")
+                f_hc = st.number_input("Employee Headcount", min_value=0, max_value=10_000_000, value=max(0, int(st.session_state.get("f_hc", 0))), step=25, format="%d", help="Max allowed entry: 10 Million employees")
 
     with col_f2:
         with st.container(border=True):
@@ -506,7 +506,7 @@ with st.form("lead_qualification_form"):
             # Row 3: Deal Size & Timeline
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
-                f_deal = st.number_input("Target Contract Value ($ USD)", min_value=0, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d")
+                f_deal = st.number_input("Target Contract Value ($ USD)", min_value=0, max_value=1_000_000_000, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d", help="Max allowed entry: $1 Billion USD")
             with c2_r3_b:
                 f_timeline = st.text_input("Buying Timeline / Horizon", value=st.session_state.get("f_timeline", ""))
 
