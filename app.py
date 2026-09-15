@@ -95,13 +95,25 @@ st.markdown("""
         border: 1px solid #C7D2FE;
     }
 
-    /* Field Labels */
+    /* Field Labels - Uniform heights & single-line alignment */
+    label[data-testid="stWidgetLabel"] {
+        height: 22px !important;
+        min-height: 22px !important;
+        margin-bottom: 2px !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
     label[data-testid="stWidgetLabel"] p {
-        font-size: 0.84rem !important;
+        font-size: 0.82rem !important;
         font-weight: 700 !important;
-        color: #1E293B !important;
+        color: #0F172A !important;
         letter-spacing: 0.2px;
-        margin-bottom: 3px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        margin: 0 !important;
+        line-height: 1.2 !important;
     }
 
     /* Form Container Card Headers */
@@ -441,26 +453,34 @@ with st.form("lead_qualification_form"):
             </div>
             """, unsafe_allow_html=True)
             
-            f_company = st.text_input("Company Name", value=st.session_state.get("f_company", ""))
+            # Row 1: Company Name & Corporate Domain
+            c1_r1_a, c1_r1_b = st.columns(2)
+            with c1_r1_a:
+                f_company = st.text_input("Company / Account Name", value=st.session_state.get("f_company", ""))
+            with c1_r1_b:
+                f_domain = st.text_input("Corporate Website / Domain", value=st.session_state.get("f_domain", ""))
             
-            c_loc1, c_loc2 = st.columns(2)
-            with c_loc1:
-                f_loc = st.text_input("Primary Headquarters Location", value=st.session_state.get("f_loc", ""))
-            with c_loc2:
-                f_branches = st.text_input("Branch Locations / Hubs (Comma-separated)", value=st.session_state.get("f_branches", ""))
+            # Row 2: HQ Location & Branch Locations
+            c1_r2_a, c1_r2_b = st.columns(2)
+            with c1_r2_a:
+                f_loc = st.text_input("Primary Headquarters", value=st.session_state.get("f_loc", ""))
+            with c1_r2_b:
+                f_branches = st.text_input("Branch Hubs (Comma-separated)", value=st.session_state.get("f_branches", ""))
 
-            c_ind1, c_ind2 = st.columns(2)
-            with c_ind1:
+            # Row 3: Industry Macro Sector & Sub-Vertical Niche
+            c1_r3_a, c1_r3_b = st.columns(2)
+            with c1_r3_a:
                 cur_ind = st.session_state.get("f_ind", MASTER_INDUSTRY_SECTORS[0])
                 ind_idx = MASTER_INDUSTRY_SECTORS.index(cur_ind) if cur_ind in MASTER_INDUSTRY_SECTORS else 0
                 f_ind = st.selectbox("Industry Macro Sector", options=MASTER_INDUSTRY_SECTORS, index=ind_idx)
-            with c_ind2:
-                f_subv = st.text_input("Sub-Vertical / Niche (AI Analyzed)", value=st.session_state.get("f_subv", ""))
+            with c1_r3_b:
+                f_subv = st.text_input("Sub-Vertical / Niche (AI)", value=st.session_state.get("f_subv", ""))
 
-            c_sc1, c_sc2 = st.columns(2)
-            with c_sc1:
+            # Row 4: Annual Revenue & Headcount
+            c1_r4_a, c1_r4_b = st.columns(2)
+            with c1_r4_a:
                 f_rev = st.number_input("Annual Revenue ($ USD)", min_value=0, max_value=1000000000, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d")
-            with c_sc2:
+            with c1_r4_b:
                 f_hc = st.number_input("Employee Headcount", min_value=1, max_value=500000, value=int(st.session_state.get("f_hc", 50)), step=25, format="%d")
 
     with col_f2:
@@ -472,21 +492,33 @@ with st.form("lead_qualification_form"):
             </div>
             """, unsafe_allow_html=True)
 
-            c_ct1, c_ct2 = st.columns(2)
-            with c_ct1:
+            # Row 1: Contact Full Name & Work Email
+            c2_r1_a, c2_r1_b = st.columns(2)
+            with c2_r1_a:
                 f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""))
-            with c_ct2:
+            with c2_r1_b:
                 f_email = st.text_input("Work Email Address", value=st.session_state.get("f_email", ""))
 
-            f_role = st.text_input("Role Title (AI Analyzes Seniority & Persona)", value=st.session_state.get("f_role", ""))
+            # Row 2: Role Title & Buying Intent
+            c2_r2_a, c2_r2_b = st.columns(2)
+            with c2_r2_a:
+                f_role = st.text_input("Role Title / Authority (AI)", value=st.session_state.get("f_role", ""))
+            with c2_r2_b:
+                f_intent = st.text_input("Buying Intent / Signal (AI)", value=st.session_state.get("f_intent", ""))
 
-            c_in1, c_in2 = st.columns(2)
-            with c_in1:
-                f_intent = st.text_input("Buying Intent & Notes (AI Urgency Signal)", value=st.session_state.get("f_intent", ""))
-            with c_in2:
+            # Row 3: Deal Size & Timeline
+            c2_r3_a, c2_r3_b = st.columns(2)
+            with c2_r3_a:
                 f_deal = st.number_input("Target Contract Value ($ USD)", min_value=0, max_value=5000000, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d")
+            with c2_r3_b:
+                f_timeline = st.text_input("Buying Timeline / Horizon", value=st.session_state.get("f_timeline", ""))
 
-            f_tech = st.text_input("Current Tech Stack & Tools (AI Synergy Analysis)", value=st.session_state.get("f_tech", ""))
+            # Row 4: Tech Stack & Notes
+            c2_r4_a, c2_r4_b = st.columns(2)
+            with c2_r4_a:
+                f_tech = st.text_input("Current Tech Stack & Tools (AI)", value=st.session_state.get("f_tech", ""))
+            with c2_r4_b:
+                f_notes = st.text_input("Tech / Migration Notes (AI)", value=st.session_state.get("f_notes", ""))
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c_btn1, c_btn2, _ = st.columns([2, 1, 3])
@@ -497,6 +529,7 @@ with st.form("lead_qualification_form"):
 
 if clear_btn:
     st.session_state["f_company"] = ""
+    st.session_state["f_domain"] = ""
     st.session_state["f_loc"] = ""
     st.session_state["f_branches"] = ""
     st.session_state["f_ind"] = MASTER_INDUSTRY_SECTORS[0]
@@ -508,7 +541,9 @@ if clear_btn:
     st.session_state["f_role"] = ""
     st.session_state["f_intent"] = ""
     st.session_state["f_deal"] = 0
+    st.session_state["f_timeline"] = ""
     st.session_state["f_tech"] = ""
+    st.session_state["f_notes"] = ""
     if "streamlined_res" in st.session_state:
         del st.session_state["streamlined_res"]
     st.rerun()
@@ -519,6 +554,7 @@ if calc_btn:
         st.warning("⚠️ Please provide a Company Name to qualify the account.")
     else:
         st.session_state["f_company"] = f_company
+        st.session_state["f_domain"] = f_domain
         st.session_state["f_loc"] = f_loc
         st.session_state["f_branches"] = f_branches
         st.session_state["f_ind"] = f_ind
@@ -530,9 +566,13 @@ if calc_btn:
         st.session_state["f_role"] = f_role
         st.session_state["f_intent"] = f_intent
         st.session_state["f_deal"] = f_deal
+        st.session_state["f_timeline"] = f_timeline
         st.session_state["f_tech"] = f_tech
+        st.session_state["f_notes"] = f_notes
 
         branches_list = [b.strip() for b in f_branches.split(",") if b.strip()]
+        combined_intent = f"{f_intent.strip()} {f_timeline.strip()}".strip()
+        combined_tech = f"{f_tech.strip()} {f_notes.strip()}".strip()
 
         submission = StreamlinedLeadForm(
             company_name=f_company.strip(),
@@ -545,9 +585,9 @@ if calc_btn:
             contact_name=f_name.strip(),
             contact_email=f_email.strip(),
             contact_role_title=f_role.strip(),
-            buying_intent=f_intent.strip(),
+            buying_intent=combined_intent,
             target_deal_size_usd=float(f_deal),
-            tech_stack_notes=f_tech.strip()
+            tech_stack_notes=combined_tech
         )
         res: StreamlinedScoringResult = GTMScoringEngine.evaluate(submission, cfg)
         st.session_state["streamlined_res"] = res
