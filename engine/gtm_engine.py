@@ -233,9 +233,10 @@ class GTMScoringEngine:
         worker_url: Optional[str] = None
     ) -> StreamlinedScoringResult:
         cfg = config or CompanyStandardsConfig()
+        sym = form.currency_symbol or cfg.currency_symbol or "$"
 
-        prospect_rev_str = form.revenue_display_str or f"{form.currency_symbol}{form.annual_revenue_usd:,.0f}"
-        prospect_deal_str = form.deal_display_str or f"{form.currency_symbol}{form.target_deal_size_usd:,.0f}"
+        prospect_rev_str = form.revenue_display_str or f"{sym}{form.annual_revenue_usd:,.0f}"
+        prospect_deal_str = form.deal_display_str or f"{sym}{form.target_deal_size_usd:,.0f}"
 
         # Build payload for Cloudflare Workers AI
         worker_payload = {
@@ -458,8 +459,8 @@ class GTMScoringEngine:
                 allotted_score=firmo_score,
                 weight_pct=round(cfg.weight_firmographics * 100, 1),
                 points_contributed=round(firmo_score * cfg.weight_firmographics, 2),
-                basis_criterion=f"Annual ARR ({sym}{form.annual_revenue_usd:,.0f}), Headcount ({form.employee_count:,}), Niche Complexity ({ai_niche.market_complexity}), and Branch Footprint ({geo_reach}).",
-                verified_signals=ev_firmo.get("evidence_points", [f"ARR: {sym}{form.annual_revenue_usd:,.0f}", f"Headcount: {form.employee_count:,} FTEs", f"Footprint: {geo_reach}"]),
+                basis_criterion=f"Annual ARR ({prospect_rev_str}), Headcount ({form.employee_count:,}), Niche Complexity ({ai_niche.market_complexity}), and Branch Footprint ({geo_reach}).",
+                verified_signals=ev_firmo.get("evidence_points", [f"ARR: {prospect_rev_str}", f"Headcount: {form.employee_count:,} FTEs", f"Footprint: {geo_reach}"]),
                 deduction_gaps=ev_firmo.get("missing_points", []),
                 decision_rationale=ev_firmo.get("rationale", "") or f"High-scale firmographic evaluation based on {form.company_name or 'account'}."
             ),
