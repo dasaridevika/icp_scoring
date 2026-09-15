@@ -1,5 +1,5 @@
 """
-Enterprise ICP Revenue Intelligence Studio (v3.2)
+Enterprise ICP Revenue Intelligence Studio (v3.3)
 High-Velocity AI Lead Qualifier & Dynamic Company Standards Studio.
 100% Pure Python • Deterministic {-5 to +5} Scoring • AI Text Field Intelligence.
 """
@@ -50,15 +50,6 @@ st.markdown("""
     }
 
     /* Hero Header */
-    .hero-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.2rem;
-        border-bottom: 1px solid #E2E8F0;
-        padding-bottom: 1rem;
-    }
-
     .hero-title {
         font-size: 2.15rem;
         font-weight: 800;
@@ -601,88 +592,97 @@ if "streamlined_res" in st.session_state:
         st.error(f"❌ **Hard Disqualification Detected**: {res.disqualification_reason}")
 
     # 2. 🤖 AI Semantic Text Intelligence Grid
-    st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>🤖 AI Semantic Text Field Intelligence</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>🤖 AI Semantic Strategic Intelligence</h4>", unsafe_allow_html=True)
     ai_col1, ai_col2, ai_col3, ai_col4 = st.columns(4)
 
     with ai_col1:
+        persona_str = res.ai_role.persona_type if res.ai_role else "End User"
+        sen_str = res.ai_role.seniority_level if res.ai_role else "Standard"
+        dept_str = res.ai_role.department if res.ai_role else "General"
+        rat_str = res.ai_role.rationale if res.ai_role else ""
         st.markdown(f"""
         <div class="ai-feature-card">
             <div>
                 <div style="font-size:0.75rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:0.8px;">
-                    👤 Role & Authority
+                    👤 Authority & Persona
                 </div>
-                <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:4px; line-height:1.3;">
-                    {res.ai_role.raw_title if res.ai_role else 'Unspecified Role'}
+                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+                    {persona_str}
                 </div>
                 <div style="margin-top:8px;">
-                    <span class="tag-chip tag-purple">{res.ai_role.seniority_level if res.ai_role else 'Standard'}</span>
-                    <span class="tag-chip tag-cyan">{res.ai_role.persona_type if res.ai_role else 'End User'}</span>
+                    <span class="tag-chip tag-purple">{sen_str}</span>
                 </div>
             </div>
-            <div style="margin-top:14px; font-size:0.80rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="color:#94A3B8; font-size:0.75rem;">Dept: <strong style="color:#E2E8F0;">{res.ai_role.department if res.ai_role else 'General'}</strong></div>
-                <div style="font-style:italic; margin-top:4px; color:#A78BFA;">"{res.ai_role.rationale if res.ai_role else ''}"</div>
+            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                <div style="color:#94A3B8; font-size:0.76rem;">Dept: <strong style="color:#E2E8F0;">{dept_str}</strong></div>
+                <div style="font-style:italic; margin-top:4px; color:#A78BFA;">"{rat_str}"</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with ai_col2:
+        market_str = res.ai_niche.market_complexity if res.ai_niche else "Established Market"
+        niche_rat = res.ai_niche.rationale if res.ai_niche else ""
         st.markdown(f"""
         <div class="ai-feature-card">
             <div>
                 <div style="font-size:0.75rem; font-weight:700; color:#38BDF8; text-transform:uppercase; letter-spacing:0.8px;">
-                    🏢 Vertical & Niche
+                    🏢 Vertical & Market
                 </div>
-                <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:4px; line-height:1.3;">
-                    {res.ai_niche.raw_niche if res.ai_niche else 'Standard Market'}
+                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+                    {market_str}
                 </div>
                 <div style="margin-top:8px;">
-                    <span class="tag-chip tag-cyan">{res.ai_niche.market_complexity if res.ai_niche else 'Established'}</span>
+                    <span class="tag-chip tag-cyan">{res.lead_summary.get('industry', 'General')}</span>
                 </div>
             </div>
-            <div style="margin-top:14px; font-size:0.80rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="font-style:italic; color:#7DD3FC;">"{res.ai_niche.rationale if res.ai_niche else ''}"</div>
+            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                <div style="font-style:italic; color:#7DD3FC;">"{niche_rat}"</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with ai_col3:
+        urgency_str = res.ai_intent.urgency_tier if res.ai_intent else "Moderate Urgency"
+        timeline_str = res.ai_intent.timeline_detected or "Standard Inbound"
+        intent_rat = res.ai_intent.rationale if res.ai_intent else ""
         st.markdown(f"""
         <div class="ai-feature-card">
             <div>
                 <div style="font-size:0.75rem; font-weight:700; color:#FBBF24; text-transform:uppercase; letter-spacing:0.8px;">
-                    ⚡ Intent & Timeline
+                    ⚡ Intent & Urgency
                 </div>
-                <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:4px; line-height:1.3;">
-                    {res.ai_intent.raw_intent if res.ai_intent else 'Standard Lead'}
+                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+                    {urgency_str}
                 </div>
                 <div style="margin-top:8px;">
-                    <span class="tag-chip tag-amber">{res.ai_intent.urgency_tier if res.ai_intent else 'Moderate'}</span>
+                    <span class="tag-chip tag-amber">{timeline_str}</span>
                 </div>
             </div>
-            <div style="margin-top:14px; font-size:0.80rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="color:#94A3B8; font-size:0.75rem;">Timeline: <strong style="color:#FDE68A;">{res.ai_intent.timeline_detected or 'Unspecified'}</strong></div>
-                <div style="font-style:italic; margin-top:4px; color:#FBBF24;">"{res.ai_intent.rationale if res.ai_intent else ''}"</div>
+            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                <div style="font-style:italic; color:#FDE68A;">"{intent_rat}"</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with ai_col4:
+        fit_str = res.ai_tech.ecosystem_fit if res.ai_tech else "Standard Fit"
+        tech_rat = res.ai_tech.rationale if res.ai_tech else ""
         st.markdown(f"""
         <div class="ai-feature-card">
             <div>
                 <div style="font-size:0.75rem; font-weight:700; color:#34D399; text-transform:uppercase; letter-spacing:0.8px;">
-                    💻 Tech Stack Synergy
+                    💻 Tech Synergy
                 </div>
-                <div style="font-size:1.05rem; font-weight:700; color:#FFFFFF; margin-top:4px; line-height:1.3;">
-                    {res.ai_tech.raw_stack if res.ai_tech else 'Standard Stack'}
+                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+                    {fit_str}
                 </div>
                 <div style="margin-top:8px;">
-                    <span class="tag-chip tag-emerald">{res.ai_tech.ecosystem_fit if res.ai_tech else 'Standard'}</span>
+                    <span class="tag-chip tag-emerald">Ecosystem Fit</span>
                 </div>
             </div>
-            <div style="margin-top:14px; font-size:0.80rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="font-style:italic; color:#6EE7B7;">"{res.ai_tech.rationale if res.ai_tech else ''}"</div>
+            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                <div style="font-style:italic; color:#6EE7B7;">"{tech_rat}"</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -760,28 +760,7 @@ if "streamlined_res" in st.session_state:
             else:
                 st.success("Zero critical risks detected.")
 
-    # 6. Explainable Point Audit Receipt
-    with st.expander("🧾 View Full Score Audit Receipt (Explainable Point Breakdown)", expanded=False):
-        all_summaries = [
-            res.pillar_firmographics,
-            res.pillar_authority,
-            res.pillar_intent,
-            res.pillar_value
-        ]
-        for p_sum in all_summaries:
-            st.markdown(f"**{p_sum.pillar_name} (Score: {p_sum.score:.0f}/100)**")
-            receipt_data = []
-            for rec in p_sum.field_receipts:
-                pts_str = f"+{rec.gtm_points}" if rec.gtm_points > 0 else str(rec.gtm_points)
-                receipt_data.append({
-                    "Field": rec.field_name,
-                    "Submitted Value": str(rec.raw_value),
-                    "Impact Points": pts_str,
-                    "Business Rationale": rec.rationale
-                })
-            st.table(receipt_data)
-
-    # 7. Discovery Prompts
+    # 6. Discovery Prompts
     if res.discovery_questions:
         with st.expander("❓ Sales Discovery Prompts (Targeted Questions for SDRs)", expanded=False):
             for q in res.discovery_questions:
