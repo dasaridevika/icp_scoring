@@ -749,40 +749,40 @@ if "streamlined_res" in st.session_state:
     badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier else "badge-b1"))
     fit_color = "#EF4444" if res.is_disqualified else ("#10B981" if res.master_icp_score >= 70 else ("#3B82F6" if res.master_icp_score >= 55 else "#F59E0B"))
 
+    branch_badge = f"<span>&bull;</span><span>Branches: <strong style='color:#38BDF8;'>{len(res.lead_summary.get('branches', []))} Locations</strong></span>" if res.lead_summary.get('branches') else ""
+
     # 1. Master Score Obsidian Banner
-    st.markdown(f"""
-    <div class="master-score-card">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
-            <div>
-                <div style="font-size:0.80rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
-                    GTM Revenue Intelligence Report &bull; {cfg.company_name}
-                </div>
-                <div style="font-size:1.9rem; font-weight:800; color:#FFFFFF; letter-spacing:-0.5px; margin-bottom:6px;">
-                    {res.company_name or 'Unspecified Account'}
-                </div>
-                <div style="display:flex; align-items:center; gap:18px; font-size:0.92rem; color:#CBD5E1; flex-wrap:wrap;">
-                    <span>Industry: <strong style="color:#FFFFFF;">{res.lead_summary.get('industry', 'N/A')}</strong></span>
-                    <span>&bull;</span>
-                    <span>HQ: <strong style="color:#FFFFFF;">{res.lead_summary.get('location') or 'Global'}</strong></span>
-                    {f"<span>&bull;</span><span>Branches: <strong style='color:#38BDF8;'>{len(res.lead_summary.get('branches', []))} Locations</strong></span>" if res.lead_summary.get('branches') else ""}
-                    <span>&bull;</span>
-                    <span>SLA: <strong style="color:#38BDF8;">{res.urgency_sla}</strong></span>
-                </div>
-            </div>
-            <div style="text-align:right;">
-                <div style="font-size:0.78rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">
-                    Master ICP Score
-                </div>
-                <div style="font-size:2.8rem; font-weight:800; color:{fit_color}; line-height:1; letter-spacing:-1px; margin-bottom:8px;">
-                    {res.master_icp_score:.1f}<span style="font-size:1.2rem; color:#94A3B8; font-weight:500;">/100</span>
-                </div>
-                <div>
-                    <span class="{badge_class}">{res.priority_tier}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="master-score-card">
+<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+<div>
+<div style="font-size:0.80rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
+GTM Revenue Intelligence Report &bull; {cfg.company_name}
+</div>
+<div style="font-size:1.9rem; font-weight:800; color:#FFFFFF; letter-spacing:-0.5px; margin-bottom:6px;">
+{res.company_name or 'Unspecified Account'}
+</div>
+<div style="display:flex; align-items:center; gap:14px; font-size:0.92rem; color:#CBD5E1; flex-wrap:wrap;">
+<span>Industry: <strong style="color:#FFFFFF;">{res.lead_summary.get('industry', 'N/A')}</strong></span>
+<span>&bull;</span>
+<span>HQ: <strong style="color:#FFFFFF;">{res.lead_summary.get('location') or 'Global'}</strong></span>
+{branch_badge}
+<span>&bull;</span>
+<span>SLA: <strong style="color:#38BDF8;">{res.urgency_sla}</strong></span>
+</div>
+</div>
+<div style="text-align:right;">
+<div style="font-size:0.78rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">
+Master ICP Score
+</div>
+<div style="font-size:2.8rem; font-weight:800; color:{fit_color}; line-height:1; letter-spacing:-1px; margin-bottom:8px;">
+{res.master_icp_score:.1f}<span style="font-size:1.2rem; color:#94A3B8; font-weight:500;">/100</span>
+</div>
+<div>
+<span class="{badge_class}">{res.priority_tier}</span>
+</div>
+</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     if res.is_disqualified:
         st.error(f"❌ **Hard Disqualification Detected**: {res.disqualification_reason}")
@@ -795,95 +795,87 @@ if "streamlined_res" in st.session_state:
         market_str = res.ai_niche.market_complexity if res.ai_niche else "Established Market"
         niche_rat = res.ai_niche.rationale if res.ai_niche else ""
         reach_str = res.ai_footprint.geographic_reach if res.ai_footprint else "Single Market"
-        st.markdown(f"""
-        <div class="ai-feature-card">
-            <div>
-                <div style="font-size:0.75rem; font-weight:700; color:#38BDF8; text-transform:uppercase; letter-spacing:0.8px;">
-                    🏢 1. Firmographics
-                </div>
-                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-                    {market_str}
-                </div>
-                <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-                    <span class="tag-chip tag-cyan">{res.lead_summary.get('industry', 'General')}</span>
-                    <span class="tag-chip tag-emerald">{reach_str}</span>
-                </div>
-            </div>
-            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="font-style:italic; color:#7DD3FC;">"{niche_rat}"</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""<div class="ai-feature-card">
+<div>
+<div style="font-size:0.75rem; font-weight:700; color:#38BDF8; text-transform:uppercase; letter-spacing:0.8px;">
+🏢 1. Firmographics
+</div>
+<div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+{market_str}
+</div>
+<div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+<span class="tag-chip tag-cyan">{res.lead_summary.get('industry', 'General')}</span>
+<span class="tag-chip tag-emerald">{reach_str}</span>
+</div>
+</div>
+<div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+<div style="font-style:italic; color:#7DD3FC;">"{niche_rat}"</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     with ai_col2:
         fit_str = res.ai_tech.ecosystem_fit if res.ai_tech else "Standard Fit"
         tech_rat = res.ai_tech.rationale if res.ai_tech else ""
-        st.markdown(f"""
-        <div class="ai-feature-card">
-            <div>
-                <div style="font-size:0.75rem; font-weight:700; color:#34D399; text-transform:uppercase; letter-spacing:0.8px;">
-                    💻 2. Technographics
-                </div>
-                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-                    {fit_str}
-                </div>
-                <div style="margin-top:8px;">
-                    <span class="tag-chip tag-emerald">Ecosystem Fit</span>
-                </div>
-            </div>
-            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="font-style:italic; color:#6EE7B7;">"{tech_rat}"</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""<div class="ai-feature-card">
+<div>
+<div style="font-size:0.75rem; font-weight:700; color:#34D399; text-transform:uppercase; letter-spacing:0.8px;">
+💻 2. Technographics
+</div>
+<div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+{fit_str}
+</div>
+<div style="margin-top:8px;">
+<span class="tag-chip tag-emerald">Ecosystem Fit</span>
+</div>
+</div>
+<div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+<div style="font-style:italic; color:#6EE7B7;">"{tech_rat}"</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     with ai_col3:
         persona_str = res.ai_role.persona_type if res.ai_role else "End User"
         sen_str = res.ai_role.seniority_level if res.ai_role else "Standard"
         dept_str = res.ai_role.department if res.ai_role else "General"
         rat_str = res.ai_role.rationale if res.ai_role else ""
-        st.markdown(f"""
-        <div class="ai-feature-card">
-            <div>
-                <div style="font-size:0.75rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:0.8px;">
-                    👤 3. Qualifying Characteristics
-                </div>
-                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-                    {persona_str}
-                </div>
-                <div style="margin-top:8px;">
-                    <span class="tag-chip tag-purple">{sen_str}</span>
-                </div>
-            </div>
-            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="color:#94A3B8; font-size:0.76rem;">Dept: <strong style="color:#E2E8F0;">{dept_str}</strong></div>
-                <div style="font-style:italic; margin-top:4px; color:#A78BFA;">"{rat_str}"</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""<div class="ai-feature-card">
+<div>
+<div style="font-size:0.75rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:0.8px;">
+👤 3. Qualifying Characteristics
+</div>
+<div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+{persona_str}
+</div>
+<div style="margin-top:8px;">
+<span class="tag-chip tag-purple">{sen_str}</span>
+</div>
+</div>
+<div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+<div style="color:#94A3B8; font-size:0.76rem;">Dept: <strong style="color:#E2E8F0;">{dept_str}</strong></div>
+<div style="font-style:italic; margin-top:4px; color:#A78BFA;">"{rat_str}"</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     with ai_col4:
         urgency_str = res.ai_intent.urgency_tier if res.ai_intent else "Moderate Urgency"
         timeline_str = res.ai_intent.timeline_detected or "Standard Inbound"
         intent_rat = res.ai_intent.rationale if res.ai_intent else ""
-        st.markdown(f"""
-        <div class="ai-feature-card">
-            <div>
-                <div style="font-size:0.75rem; font-weight:700; color:#FBBF24; text-transform:uppercase; letter-spacing:0.8px;">
-                    ⚡ 4. Readiness to Buy
-                </div>
-                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-                    {urgency_str}
-                </div>
-                <div style="margin-top:8px;">
-                    <span class="tag-chip tag-amber">{timeline_str}</span>
-                </div>
-            </div>
-            <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                <div style="font-style:italic; color:#FDE68A;">"{intent_rat}"</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""<div class="ai-feature-card">
+<div>
+<div style="font-size:0.75rem; font-weight:700; color:#FBBF24; text-transform:uppercase; letter-spacing:0.8px;">
+⚡ 4. Readiness to Buy
+</div>
+<div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
+{urgency_str}
+</div>
+<div style="margin-top:8px;">
+<span class="tag-chip tag-amber">{timeline_str}</span>
+</div>
+</div>
+<div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+<div style="font-style:italic; color:#FDE68A;">"{intent_rat}"</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     # 3. ⚡ 4-Dimensional Revenue Intelligence Score Cards
     st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
@@ -901,24 +893,22 @@ if "streamlined_res" in st.session_state:
         with col:
             diff = p_res.score - 50.0
             diff_str = f"+{diff:.0f} pts" if diff >= 0 else f"{diff:.0f} pts"
-            st.markdown(f"""
-            <div class="metric-pillar-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:0.72rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.6px;">
-                        {title}
-                    </div>
-                    <div style="font-size:0.72rem; font-weight:700; color:{col_accent};">
-                        {weight*100:.0f}% Weight
-                    </div>
-                </div>
-                <div style="font-size:2.1rem; font-weight:800; color:#FFFFFF; margin:8px 0; letter-spacing:-0.5px;">
-                    {p_res.score:.0f} <span style="font-size:1.0rem; font-weight:500; color:#94A3B8;">/100</span>
-                </div>
-                <div style="font-size:0.80rem; font-weight:600; color:{col_accent};">
-                    {diff_str} vs baseline
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<div class="metric-pillar-card">
+<div style="display:flex; justify-content:space-between; align-items:center;">
+<div style="font-size:0.72rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.6px;">
+{title}
+</div>
+<div style="font-size:0.72rem; font-weight:700; color:{col_accent};">
+{weight*100:.0f}% Weight
+</div>
+</div>
+<div style="font-size:2.1rem; font-weight:800; color:#FFFFFF; margin:8px 0; letter-spacing:-0.5px;">
+{p_res.score:.0f} <span style="font-size:1.0rem; font-weight:500; color:#94A3B8;">/100</span>
+</div>
+<div style="font-size:0.80rem; font-weight:600; color:{col_accent};">
+{diff_str} vs baseline
+</div>
+</div>""", unsafe_allow_html=True)
 
     # 3.5 📊 Scoring Audit Trail & Decision Tracker (Why & On What Basis Points Were Allotted)
     if res.scoring_tracker:
@@ -953,23 +943,21 @@ if "streamlined_res" in st.session_state:
 
 
     # 4. 🎯 Next Best Action & Routing Card
-    st.markdown(f"""
-    <div class="action-routing-card">
-        <div style="font-size:0.78rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
-            🎯 Strategic Next Best Action & Routing &bull; SLA: {res.urgency_sla}
-        </div>
-        <div style="font-size:1.25rem; font-weight:700; color:#FFFFFF; margin-bottom:10px;">
-            Channel: <span style="color:#FDE68A;">{res.recommended_channel}</span>
-        </div>
-        <div style="font-size:0.92rem; color:#F1F5F9; line-height:1.5; margin-bottom:12px;">
-            <strong>Strategic Value Wedge:</strong> {res.value_wedge}
-        </div>
-        <div style="background:rgba(0,0,0,0.3); border-left:4px solid #F472B6; padding:12px 16px; border-radius:8px;">
-            <div style="font-size:0.76rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:0.5px;">🔥 Recommended 1-Sentence Outreach Hook (Ready to Copy):</div>
-            <div style="font-size:0.92rem; color:#FFFFFF; font-style:italic; margin-top:4px;">"{res.outreach_hook}"</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="action-routing-card">
+<div style="font-size:0.78rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
+🎯 Strategic Next Best Action & Routing &bull; SLA: {res.urgency_sla}
+</div>
+<div style="font-size:1.25rem; font-weight:700; color:#FFFFFF; margin-bottom:10px;">
+Channel: <span style="color:#FDE68A;">{res.recommended_channel}</span>
+</div>
+<div style="font-size:0.92rem; color:#F1F5F9; line-height:1.5; margin-bottom:12px;">
+<strong>Strategic Value Wedge:</strong> {res.value_wedge}
+</div>
+<div style="background:rgba(0,0,0,0.3); border-left:4px solid #F472B6; padding:12px 16px; border-radius:8px;">
+<div style="font-size:0.76rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:0.5px;">🔥 Recommended 1-Sentence Outreach Hook (Ready to Copy):</div>
+<div style="font-size:0.92rem; color:#FFFFFF; font-style:italic; margin-top:4px;">"{res.outreach_hook}"</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     # 5. Strengths vs Risks
     c_why, c_risk = st.columns(2)
