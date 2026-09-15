@@ -1,6 +1,9 @@
-﻿name = "icp-revenue-intelligence-worker"
+name = "icp-revenue-intelligence-worker"
 main = "index.js"
 compatibility_date = "2024-04-01"
+
+[ai]
+binding = "AI"
 
 [vars]
 ENVIRONMENT = "production"
