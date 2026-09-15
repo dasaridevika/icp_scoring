@@ -1,5 +1,5 @@
 """
-Enterprise ICP Revenue Intelligence Studio (v3.3)
+Enterprise ICP Revenue Intelligence Studio (v3.4)
 High-Velocity AI Lead Qualifier & Dynamic Company Standards Studio.
 100% Pure Python • Deterministic {-5 to +5} Scoring • AI Text Field Intelligence.
 """
@@ -294,7 +294,7 @@ def show_settings_dialog():
         with col_s1:
             with st.container(border=True):
                 st.markdown('<div class="settings-section-title">🏢 Commercial Margins & Scale Sweet-Spots</div>', unsafe_allow_html=True)
-                s_name = st.text_input("Company / Org Identifier", value=cfg.company_name, placeholder="e.g. Acme Enterprise Org")
+                s_name = st.text_input("Company / Org Identifier", value=cfg.company_name)
 
                 c_s1, c_s2 = st.columns(2)
                 with c_s1:
@@ -427,7 +427,7 @@ with st.container(border=True):
 
 
 # ==============================================================================
-# MAIN LEAD QUALIFICATION FORM (CLEAN, BOLD HEADINGS & UNIFORM ALIGNMENT)
+# MAIN LEAD QUALIFICATION FORM (CLEAN, BOLD HEADINGS, NO PLACEHOLDER DATA)
 # ==============================================================================
 with st.form("lead_qualification_form"):
     col_f1, col_f2 = st.columns(2, gap="large")
@@ -441,8 +441,8 @@ with st.form("lead_qualification_form"):
             </div>
             """, unsafe_allow_html=True)
             
-            f_company = st.text_input("Company Name", value=st.session_state.get("f_company", ""), placeholder="e.g. Acme Corporation")
-            f_loc = st.text_input("Geographic Location / Territory", value=st.session_state.get("f_loc", ""), placeholder="e.g. United States, United Kingdom, UAE")
+            f_company = st.text_input("Company Name", value=st.session_state.get("f_company", ""))
+            f_loc = st.text_input("Geographic Location / Territory", value=st.session_state.get("f_loc", ""))
 
             c_ind1, c_ind2 = st.columns(2)
             with c_ind1:
@@ -450,7 +450,7 @@ with st.form("lead_qualification_form"):
                 ind_idx = MASTER_INDUSTRY_SECTORS.index(cur_ind) if cur_ind in MASTER_INDUSTRY_SECTORS else 0
                 f_ind = st.selectbox("Industry Macro Sector", options=MASTER_INDUSTRY_SECTORS, index=ind_idx)
             with c_ind2:
-                f_subv = st.text_input("Sub-Vertical / Niche (AI Analyzed)", value=st.session_state.get("f_subv", ""), placeholder="e.g. Solar Energy Farm Infrastructure")
+                f_subv = st.text_input("Sub-Vertical / Niche (AI Analyzed)", value=st.session_state.get("f_subv", ""))
 
             c_sc1, c_sc2 = st.columns(2)
             with c_sc1:
@@ -469,19 +469,19 @@ with st.form("lead_qualification_form"):
 
             c_ct1, c_ct2 = st.columns(2)
             with c_ct1:
-                f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""), placeholder="e.g. Jane Doe")
+                f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""))
             with c_ct2:
-                f_email = st.text_input("Work Email Address", value=st.session_state.get("f_email", ""), placeholder="e.g. jane@company.com")
+                f_email = st.text_input("Work Email Address", value=st.session_state.get("f_email", ""))
 
-            f_role = st.text_input("Role Title (AI Analyzes Seniority & Persona)", value=st.session_state.get("f_role", ""), placeholder="e.g. VP of Global Supply Chain, Principal DevOps Architect, Intern")
+            f_role = st.text_input("Role Title (AI Analyzes Seniority & Persona)", value=st.session_state.get("f_role", ""))
 
             c_in1, c_in2 = st.columns(2)
             with c_in1:
-                f_intent = st.text_input("Buying Intent & Notes (AI Urgency Signal)", value=st.session_state.get("f_intent", ""), placeholder="e.g. Need pricing for 50 seats before Q4 renewal")
+                f_intent = st.text_input("Buying Intent & Notes (AI Urgency Signal)", value=st.session_state.get("f_intent", ""))
             with c_in2:
                 f_deal = st.number_input("Target Contract Value ($ USD)", min_value=0, max_value=5000000, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d")
 
-            f_tech = st.text_input("Current Tech Stack & Tools (AI Synergy Analysis)", value=st.session_state.get("f_tech", ""), placeholder="e.g. SAP S/4HANA, AWS, Snowflake, Salesforce")
+            f_tech = st.text_input("Current Tech Stack & Tools (AI Synergy Analysis)", value=st.session_state.get("f_tech", ""))
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c_btn1, c_btn2, _ = st.columns([2, 1, 3])
