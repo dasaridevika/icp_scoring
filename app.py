@@ -320,9 +320,9 @@ def show_settings_dialog():
 
                 c_s5, c_s6 = st.columns(2)
                 with c_s5:
-                     s_min_hc = st.number_input("Min Headcount Floor", min_value=1, value=int(cfg.min_headcount), step=10, format="%d")
+                     s_min_hc = st.number_input("Min Headcount Floor", min_value=0, value=max(0, int(cfg.min_headcount)), step=10, format="%d")
                 with c_s6:
-                     s_ideal_hc = st.number_input("Ideal Headcount Target", min_value=1, value=int(cfg.ideal_headcount), step=50, format="%d")
+                     s_ideal_hc = st.number_input("Ideal Headcount Target", min_value=0, value=max(0, int(cfg.ideal_headcount)), step=50, format="%d")
 
             with st.container(border=True):
                 st.markdown('<div class="settings-section-title">🎯 Primary Focus Verticals (+5 Pts)</div>', unsafe_allow_html=True)
@@ -477,7 +477,7 @@ with st.form("lead_qualification_form"):
             with c1_r4_a:
                 f_rev = st.number_input("Annual Revenue ($ USD)", min_value=0, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d")
             with c1_r4_b:
-                f_hc = st.number_input("Employee Headcount", min_value=1, value=int(st.session_state.get("f_hc", 50)), step=25, format="%d")
+                f_hc = st.number_input("Employee Headcount", min_value=0, value=max(0, int(st.session_state.get("f_hc", 0))), step=25, format="%d")
 
     with col_f2:
         with st.container(border=True):
