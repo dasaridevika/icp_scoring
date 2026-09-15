@@ -14,7 +14,6 @@ ROOT_DIR = Path(__file__).parent
 sys.path.append(str(ROOT_DIR))
 
 from engine.gtm_engine import (
-    MASTER_INDUSTRY_SECTORS,
     CompanyStandardsConfig,
     StreamlinedLeadForm,
     GTMScoringEngine,
@@ -309,29 +308,30 @@ def show_settings_dialog():
 
                 c_s1, c_s2 = st.columns(2)
                 with c_s1:
-                    s_min_deal = st.number_input("Minimum Viable Deal ($)", min_value=1000, max_value=500000, value=int(cfg.min_deal_size_usd), step=5000, format="%d")
+                     s_min_deal = st.number_input("Minimum Viable Deal ($)", min_value=0, value=int(cfg.min_deal_size_usd), step=5000, format="%d")
                 with c_s2:
-                    s_target_deal = st.number_input("Target Ideal Deal ($)", min_value=5000, max_value=2000000, value=int(cfg.target_deal_size_usd), step=10000, format="%d")
+                     s_target_deal = st.number_input("Target Ideal Deal ($)", min_value=0, value=int(cfg.target_deal_size_usd), step=10000, format="%d")
 
                 c_s3, c_s4 = st.columns(2)
                 with c_s3:
-                    s_min_rev = st.number_input("Minimum Prospect Revenue ($)", min_value=0, max_value=50000000, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
+                     s_min_rev = st.number_input("Minimum Prospect Revenue ($)", min_value=0, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
                 with c_s4:
-                    s_ideal_rev = st.number_input("Ideal Prospect Target ARR ($)", min_value=1000000, max_value=500000000, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
+                     s_ideal_rev = st.number_input("Ideal Prospect Target ARR ($)", min_value=0, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
 
                 c_s5, c_s6 = st.columns(2)
                 with c_s5:
-                    s_min_hc = st.number_input("Min Headcount Floor", min_value=1, max_value=1000, value=int(cfg.min_headcount), step=10, format="%d")
+                     s_min_hc = st.number_input("Min Headcount Floor", min_value=1, value=int(cfg.min_headcount), step=10, format="%d")
                 with c_s6:
-                    s_ideal_hc = st.number_input("Ideal Headcount Target", min_value=20, max_value=10000, value=int(cfg.ideal_headcount), step=50, format="%d")
+                     s_ideal_hc = st.number_input("Ideal Headcount Target", min_value=1, value=int(cfg.ideal_headcount), step=50, format="%d")
 
             with st.container(border=True):
                 st.markdown('<div class="settings-section-title">🎯 Primary Focus Verticals (+5 Pts)</div>', unsafe_allow_html=True)
-                s_focus_ind = st.multiselect(
-                    "Select Sweet-Spot Verticals",
-                    options=MASTER_INDUSTRY_SECTORS,
-                    default=[i for i in cfg.target_focus_industries if i in MASTER_INDUSTRY_SECTORS]
+                s_focus_ind_raw = st.text_input(
+                    "Sweet-Spot Verticals / Focus Industries (comma separated)",
+                    value=", ".join(cfg.target_focus_industries) if cfg.target_focus_industries else "Technology, SaaS & IT, Manufacturing & Industrial Goods, Energy, Utilities & Renewables",
+                    placeholder="e.g. Enterprise Software, CleanTech, Healthcare, Industrial"
                 )
+                s_focus_ind = [i.strip() for i in s_focus_ind_raw.split(",") if i.strip()]
 
         with col_s2:
             with st.container(border=True):
@@ -468,18 +468,16 @@ with st.form("lead_qualification_form"):
             # Row 3: Industry Macro Sector & Sub-Vertical Niche
             c1_r3_a, c1_r3_b = st.columns(2)
             with c1_r3_a:
-                cur_ind = st.session_state.get("f_ind", MASTER_INDUSTRY_SECTORS[0])
-                ind_idx = MASTER_INDUSTRY_SECTORS.index(cur_ind) if cur_ind in MASTER_INDUSTRY_SECTORS else 0
-                f_ind = st.selectbox("Industry Macro Sector", options=MASTER_INDUSTRY_SECTORS, index=ind_idx)
+                f_ind = st.text_input("Industry / Macro Sector", value=st.session_state.get("f_ind", "Technology, SaaS & IT"), placeholder="e.g. Technology, SaaS & IT, Manufacturing...")
             with c1_r3_b:
                 f_subv = st.text_input("Sub-Vertical / Niche (AI)", value=st.session_state.get("f_subv", ""))
 
             # Row 4: Annual Revenue & Headcount
             c1_r4_a, c1_r4_b = st.columns(2)
             with c1_r4_a:
-                f_rev = st.number_input("Annual Revenue ($ USD)", min_value=0, max_value=1000000000, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d")
+                f_rev = st.number_input("Annual Revenue ($ USD)", min_value=0, value=int(st.session_state.get("f_rev", 0)), step=500000, format="%d")
             with c1_r4_b:
-                f_hc = st.number_input("Employee Headcount", min_value=1, max_value=500000, value=int(st.session_state.get("f_hc", 50)), step=25, format="%d")
+                f_hc = st.number_input("Employee Headcount", min_value=1, value=int(st.session_state.get("f_hc", 50)), step=25, format="%d")
 
     with col_f2:
         with st.container(border=True):
@@ -507,7 +505,7 @@ with st.form("lead_qualification_form"):
             # Row 3: Deal Size & Timeline
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
-                f_deal = st.number_input("Target Contract Value ($ USD)", min_value=0, max_value=5000000, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d")
+                f_deal = st.number_input("Target Contract Value ($ USD)", min_value=0, value=int(st.session_state.get("f_deal", 0)), step=5000, format="%d")
             with c2_r3_b:
                 f_timeline = st.text_input("Buying Timeline / Horizon", value=st.session_state.get("f_timeline", ""))
 
@@ -530,7 +528,7 @@ if clear_btn:
     st.session_state["f_domain"] = ""
     st.session_state["f_loc"] = ""
     st.session_state["f_branches"] = ""
-    st.session_state["f_ind"] = MASTER_INDUSTRY_SECTORS[0]
+    st.session_state["f_ind"] = "Technology, SaaS & IT"
     st.session_state["f_subv"] = ""
     st.session_state["f_rev"] = 0
     st.session_state["f_hc"] = 50

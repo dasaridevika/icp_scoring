@@ -17,20 +17,6 @@ DEFAULT_WORKER_URL = os.environ.get(
     "https://icp-revenue-intelligence-worker.devika-worker.workers.dev"
 )
 
-MASTER_INDUSTRY_SECTORS = [
-    "Manufacturing & Industrial Goods",
-    "Energy, Utilities & Renewables",
-    "Technology, SaaS & IT",
-    "Financial Services & FinTech",
-    "Healthcare & Life Sciences",
-    "Logistics, Freight & Supply Chain",
-    "Retail, Wholesale & E-Commerce",
-    "Construction & Real Estate",
-    "Professional & Business Services",
-    "Telecommunications & Media",
-    "Education & Public Sector"
-]
-
 
 # ==============================================================================
 # 1. AI Analysis & Output Data Models
@@ -50,7 +36,7 @@ class RoleAIAnalysis(BaseModel):
 class NicheAIAnalysis(BaseModel):
     raw_niche: str = ""
     suggested_sector: str = ""
-    market_complexity: str = "Mid-Market Specialized"
+    market_complexity: str = "Specialized Enterprise"
     fit_points: int = 3
     rationale: str = ""
 
@@ -77,7 +63,7 @@ class FootprintAIAnalysis(BaseModel):
     headquarters: str = ""
     branch_locations: List[str] = Field(default_factory=list)
     total_locations: int = 1
-    geographic_reach: str = "Single-Market Hub"
+    geographic_reach: str = "Multi-Region Enterprise"
     tier1_matches: List[str] = Field(default_factory=list)
     prohibited_matches: List[str] = Field(default_factory=list)
     footprint_points: int = 3
@@ -85,21 +71,17 @@ class FootprintAIAnalysis(BaseModel):
 
 
 class CompanyStandardsConfig(BaseModel):
-    company_name: str = "My Enterprise Revenue Org"
+    company_name: str = "Enterprise Revenue Org"
     min_deal_size_usd: float = 10000.0
     target_deal_size_usd: float = 50000.0
     min_company_revenue_usd: float = 2000000.0
     ideal_revenue_usd: float = 20000000.0
     min_headcount: int = 50
     ideal_headcount: int = 250
-    target_focus_industries: List[str] = Field(default_factory=lambda: [
-        "Manufacturing & Industrial Goods",
-        "Energy, Utilities & Renewables",
-        "Technology, SaaS & IT"
-    ])
+    target_focus_industries: List[str] = Field(default_factory=list)
     tier1_territories: List[str] = Field(default_factory=lambda: [
         "United States", "United Kingdom", "United Arab Emirates", "European Union",
-        "Canada", "Australia", "Singapore", "India", "Germany", "France", "UAE", "UK", "USA"
+        "Canada", "Australia", "Singapore", "India", "Germany", "France"
     ])
     prohibited_countries: List[str] = Field(default_factory=lambda: [
         "North Korea", "Iran", "Syria", "Cuba"
