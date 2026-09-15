@@ -6,7 +6,7 @@ or FastAPI/Uvicorn if installed.
 
 import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from engine import GTMScoringEngine, StreamlinedLeadForm, CompanyStandardsConfig
+from engine.gtm_engine import GTMScoringEngine, StreamlinedLeadForm, CompanyStandardsConfig
 
 
 class ICPWorkerHandler(BaseHTTPRequestHandler):
