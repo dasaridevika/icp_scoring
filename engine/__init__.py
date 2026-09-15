@@ -3,18 +3,8 @@ Enterprise ICP Revenue Intelligence Engine - Production Package.
 GTM Partners 4-Pillar ICP Scoring Engine with Cloudflare Workers AI Semantic Intelligence.
 """
 
-from .ai_analyzer import (
-    AITextAnalyzer,
-    AIWorkerClient,
-    DEFAULT_WORKER_URL,
-    RoleAIAnalysis,
-    NicheAIAnalysis,
-    IntentAIAnalysis,
-    TechStackAIAnalysis,
-    FootprintAIAnalysis
-)
-
 from .gtm_engine import (
+    DEFAULT_WORKER_URL,
     MASTER_INDUSTRY_SECTORS,
     CompanyStandardsConfig,
     StreamlinedLeadForm,
@@ -23,18 +13,16 @@ from .gtm_engine import (
     GTMScoringResult,
     StreamlinedScoringResult,
     FieldScoreReceipt,
-    PillarScoreSummary
+    PillarScoreSummary,
+    RoleAIAnalysis,
+    NicheAIAnalysis,
+    IntentAIAnalysis,
+    TechStackAIAnalysis,
+    FootprintAIAnalysis
 )
 
 __all__ = [
-    "AITextAnalyzer",
-    "AIWorkerClient",
     "DEFAULT_WORKER_URL",
-    "RoleAIAnalysis",
-    "NicheAIAnalysis",
-    "IntentAIAnalysis",
-    "TechStackAIAnalysis",
-    "FootprintAIAnalysis",
     "MASTER_INDUSTRY_SECTORS",
     "CompanyStandardsConfig",
     "StreamlinedLeadForm",
@@ -43,6 +31,12 @@ __all__ = [
     "GTMScoringResult",
     "StreamlinedScoringResult",
     "FieldScoreReceipt",
-    "PillarScoreSummary"
+    "PillarScoreSummary",
+    "RoleAIAnalysis",
+    "NicheAIAnalysis",
+    "IntentAIAnalysis",
+    "TechStackAIAnalysis",
+    "FootprintAIAnalysis"
 ]
+
 
