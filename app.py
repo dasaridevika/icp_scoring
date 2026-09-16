@@ -398,25 +398,6 @@ SCALE_UNITS = {
     "Exact / Standard": 1
 }
 
-# Standard Buying Roles & Timeline Options
-BUYING_ROLES = [
-    "Economic Buyer / Decision Maker",
-    "Champion / Internal Sponsor",
-    "Technical Evaluator / Lead",
-    "Key Influencer / Advisor",
-    "End User / Practitioner",
-    "Procurement / Commercial / Legal",
-    "Other / Unspecified"
-]
-
-TIMELINE_OPTIONS = [
-    "Immediate (< 30 Days)",
-    "1 – 3 Months (Current Quarter)",
-    "3 – 6 Months (Next Half)",
-    "6 – 12 Months (Fiscal Year)",
-    "Exploratory / Unsure (> 12 Months)"
-]
-
 if "selected_curr" not in st.session_state:
     st.session_state["selected_curr"] = "USD ($)"
 
@@ -566,21 +547,19 @@ with st.form("lead_qualification_form"):
             with c2_r1_b:
                 f_role = st.text_input("Role Title / Authority (AI)", value=st.session_state.get("f_role", ""), placeholder="Enter role title / seniority...")
 
-            # Row 2: Buying Role & Timeline
+            # Row 2: Buying Role & Timeline (Free Text)
             c2_r2_a, c2_r2_b = st.columns(2)
             with c2_r2_a:
-                f_buying_role = st.selectbox(
-                    "Buying Role",
-                    BUYING_ROLES,
-                    index=BUYING_ROLES.index(st.session_state.get("f_buying_role", "Economic Buyer / Decision Maker")) if st.session_state.get("f_buying_role") in BUYING_ROLES else 0,
-                    help="Contact's authority and function within the buying committee"
+                f_buying_role = st.text_input(
+                    "Buying Role / Persona",
+                    value=st.session_state.get("f_buying_role", ""),
+                    placeholder="e.g. Economic Buyer, Champion, Technical Evaluator..."
                 )
             with c2_r2_b:
-                f_timeline = st.selectbox(
-                    "Timeline",
-                    TIMELINE_OPTIONS,
-                    index=TIMELINE_OPTIONS.index(st.session_state.get("f_timeline", "1 – 3 Months (Current Quarter)")) if st.session_state.get("f_timeline") in TIMELINE_OPTIONS else 1,
-                    help="Expected purchase horizon and evaluation timeline"
+                f_timeline = st.text_input(
+                    "Purchase & Implementation Timeline",
+                    value=st.session_state.get("f_timeline", ""),
+                    placeholder="e.g. Immediate (< 30 days), Q1, 3-6 months..."
                 )
 
             # Row 3: Buying Intent & Signals (AI) | Current Tech Stack & Environment (AI)
@@ -649,8 +628,8 @@ if clear_btn:
     st.session_state["f_hc"] = 0
     st.session_state["f_name"] = ""
     st.session_state["f_role"] = ""
-    st.session_state["f_buying_role"] = "Economic Buyer / Decision Maker"
-    st.session_state["f_timeline"] = "1 – 3 Months (Current Quarter)"
+    st.session_state["f_buying_role"] = ""
+    st.session_state["f_timeline"] = ""
     st.session_state["f_intent"] = ""
     st.session_state["f_tech"] = ""
     if "streamlined_res" in st.session_state:
