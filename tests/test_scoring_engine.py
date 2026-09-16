@@ -114,10 +114,12 @@ def test_buying_role_timeline_budget_range():
         buying_role="Economic Buyer / Decision Maker",
         buying_intent="Active ERP integration evaluation",
         timeline="1 – 3 Months (Current Quarter)",
+        existing_platform="Bloomberg Terminal",
         target_deal_size_usd=75_000.0
     )
     assert form.buying_role == "Economic Buyer / Decision Maker"
     assert form.timeline == "1 – 3 Months (Current Quarter)"
+    assert form.existing_platform == "Bloomberg Terminal"
 
 
 if __name__ == "__main__":

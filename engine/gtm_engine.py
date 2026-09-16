@@ -144,6 +144,7 @@ class StreamlinedLeadForm(BaseModel):
     timeline: str = ""
     target_deal_size_usd: float = 0.0
     tech_stack_notes: Optional[str] = ""
+    existing_platform: Optional[str] = ""
 
 
 class FieldScoreReceipt(BaseModel):
@@ -330,6 +331,7 @@ class GTMScoringEngine:
             "stated_deal_size": prospect_deal_str,
             "deal_unit": form.deal_unit,
             "tech_stack_notes": form.tech_stack_notes,
+            "existing_platform": form.existing_platform or "",
             "company_standards": {
                 "org_name": cfg.company_name,
                 "target_focus_industries": cfg.target_focus_industries,
@@ -491,13 +493,14 @@ class GTMScoringEngine:
             ]
         )
 
+        tech_receipt_val = f"{form.tech_stack_notes} (Platform: {form.existing_platform})" if form.existing_platform and form.tech_stack_notes else (form.existing_platform or form.tech_stack_notes or "Cloud Baseline")
         pillar_val = PillarScoreSummary(
             pillar_name="Technographics & Ecosystem Fit",
             score=techno_score,
             weight_pct=cfg.weight_value,
             field_receipts=[
                 FieldScoreReceipt(field_name="Budget Range (ACV)", pillar="Commercial Scale", raw_value=prospect_deal_str, gtm_points=techno_pts, rationale=f"Budget: {prospect_deal_str} (~${norm_deal_usd:,.0f} USD)"),
-                FieldScoreReceipt(field_name="Tech Stack Ecosystem (AI)", pillar="Technographics", raw_value=form.tech_stack_notes or "Cloud Baseline", gtm_points=ai_tech.tech_points, rationale=ai_tech.rationale)
+                FieldScoreReceipt(field_name="Tech Stack Ecosystem (AI)", pillar="Technographics", raw_value=tech_receipt_val, gtm_points=ai_tech.tech_points, rationale=ai_tech.rationale)
             ]
         )
 
@@ -609,7 +612,8 @@ class GTMScoringEngine:
                 "buying_role": form.buying_role,
                 "buying_intent": form.buying_intent,
                 "timeline": form.timeline,
-                "tech_stack": form.tech_stack_notes
+                "tech_stack": form.tech_stack_notes,
+                "existing_platform": form.existing_platform or ""
             },
             discovery_questions=discovery_questions,
             key_strengths=key_strengths,
