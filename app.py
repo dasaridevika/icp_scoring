@@ -34,6 +34,13 @@ except (ImportError, ModuleNotFoundError):
         ScoringTrackerItem
     )
 
+# HTML Sanitizer Helper (Defined globally at top of module)
+def esc(val: Any) -> str:
+    if val is None:
+        return ""
+    return html.escape(str(val))
+
+
 # Page Configuration
 st.set_page_config(
     page_title="Enterprise ICP Revenue Intelligence Studio",
@@ -729,11 +736,7 @@ if calc_btn:
         st.rerun()
 
 
-# HTML Sanitizer Helper
-def esc(val: Any) -> str:
-    if val is None:
-        return ""
-    return html.escape(str(val))
+
 
 
 # ==============================================================================
