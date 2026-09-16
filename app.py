@@ -293,7 +293,28 @@ st.markdown("""
 
 # Initialize Session State
 if "company_config" not in st.session_state:
-    st.session_state["company_config"] = CompanyStandardsConfig()
+    st.session_state["company_config"] = CompanyStandardsConfig(
+        company_name="Blackridge Research & Consulting",
+        min_deal_size_usd=5000.0,
+        target_deal_size_usd=25000.0,
+        min_company_revenue_usd=5000000.0,
+        ideal_revenue_usd=50000000.0,
+        target_focus_industries=[
+            "Energy, Utilities & Renewables",
+            "Infrastructure & Construction",
+            "Oil, Gas & Petrochemicals",
+            "Industrial Goods & Manufacturing",
+            "Automotive & Electric Mobility",
+            "Chemicals & Materials",
+            "Technology & Telecom"
+        ],
+        tier1_territories=[
+            "United States", "Canada", "United Kingdom", "Germany", "France", "Japan", "India", "Australia", "Singapore", "United Arab Emirates", "Saudi Arabia"
+        ],
+        prohibited_countries=[
+            "North Korea", "Iran", "Syria", "Cuba", "Russia", "Belarus"
+        ]
+    )
 
 cfg: CompanyStandardsConfig = st.session_state["company_config"]
 
