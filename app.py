@@ -105,25 +105,20 @@ st.markdown("""
         border: 1px solid #C7D2FE;
     }
 
-    /* Field Labels - Uniform heights & single-line alignment */
+    /* Field Labels - Clean spacing & readable typography */
     label[data-testid="stWidgetLabel"] {
-        height: 22px !important;
-        min-height: 22px !important;
-        margin-bottom: 2px !important;
+        margin-bottom: 4px !important;
         display: flex !important;
         align-items: center !important;
     }
 
     label[data-testid="stWidgetLabel"] p {
-        font-size: 0.82rem !important;
+        font-size: 0.83rem !important;
         font-weight: 700 !important;
         color: #0F172A !important;
-        letter-spacing: 0.2px;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        letter-spacing: 0.1px;
         margin: 0 !important;
-        line-height: 1.2 !important;
+        line-height: 1.3 !important;
     }
 
     /* Form Container Card Headers */
@@ -525,53 +520,57 @@ with st.form("lead_qualification_form"):
             with c1_r3_b:
                 f_subv = st.text_input("Sub-Vertical / Niche (AI)", value=st.session_state.get("f_subv", ""))
 
-            # Row 4: Annual Revenue & Headcount
+            # Row 4: Annual Revenue Amount & Currency
             c1_r4_a, c1_r4_b = st.columns(2)
             with c1_r4_a:
-                st.markdown("<label style='font-size:0.82rem; font-weight:700; color:#0F172A;'>Annual Revenue Scale</label>", unsafe_allow_html=True)
-                c_r_val, c_r_cur, c_r_unit = st.columns([1.5, 1.2, 1.3])
-                with c_r_val:
-                    f_rev_val = st.number_input(
-                        "Revenue",
-                        min_value=0.0,
-                        max_value=100_000_000_000.0,
-                        value=float(st.session_state.get("f_rev_val", 0.0)),
-                        step=1.0,
-                        format="%.2f",
-                        label_visibility="collapsed",
-                        help="Enter numerical amount in client's native unit"
-                    )
-                with c_r_cur:
-                    f_rev_curr = st.selectbox(
-                        "Rev Currency",
-                        list(CURRENCY_OPTIONS.keys()),
-                        index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_rev_curr", curr_label)),
-                        label_visibility="collapsed"
-                    )
-                with c_r_unit:
-                    f_rev_unit = st.selectbox(
-                        "Rev Unit",
-                        list(SCALE_UNITS.keys()),
-                        index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_rev_unit", "Millions (M)")),
-                        label_visibility="collapsed"
-                    )
-
-                rev_mult = SCALE_UNITS.get(f_rev_unit, 1)
-                f_rev_total = float(f_rev_val) * rev_mult
-                rev_sym = CURRENCY_OPTIONS.get(f_rev_curr, "$")
-                rev_code = f_rev_curr.split()[0]
-                
-                if f_rev_val > 0:
-                    if f_rev_unit != "Exact / Standard":
-                        rev_stated_str = f"{rev_sym}{f_rev_val:g} {f_rev_unit} ({rev_sym}{f_rev_total:,.0f} {rev_code})"
-                    else:
-                        rev_stated_str = f"{rev_sym}{f_rev_total:,.0f} {rev_code}"
-                    st.caption(f"💡 Evaluated Scale: **{rev_stated_str}**")
-                else:
-                    rev_stated_str = f"{rev_sym}0 {rev_code}"
-
+                f_rev_val = st.number_input(
+                    "Annual Revenue (Amount)",
+                    min_value=0.0,
+                    max_value=100_000_000_000.0,
+                    value=float(st.session_state.get("f_rev_val", 0.0)),
+                    step=1.0,
+                    format="%.2f",
+                    help="Enter numerical amount in client's native unit"
+                )
             with c1_r4_b:
-                f_hc = st.number_input("Employee Headcount", min_value=0, max_value=10_000_000, value=max(0, int(st.session_state.get("f_hc", 0))), step=25, format="%d", help="Max allowed entry: 10 Million employees")
+                f_rev_curr = st.selectbox(
+                    "Revenue Currency",
+                    list(CURRENCY_OPTIONS.keys()),
+                    index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_rev_curr", curr_label))
+                )
+
+            # Row 5: Revenue Scale Unit & Headcount
+            c1_r5_a, c1_r5_b = st.columns(2)
+            with c1_r5_a:
+                f_rev_unit = st.selectbox(
+                    "Revenue Scale Unit",
+                    list(SCALE_UNITS.keys()),
+                    index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_rev_unit", "Millions (M)"))
+                )
+            with c1_r5_b:
+                f_hc = st.number_input(
+                    "Employee Headcount",
+                    min_value=0,
+                    max_value=10_000_000,
+                    value=max(0, int(st.session_state.get("f_hc", 0))),
+                    step=25,
+                    format="%d",
+                    help="Max allowed entry: 10 Million employees"
+                )
+
+            rev_mult = SCALE_UNITS.get(f_rev_unit, 1)
+            f_rev_total = float(f_rev_val) * rev_mult
+            rev_sym = CURRENCY_OPTIONS.get(f_rev_curr, "$")
+            rev_code = f_rev_curr.split()[0]
+            
+            if f_rev_val > 0:
+                if f_rev_unit != "Exact / Standard":
+                    rev_stated_str = f"{rev_sym}{f_rev_val:g} {f_rev_unit} ({rev_sym}{f_rev_total:,.0f} {rev_code})"
+                else:
+                    rev_stated_str = f"{rev_sym}{f_rev_total:,.0f} {rev_code}"
+                st.caption(f"💡 Evaluated Scale: **{rev_stated_str}**")
+            else:
+                rev_stated_str = f"{rev_sym}0 {rev_code}"
 
     with col_f2:
         with st.container(border=True):
@@ -596,59 +595,55 @@ with st.form("lead_qualification_form"):
             with c2_r2_b:
                 f_intent = st.text_input("Buying Intent / Signal (AI)", value=st.session_state.get("f_intent", ""))
 
-            # Row 3: Deal Size & Timeline
+            # Row 3: Deal Size Amount & Currency
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
-                st.markdown("<label style='font-size:0.82rem; font-weight:700; color:#0F172A;'>Target Contract Value</label>", unsafe_allow_html=True)
-                c_d_val, c_d_cur, c_d_unit = st.columns([1.5, 1.2, 1.3])
-                with c_d_val:
-                    f_deal_val = st.number_input(
-                        "Deal Value",
-                        min_value=0.0,
-                        max_value=1_000_000_000.0,
-                        value=float(st.session_state.get("f_deal_val", 0.0)),
-                        step=1.0,
-                        format="%.2f",
-                        label_visibility="collapsed",
-                        help="Enter contract size in client's native unit"
-                    )
-                with c_d_cur:
-                    f_deal_curr = st.selectbox(
-                        "Deal Currency",
-                        list(CURRENCY_OPTIONS.keys()),
-                        index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label)),
-                        label_visibility="collapsed"
-                    )
-                with c_d_unit:
-                    f_deal_unit = st.selectbox(
-                        "Deal Unit",
-                        list(SCALE_UNITS.keys()),
-                        index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_deal_unit", "Thousands (k)")),
-                        label_visibility="collapsed"
-                    )
-
-                deal_mult = SCALE_UNITS.get(f_deal_unit, 1)
-                f_deal_total = float(f_deal_val) * deal_mult
-                deal_sym = CURRENCY_OPTIONS.get(f_deal_curr, "$")
-                deal_code = f_deal_curr.split()[0]
-                
-                if f_deal_val > 0:
-                    if f_deal_unit != "Exact / Standard":
-                        deal_stated_str = f"{deal_sym}{f_deal_val:g} {f_deal_unit} ({deal_sym}{f_deal_total:,.0f} {deal_code})"
-                    else:
-                        deal_stated_str = f"{deal_sym}{f_deal_total:,.0f} {deal_code}"
-                    st.caption(f"🎯 Evaluated ACV: **{deal_stated_str}**")
-                else:
-                    deal_stated_str = f"{deal_sym}0 {deal_code}"
-
+                f_deal_val = st.number_input(
+                    "Target Contract Value (Amount)",
+                    min_value=0.0,
+                    max_value=1_000_000_000.0,
+                    value=float(st.session_state.get("f_deal_val", 0.0)),
+                    step=1.0,
+                    format="%.2f",
+                    help="Enter contract size in client's native unit"
+                )
             with c2_r3_b:
-                f_timeline = st.text_input("Buying Timeline / Horizon", value=st.session_state.get("f_timeline", ""))
+                f_deal_curr = st.selectbox(
+                    "Deal Currency",
+                    list(CURRENCY_OPTIONS.keys()),
+                    index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label))
+                )
 
-            # Row 4: Tech Stack & Notes
+            # Row 4: Deal Scale Unit & Timeline
             c2_r4_a, c2_r4_b = st.columns(2)
             with c2_r4_a:
-                f_tech = st.text_input("Current Tech Stack & Tools (AI)", value=st.session_state.get("f_tech", ""))
+                f_deal_unit = st.selectbox(
+                    "Deal Scale Unit",
+                    list(SCALE_UNITS.keys()),
+                    index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_deal_unit", "Thousands (k)"))
+                )
             with c2_r4_b:
+                f_timeline = st.text_input("Buying Timeline / Horizon", value=st.session_state.get("f_timeline", ""))
+
+            deal_mult = SCALE_UNITS.get(f_deal_unit, 1)
+            f_deal_total = float(f_deal_val) * deal_mult
+            deal_sym = CURRENCY_OPTIONS.get(f_deal_curr, "$")
+            deal_code = f_deal_curr.split()[0]
+            
+            if f_deal_val > 0:
+                if f_deal_unit != "Exact / Standard":
+                    deal_stated_str = f"{deal_sym}{f_deal_val:g} {f_deal_unit} ({deal_sym}{f_deal_total:,.0f} {deal_code})"
+                else:
+                    deal_stated_str = f"{deal_sym}{f_deal_total:,.0f} {deal_code}"
+                st.caption(f"🎯 Evaluated ACV: **{deal_stated_str}**")
+            else:
+                deal_stated_str = f"{deal_sym}0 {deal_code}"
+
+            # Row 5: Tech Stack & Notes
+            c2_r5_a, c2_r5_b = st.columns(2)
+            with c2_r5_a:
+                f_tech = st.text_input("Current Tech Stack & Tools (AI)", value=st.session_state.get("f_tech", ""))
+            with c2_r5_b:
                 f_notes = st.text_input("Tech / Migration Notes (AI)", value=st.session_state.get("f_notes", ""))
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
