@@ -334,8 +334,7 @@ def show_settings_dialog():
             
             s_focus_ind_raw = st.text_input(
                 "Sweet-Spot Focus Industries (+5 Pts Bonus)",
-                value=", ".join(cfg.target_focus_industries) if cfg.target_focus_industries else "Technology, SaaS & IT, Manufacturing & Industrial Goods, Energy, Utilities & Renewables",
-                placeholder="e.g. Energy, SaaS"
+                value=", ".join(cfg.target_focus_industries) if cfg.target_focus_industries else "Technology, SaaS & IT, Manufacturing & Industrial Goods, Energy, Utilities & Renewables"
             )
             s_focus_ind = [i.strip() for i in s_focus_ind_raw.split(",") if i.strip()]
 
@@ -471,14 +470,14 @@ with st.form("lead_qualification_form"):
             # Row 1: Company Name & Headquarters
             c1_r1_a, c1_r1_b = st.columns(2)
             with c1_r1_a:
-                f_company = st.text_input("Company Name", value=st.session_state.get("f_company", ""), placeholder="e.g. Acme Corp")
+                f_company = st.text_input("Company Name", value=st.session_state.get("f_company", ""))
             with c1_r1_b:
-                f_loc = st.text_input("Headquarters", value=st.session_state.get("f_loc", ""), placeholder="City, Country")
+                f_loc = st.text_input("Headquarters", value=st.session_state.get("f_loc", ""))
 
             # Row 2: Industry & Headcount
             c1_r2_a, c1_r2_b = st.columns(2)
             with c1_r2_a:
-                f_ind = st.text_input("Industry", value=st.session_state.get("f_ind", ""), placeholder="e.g. Energy")
+                f_ind = st.text_input("Industry", value=st.session_state.get("f_ind", ""))
             with c1_r2_b:
                 f_hc = st.number_input(
                     "Headcount",
@@ -543,31 +542,29 @@ with st.form("lead_qualification_form"):
             # Row 1: Contact Name & Role Title
             c2_r1_a, c2_r1_b = st.columns(2)
             with c2_r1_a:
-                f_name = st.text_input("Contact Name", value=st.session_state.get("f_name", ""), placeholder="e.g. Jane Doe")
+                f_name = st.text_input("Contact Name", value=st.session_state.get("f_name", ""))
             with c2_r1_b:
-                f_role = st.text_input("Role Title", value=st.session_state.get("f_role", ""), placeholder="e.g. CISO")
+                f_role = st.text_input("Role Title", value=st.session_state.get("f_role", ""))
 
             # Row 2: Buying Role & Timeline (Manual Text Entry)
             c2_r2_a, c2_r2_b = st.columns(2)
             with c2_r2_a:
                 f_buying_role = st.text_input(
                     "Buying Role",
-                    value=st.session_state.get("f_buying_role", ""),
-                    placeholder="e.g. Economic Buyer"
+                    value=st.session_state.get("f_buying_role", "")
                 )
             with c2_r2_b:
                 f_timeline = st.text_input(
                     "Timeline",
-                    value=st.session_state.get("f_timeline", ""),
-                    placeholder="e.g. Q1 / 1-3 mos"
+                    value=st.session_state.get("f_timeline", "")
                 )
 
             # Row 3: Buying Intent & Tech Stack
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
-                f_intent = st.text_input("Buying Intent", value=st.session_state.get("f_intent", ""), placeholder="e.g. ERP upgrade")
+                f_intent = st.text_input("Buying Intent", value=st.session_state.get("f_intent", ""))
             with c2_r3_b:
-                f_tech = st.text_input("Tech Stack", value=st.session_state.get("f_tech", ""), placeholder="e.g. AWS, SAP")
+                f_tech = st.text_input("Tech Stack", value=st.session_state.get("f_tech", ""))
 
             # Row 4: Budget Range & Budget Currency
             c2_r4_a, c2_r4_b = st.columns(2)
@@ -600,7 +597,6 @@ with st.form("lead_qualification_form"):
                 f_platform = st.text_input(
                     "Uses Existing Platform",
                     value=st.session_state.get("f_platform", ""),
-                    placeholder="e.g. false, Bloomberg",
                     help="Optional: whether the prospect uses an incumbent or existing tool"
                 )
 
