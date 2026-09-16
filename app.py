@@ -468,39 +468,39 @@ with st.form("lead_qualification_form"):
             </div>
             """, unsafe_allow_html=True)
             
-            # Row 1: Company Name & Primary Headquarters
+            # Row 1: Company Name & Headquarters
             c1_r1_a, c1_r1_b = st.columns(2)
             with c1_r1_a:
-                f_company = st.text_input("Company / Account Name", value=st.session_state.get("f_company", ""), placeholder="Enter company name...")
+                f_company = st.text_input("Company Name", value=st.session_state.get("f_company", ""), placeholder="Enter company name...")
             with c1_r1_b:
-                f_loc = st.text_input("Primary Headquarters", value=st.session_state.get("f_loc", ""), placeholder="City, State, Country...")
+                f_loc = st.text_input("Headquarters", value=st.session_state.get("f_loc", ""), placeholder="City, State, Country...")
 
-            # Row 2: Industry / Niche & Headcount
+            # Row 2: Industry & Headcount
             c1_r2_a, c1_r2_b = st.columns(2)
             with c1_r2_a:
-                f_ind = st.text_input("Industry / Sector & Focus Niche", value=st.session_state.get("f_ind", ""), placeholder="Enter industry / market sector...")
+                f_ind = st.text_input("Industry", value=st.session_state.get("f_ind", ""), placeholder="e.g. Energy, Technology, Manufacturing...")
             with c1_r2_b:
                 f_hc = st.number_input(
-                    "Employee Headcount",
+                    "Headcount",
                     min_value=0,
                     max_value=10_000_000,
                     value=max(0, int(st.session_state.get("f_hc", 0))),
                     step=25,
                     format="%d",
-                    help="Max allowed entry: 10 Million employees"
+                    help="Employee headcount"
                 )
 
-            # Row 3: Annual Revenue Amount & Currency
+            # Row 3: Annual Revenue & Revenue Currency
             c1_r3_a, c1_r3_b = st.columns(2)
             with c1_r3_a:
                 f_rev_val = st.number_input(
-                    "Annual Revenue (Amount)",
+                    "Annual Revenue",
                     min_value=0.0,
                     max_value=100_000_000_000.0,
                     value=float(st.session_state.get("f_rev_val", 0.0)),
                     step=1.0,
                     format="%.2f",
-                    help="Enter numerical amount in client's native unit"
+                    help="Revenue amount in selected unit"
                 )
             with c1_r3_b:
                 f_rev_curr = st.selectbox(
@@ -540,46 +540,46 @@ with st.form("lead_qualification_form"):
             </div>
             """, unsafe_allow_html=True)
 
-            # Row 1: Contact Full Name & Role Authority
+            # Row 1: Contact Name & Role Title
             c2_r1_a, c2_r1_b = st.columns(2)
             with c2_r1_a:
-                f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""), placeholder="Enter contact name...")
+                f_name = st.text_input("Contact Name", value=st.session_state.get("f_name", ""), placeholder="Enter contact name...")
             with c2_r1_b:
-                f_role = st.text_input("Role Title / Authority (AI)", value=st.session_state.get("f_role", ""), placeholder="Enter role title / seniority...")
+                f_role = st.text_input("Role Title", value=st.session_state.get("f_role", ""), placeholder="e.g. VP Marketing, CISO, Director...")
 
-            # Row 2: Buying Role & Timeline (Free Text)
+            # Row 2: Buying Role & Timeline (Manual Text Entry)
             c2_r2_a, c2_r2_b = st.columns(2)
             with c2_r2_a:
                 f_buying_role = st.text_input(
-                    "Buying Role / Persona",
+                    "Buying Role",
                     value=st.session_state.get("f_buying_role", ""),
-                    placeholder="e.g. Economic Buyer, Champion, Technical Evaluator..."
+                    placeholder="e.g. Economic Buyer, Champion, Evaluator..."
                 )
             with c2_r2_b:
                 f_timeline = st.text_input(
-                    "Purchase & Implementation Timeline",
+                    "Timeline",
                     value=st.session_state.get("f_timeline", ""),
                     placeholder="e.g. Immediate (< 30 days), Q1, 3-6 months..."
                 )
 
-            # Row 3: Buying Intent & Signals (AI) | Current Tech Stack & Environment (AI)
+            # Row 3: Buying Intent & Tech Stack
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
-                f_intent = st.text_input("Buying Intent & Signals (AI)", value=st.session_state.get("f_intent", ""), placeholder="Enter buying intent, commercial triggers...")
+                f_intent = st.text_input("Buying Intent", value=st.session_state.get("f_intent", ""), placeholder="Enter buying intent, commercial triggers, pain points...")
             with c2_r3_b:
-                f_tech = st.text_input("Current Tech Stack & Environment (AI)", value=st.session_state.get("f_tech", ""), placeholder="Enter existing tools, tech stack, and migration notes...")
+                f_tech = st.text_input("Tech Stack", value=st.session_state.get("f_tech", ""), placeholder="Enter existing tools, ERP, CRM, infrastructure...")
 
-            # Row 4: Budget Range Amount & Currency
+            # Row 4: Budget Range & Budget Currency
             c2_r4_a, c2_r4_b = st.columns(2)
             with c2_r4_a:
                 f_deal_val = st.number_input(
-                    "Budget Range (Amount)",
+                    "Budget Range",
                     min_value=0.0,
                     max_value=1_000_000_000.0,
                     value=float(st.session_state.get("f_deal_val", 0.0)),
                     step=1.0,
                     format="%.2f",
-                    help="Enter allocated budget / contract size in client's native unit"
+                    help="Allocated budget / contract size"
                 )
             with c2_r4_b:
                 f_deal_curr = st.selectbox(
