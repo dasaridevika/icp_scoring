@@ -398,6 +398,25 @@ SCALE_UNITS = {
     "Exact / Standard": 1
 }
 
+# Standard Buying Roles & Timeline Options
+BUYING_ROLES = [
+    "Economic Buyer / Decision Maker",
+    "Champion / Internal Sponsor",
+    "Technical Evaluator / Lead",
+    "Key Influencer / Advisor",
+    "End User / Practitioner",
+    "Procurement / Commercial / Legal",
+    "Other / Unspecified"
+]
+
+TIMELINE_OPTIONS = [
+    "Immediate (< 30 Days)",
+    "1 – 3 Months (Current Quarter)",
+    "3 – 6 Months (Next Half)",
+    "6 – 12 Months (Fiscal Year)",
+    "Exploratory / Unsure (> 12 Months)"
+]
+
 if "selected_curr" not in st.session_state:
     st.session_state["selected_curr"] = "USD ($)"
 
@@ -547,37 +566,54 @@ with st.form("lead_qualification_form"):
             with c2_r1_b:
                 f_role = st.text_input("Role Title / Authority (AI)", value=st.session_state.get("f_role", ""), placeholder="Enter role title / seniority...")
 
-            # Row 2: Buying Intent & Horizon (Merged) | Tech Stack & Environment (Merged)
+            # Row 2: Buying Role & Timeline
             c2_r2_a, c2_r2_b = st.columns(2)
             with c2_r2_a:
-                f_intent = st.text_input("Buying Intent, Horizon & Signals (AI)", value=st.session_state.get("f_intent", ""), placeholder="Enter buying intent, timeline, and purchase triggers...")
+                f_buying_role = st.selectbox(
+                    "Buying Role",
+                    BUYING_ROLES,
+                    index=BUYING_ROLES.index(st.session_state.get("f_buying_role", "Economic Buyer / Decision Maker")) if st.session_state.get("f_buying_role") in BUYING_ROLES else 0,
+                    help="Contact's authority and function within the buying committee"
+                )
             with c2_r2_b:
-                f_tech = st.text_input("Current Tech Stack & Environment (AI)", value=st.session_state.get("f_tech", ""), placeholder="Enter existing tools, tech stack, and migration notes...")
+                f_timeline = st.selectbox(
+                    "Timeline",
+                    TIMELINE_OPTIONS,
+                    index=TIMELINE_OPTIONS.index(st.session_state.get("f_timeline", "1 – 3 Months (Current Quarter)")) if st.session_state.get("f_timeline") in TIMELINE_OPTIONS else 1,
+                    help="Expected purchase horizon and evaluation timeline"
+                )
 
-            # Row 3: Deal Value Amount & Deal Currency
+            # Row 3: Buying Intent & Signals (AI) | Current Tech Stack & Environment (AI)
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
+                f_intent = st.text_input("Buying Intent & Signals (AI)", value=st.session_state.get("f_intent", ""), placeholder="Enter buying intent, commercial triggers...")
+            with c2_r3_b:
+                f_tech = st.text_input("Current Tech Stack & Environment (AI)", value=st.session_state.get("f_tech", ""), placeholder="Enter existing tools, tech stack, and migration notes...")
+
+            # Row 4: Budget Range Amount & Currency
+            c2_r4_a, c2_r4_b = st.columns(2)
+            with c2_r4_a:
                 f_deal_val = st.number_input(
-                    "Target Contract Value (Amount)",
+                    "Budget Range (Amount)",
                     min_value=0.0,
                     max_value=1_000_000_000.0,
                     value=float(st.session_state.get("f_deal_val", 0.0)),
                     step=1.0,
                     format="%.2f",
-                    help="Enter contract size in client's native unit"
+                    help="Enter allocated budget / contract size in client's native unit"
                 )
-            with c2_r3_b:
+            with c2_r4_b:
                 f_deal_curr = st.selectbox(
-                    "Deal Currency",
+                    "Budget Currency",
                     list(CURRENCY_OPTIONS.keys()),
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label))
                 )
 
-            # Row 4: Deal Scale Unit
-            c2_r4_a, _ = st.columns(2)
-            with c2_r4_a:
+            # Row 5: Budget Scale Unit
+            c2_r5_a, _ = st.columns(2)
+            with c2_r5_a:
                 f_deal_unit = st.selectbox(
-                    "Deal Scale Unit",
+                    "Budget Scale Unit",
                     list(SCALE_UNITS.keys()),
                     index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_deal_unit", "Thousands (k)"))
                 )
@@ -613,6 +649,8 @@ if clear_btn:
     st.session_state["f_hc"] = 0
     st.session_state["f_name"] = ""
     st.session_state["f_role"] = ""
+    st.session_state["f_buying_role"] = "Economic Buyer / Decision Maker"
+    st.session_state["f_timeline"] = "1 – 3 Months (Current Quarter)"
     st.session_state["f_intent"] = ""
     st.session_state["f_tech"] = ""
     if "streamlined_res" in st.session_state:
@@ -636,6 +674,8 @@ if calc_btn:
         st.session_state["f_hc"] = f_hc
         st.session_state["f_name"] = f_name
         st.session_state["f_role"] = f_role
+        st.session_state["f_buying_role"] = f_buying_role
+        st.session_state["f_timeline"] = f_timeline
         st.session_state["f_intent"] = f_intent
         st.session_state["f_tech"] = f_tech
 
@@ -658,7 +698,9 @@ if calc_btn:
             contact_name=f_name.strip(),
             contact_email="",
             contact_role_title=f_role.strip(),
+            buying_role=f_buying_role.strip(),
             buying_intent=f_intent.strip(),
+            timeline=f_timeline.strip(),
             target_deal_size_usd=float(f_deal_total),
             tech_stack_notes=f_tech.strip()
         )

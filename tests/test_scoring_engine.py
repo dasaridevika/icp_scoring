@@ -93,6 +93,33 @@ def test_fail_loud_on_ai_unreachable():
     assert len(result.degraded_reasons) > 0
 
 
+def test_buying_role_timeline_budget_range():
+    """Verify buying_role, timeline, and budget range fields in lead form and receipts."""
+    form = StreamlinedLeadForm(
+        company_name="Apex Energy Solutions",
+        currency_symbol="$",
+        currency_code="USD",
+        revenue_entered_value=50.0,
+        revenue_unit="Millions (M)",
+        deal_entered_value=75.0,
+        deal_unit="Thousands (k)",
+        deal_display_str="$75k USD",
+        industry_sector="Energy & Renewables",
+        sub_vertical="Grid Modernization",
+        annual_revenue_usd=50_000_000.0,
+        employee_count=350,
+        location="Houston, Texas, United States",
+        contact_name="Sarah Jenkins",
+        contact_role_title="VP Energy Infrastructure",
+        buying_role="Economic Buyer / Decision Maker",
+        buying_intent="Active ERP integration evaluation",
+        timeline="1 – 3 Months (Current Quarter)",
+        target_deal_size_usd=75_000.0
+    )
+    assert form.buying_role == "Economic Buyer / Decision Maker"
+    assert form.timeline == "1 – 3 Months (Current Quarter)"
+
+
 if __name__ == "__main__":
     print("Running test_fx_conversion_inr_crores...")
     test_fx_conversion_inr_crores()
@@ -114,4 +141,9 @@ if __name__ == "__main__":
     test_fail_loud_on_ai_unreachable()
     print("[PASS] test_fail_loud_on_ai_unreachable passed.")
 
-    print("\nALL 5 TESTS PASSED SUCCESSFULLY!")
+    print("Running test_buying_role_timeline_budget_range...")
+    test_buying_role_timeline_budget_range()
+    print("[PASS] test_buying_role_timeline_budget_range passed.")
+
+    print("\nALL 6 TESTS PASSED SUCCESSFULLY!")
+

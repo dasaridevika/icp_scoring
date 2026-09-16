@@ -139,7 +139,9 @@ class StreamlinedLeadForm(BaseModel):
     contact_name: str = ""
     contact_email: str = ""
     contact_role_title: str = ""
+    buying_role: str = ""
     buying_intent: str = ""
+    timeline: str = ""
     target_deal_size_usd: float = 0.0
     tech_stack_notes: Optional[str] = ""
 
@@ -320,7 +322,9 @@ class GTMScoringEngine:
             "contact_name": form.contact_name,
             "contact_email": form.contact_email,
             "contact_role_title": form.contact_role_title,
+            "buying_role": form.buying_role,
             "buying_intent": form.buying_intent,
+            "timeline": form.timeline,
             "target_deal_size_usd": norm_deal_usd,
             "target_deal_size_native": native_deal,
             "stated_deal_size": prospect_deal_str,
@@ -407,7 +411,7 @@ class GTMScoringEngine:
             raw_intent=form.buying_intent,
             urgency_tier=urg_tier,
             intent_points=intent_pts,
-            timeline_detected=r_readiness.get("timeline_detected", "< 60 Days"),
+            timeline_detected=form.timeline or r_readiness.get("timeline_detected", "< 60 Days"),
             extracted_signals=r_readiness.get("catalysts", []),
             rationale=r_readiness.get("rationale", "Commercial intent velocity analysis.")
         )
@@ -467,21 +471,23 @@ class GTMScoringEngine:
             ]
         )
 
+        auth_val = f"{form.contact_role_title or 'Unspecified'} • {form.buying_role or ai_role.persona_type}" if form.buying_role else f"{form.contact_role_title or 'Unspecified'} ({ai_role.persona_type})"
         pillar_auth = PillarScoreSummary(
             pillar_name="Decision Authority",
             score=qual_score,
             weight_pct=cfg.weight_authority,
             field_receipts=[
-                FieldScoreReceipt(field_name="Role Title & Persona (AI)", pillar="Decision Authority", raw_value=f"{form.contact_role_title or 'Unspecified'} ({ai_role.persona_type})", gtm_points=ai_role.seniority_points, rationale=ai_role.rationale)
+                FieldScoreReceipt(field_name="Role Title & Buying Persona", pillar="Decision Authority", raw_value=auth_val, gtm_points=ai_role.seniority_points, rationale=ai_role.rationale)
             ]
         )
 
+        intent_val = f"{form.buying_intent or 'Active Evaluation'} (Timeline: {form.timeline or ai_intent.timeline_detected})" if form.timeline else (form.buying_intent or "Standard")
         pillar_intent = PillarScoreSummary(
             pillar_name="Buying Intent & Velocity",
             score=readiness_score,
             weight_pct=cfg.weight_intent,
             field_receipts=[
-                FieldScoreReceipt(field_name="Buying Intent (AI)", pillar="Buying Intent", raw_value=form.buying_intent or "Standard", gtm_points=ai_intent.intent_points, rationale=ai_intent.rationale)
+                FieldScoreReceipt(field_name="Buying Intent & Timeline", pillar="Buying Intent", raw_value=intent_val, gtm_points=ai_intent.intent_points, rationale=ai_intent.rationale)
             ]
         )
 
@@ -490,7 +496,7 @@ class GTMScoringEngine:
             score=techno_score,
             weight_pct=cfg.weight_value,
             field_receipts=[
-                FieldScoreReceipt(field_name="Contract Size (ACV)", pillar="Commercial Scale", raw_value=prospect_deal_str, gtm_points=techno_pts, rationale=f"Target ACV: {prospect_deal_str} (~${norm_deal_usd:,.0f} USD)"),
+                FieldScoreReceipt(field_name="Budget Range (ACV)", pillar="Commercial Scale", raw_value=prospect_deal_str, gtm_points=techno_pts, rationale=f"Budget: {prospect_deal_str} (~${norm_deal_usd:,.0f} USD)"),
                 FieldScoreReceipt(field_name="Tech Stack Ecosystem (AI)", pillar="Technographics", raw_value=form.tech_stack_notes or "Cloud Baseline", gtm_points=ai_tech.tech_points, rationale=ai_tech.rationale)
             ]
         )
@@ -600,7 +606,9 @@ class GTMScoringEngine:
                 "location": form.location,
                 "branches": branches,
                 "contact_title": form.contact_role_title,
+                "buying_role": form.buying_role,
                 "buying_intent": form.buying_intent,
+                "timeline": form.timeline,
                 "tech_stack": form.tech_stack_notes
             },
             discovery_questions=discovery_questions,
