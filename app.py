@@ -502,14 +502,14 @@ with st.form("lead_qualification_form"):
             # Row 1: Company Name & Primary Headquarters
             c1_r1_a, c1_r1_b = st.columns(2)
             with c1_r1_a:
-                f_company = st.text_input("Company / Account Name", value=st.session_state.get("f_company", ""), placeholder="e.g. Apex Global Cloud Solutions")
+                f_company = st.text_input("Company / Account Name", value=st.session_state.get("f_company", ""), placeholder="Enter company name...")
             with c1_r1_b:
-                f_loc = st.text_input("Primary Headquarters", value=st.session_state.get("f_loc", ""), placeholder="e.g. San Francisco, California, United States")
+                f_loc = st.text_input("Primary Headquarters", value=st.session_state.get("f_loc", ""), placeholder="City, State, Country...")
 
             # Row 2: Industry / Niche & Headcount
             c1_r2_a, c1_r2_b = st.columns(2)
             with c1_r2_a:
-                f_ind = st.text_input("Industry / Sector & Focus Niche", value=st.session_state.get("f_ind", "Technology, SaaS & IT"), placeholder="e.g. Technology - Hybrid Cloud Security & SaaS")
+                f_ind = st.text_input("Industry / Sector & Focus Niche", value=st.session_state.get("f_ind", ""), placeholder="Enter industry / market sector...")
             with c1_r2_b:
                 f_hc = st.number_input(
                     "Employee Headcount",
@@ -578,16 +578,16 @@ with st.form("lead_qualification_form"):
             # Row 1: Contact Full Name & Role Authority
             c2_r1_a, c2_r1_b = st.columns(2)
             with c2_r1_a:
-                f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""), placeholder="e.g. Elena Rostova")
+                f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""), placeholder="Enter contact name...")
             with c2_r1_b:
-                f_role = st.text_input("Role Title / Authority (AI)", value=st.session_state.get("f_role", ""), placeholder="e.g. VP of Revenue Operations & Systems")
+                f_role = st.text_input("Role Title / Authority (AI)", value=st.session_state.get("f_role", ""), placeholder="Enter role title / seniority...")
 
             # Row 2: Buying Intent & Horizon (Merged) | Tech Stack & Environment (Merged)
             c2_r2_a, c2_r2_b = st.columns(2)
             with c2_r2_a:
-                f_intent = st.text_input("Buying Intent, Horizon & Signals (AI)", value=st.session_state.get("f_intent", ""), placeholder="e.g. Budget approved for Q3 rollout; evaluating 2 vendors within 30 days")
+                f_intent = st.text_input("Buying Intent, Horizon & Signals (AI)", value=st.session_state.get("f_intent", ""), placeholder="Enter buying intent, timeline, and purchase triggers...")
             with c2_r2_b:
-                f_tech = st.text_input("Current Tech Stack & Environment (AI)", value=st.session_state.get("f_tech", ""), placeholder="e.g. Salesforce, Snowflake, migrating off legacy SQL")
+                f_tech = st.text_input("Current Tech Stack & Environment (AI)", value=st.session_state.get("f_tech", ""), placeholder="Enter existing tools, tech stack, and migration notes...")
 
             # Row 3: Deal Value Amount & Deal Currency
             c2_r3_a, c2_r3_b = st.columns(2)
@@ -644,12 +644,12 @@ with st.form("lead_qualification_form"):
 if clear_btn:
     st.session_state["f_company"] = ""
     st.session_state["f_loc"] = ""
-    st.session_state["f_ind"] = "Technology, SaaS & IT"
+    st.session_state["f_ind"] = ""
     st.session_state["f_rev_val"] = 0.0
     st.session_state["f_rev_unit"] = "Millions (M)"
     st.session_state["f_deal_val"] = 0.0
     st.session_state["f_deal_unit"] = "Thousands (k)"
-    st.session_state["f_hc"] = 50
+    st.session_state["f_hc"] = 0
     st.session_state["f_name"] = ""
     st.session_state["f_role"] = ""
     st.session_state["f_intent"] = ""
