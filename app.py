@@ -301,59 +301,40 @@ cfg: CompanyStandardsConfig = st.session_state["company_config"]
 # ==============================================================================
 # SETTINGS MODAL DIALOG (UNIFORMLY ALIGNED & PROFESSIONAL)
 # ==============================================================================
-@st.dialog("⚙️ Company ICP Standards & Thresholds", width="large")
+@st.dialog("⚙️ Company ICP Standards & Target Rules", width="medium")
 def show_settings_dialog():
-    st.caption("Configure dynamic commercial revenue thresholds, focus industries, and territory rules:")
+    st.caption("Configure company identifier, focus target industries, and geographic territory rules:")
 
     with st.form("modal_company_standards_form"):
-        col_s1, col_s2 = st.columns(2, gap="large")
+        with st.container(border=True):
+            s_name = st.text_input("Company / Org Identifier", value=cfg.company_name)
+            
+            s_focus_ind_raw = st.text_input(
+                "Sweet-Spot Focus Industries (+5 Pts Bonus)",
+                value=", ".join(cfg.target_focus_industries) if cfg.target_focus_industries else "Technology, SaaS & IT, Manufacturing & Industrial Goods, Energy, Utilities & Renewables",
+                placeholder="e.g. Enterprise Software, CleanTech, Healthcare, Industrial"
+            )
+            s_focus_ind = [i.strip() for i in s_focus_ind_raw.split(",") if i.strip()]
 
-        with col_s1:
-            with st.container(border=True):
-                st.markdown('<div class="settings-section-title">🏢 Commercial Margins & Deal Floors</div>', unsafe_allow_html=True)
-                s_name = st.text_input("Company / Org Identifier", value=cfg.company_name)
-
-                c_s1, c_s2 = st.columns(2)
-                with c_s1:
-                     s_min_deal = st.number_input(f"Minimum Viable Deal ({curr_sym})", min_value=0, max_value=1_000_000_000, value=int(cfg.min_deal_size_usd), step=5000, format="%d", help="Deals below this trigger commercial margin warnings")
-                with c_s2:
-                     s_target_deal = st.number_input(f"Target Ideal Deal ({curr_sym})", min_value=0, max_value=1_000_000_000, value=int(cfg.target_deal_size_usd), step=10000, format="%d", help="Deals reaching this earn full commercial points")
-
-                c_s3, c_s4 = st.columns(2)
-                with c_s3:
-                     s_min_rev = st.number_input(f"Minimum Prospect ARR ({curr_sym})", min_value=0, max_value=100_000_000_000, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
-                with c_s4:
-                     s_ideal_rev = st.number_input(f"Ideal Target ARR ({curr_sym})", min_value=0, max_value=100_000_000_000, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
-
-        with col_s2:
-            with st.container(border=True):
-                st.markdown('<div class="settings-section-title">🎯 Targeting & Geographic Rules</div>', unsafe_allow_html=True)
-                s_focus_ind_raw = st.text_input(
-                    "Sweet-Spot Focus Industries (+5 Pts Bonus)",
-                    value=", ".join(cfg.target_focus_industries) if cfg.target_focus_industries else "Technology, SaaS & IT, Manufacturing & Industrial Goods, Energy, Utilities & Renewables",
-                    placeholder="e.g. Enterprise Software, CleanTech, Healthcare, Industrial"
-                )
-                s_focus_ind = [i.strip() for i in s_focus_ind_raw.split(",") if i.strip()]
-
-                s_t1_geo = st.text_input(
-                    "Tier 1 Supported Territories",
-                    value=", ".join(cfg.tier1_territories)
-                )
-                s_proh_geo = st.text_input(
-                    "Sanctioned / Prohibited Territories (Hard Disqualification)",
-                    value=", ".join(cfg.prohibited_countries)
-                )
+            s_t1_geo = st.text_input(
+                "Tier 1 Supported Territories",
+                value=", ".join(cfg.tier1_territories)
+            )
+            s_proh_geo = st.text_input(
+                "Sanctioned / Prohibited Territories (Hard Disqualification)",
+                value=", ".join(cfg.prohibited_countries)
+            )
 
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-        save_btn = st.form_submit_button("💾 Save ICP Standards & Recalibrate", type="primary", use_container_width=True)
+        save_btn = st.form_submit_button("💾 Save Settings", type="primary", use_container_width=True)
 
     if save_btn:
         new_cfg = CompanyStandardsConfig(
             company_name=s_name,
-            min_deal_size_usd=float(s_min_deal),
-            target_deal_size_usd=float(s_target_deal),
-            min_company_revenue_usd=float(s_min_rev),
-            ideal_revenue_usd=float(s_ideal_rev),
+            min_deal_size_usd=cfg.min_deal_size_usd,
+            target_deal_size_usd=cfg.target_deal_size_usd,
+            min_company_revenue_usd=cfg.min_company_revenue_usd,
+            ideal_revenue_usd=cfg.ideal_revenue_usd,
             min_headcount=cfg.min_headcount,
             ideal_headcount=cfg.ideal_headcount,
             target_focus_industries=s_focus_ind,
@@ -440,14 +421,12 @@ with head_col2:
 
 # Clean Status Indicator Bar
 with st.container(border=True):
-    bar_c1, bar_c2, bar_c3, bar_c4 = st.columns([3, 2, 2, 3])
+    bar_c1, bar_c2, bar_c3 = st.columns([4, 4, 3])
     with bar_c1:
         st.markdown(f"🏢 **Standards Org**: `{cfg.company_name}`")
     with bar_c2:
-        st.markdown(f"🎯 **Min ACV Floor**: `{curr_sym}{cfg.min_deal_size_usd:,.0f}`")
+        st.markdown(f"🎯 **Target Verticals**: `{len(cfg.target_focus_industries)} Focus Sectors`")
     with bar_c3:
-        st.markdown(f"📈 **Target ARR**: `{curr_sym}{cfg.ideal_revenue_usd:,.0f}`")
-    with bar_c4:
         st.markdown(f"💱 **Currency**: `{curr_label}` &bull; 🤖 **AI Active**")
 
 
