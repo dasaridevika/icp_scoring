@@ -7,6 +7,8 @@ High-Velocity AI Lead Qualifier & Dynamic Company Standards Studio.
 import streamlit as st
 import json
 import os
+import html
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 import sys
 
@@ -660,9 +662,17 @@ if calc_btn:
             target_deal_size_usd=float(f_deal_total),
             tech_stack_notes=f_tech.strip()
         )
-        res: StreamlinedScoringResult = GTMScoringEngine.evaluate(submission, cfg)
+        with st.spinner("🤖 Evaluating prospect across GTM 4-Pillar ICP standards..."):
+            res: StreamlinedScoringResult = GTMScoringEngine.evaluate(submission, cfg)
         st.session_state["streamlined_res"] = res
         st.rerun()
+
+
+# HTML Sanitizer Helper
+def esc(val: Any) -> str:
+    if val is None:
+        return ""
+    return html.escape(str(val))
 
 
 # ==============================================================================
@@ -672,28 +682,33 @@ if "streamlined_res" in st.session_state:
     st.markdown("---")
     res: StreamlinedScoringResult = st.session_state["streamlined_res"]
 
-    badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier else "badge-b1"))
-    fit_color = "#EF4444" if res.is_disqualified else ("#10B981" if res.master_icp_score >= 70 else ("#3B82F6" if res.master_icp_score >= 55 else "#F59E0B"))
+    # Handle Fail-Loud AI Error Mode
+    if getattr(res, "analysis_mode", "live") == "failed":
+        st.error(f"⚠️ **AI Engine Unreachable**: {esc(res.disqualification_reason)}")
+        st.info("Scoring was halted to prevent fake score fabrication. Please verify your connection to the Cloudflare AI worker and try again.")
+    else:
+        badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier else "badge-b1"))
+        fit_color = "#EF4444" if res.is_disqualified else ("#10B981" if res.master_icp_score >= 70 else ("#3B82F6" if res.master_icp_score >= 55 else "#F59E0B"))
 
-    branch_badge = f"<span>&bull;</span><span>Branches: <strong style='color:#38BDF8;'>{len(res.lead_summary.get('branches', []))} Locations</strong></span>" if res.lead_summary.get('branches') else ""
+        branch_badge = f"<span>&bull;</span><span>Branches: <strong style='color:#38BDF8;'>{len(res.lead_summary.get('branches', []))} Locations</strong></span>" if res.lead_summary.get('branches') else ""
 
-    # 1. Master Score Obsidian Banner
-    st.markdown(f"""<div class="master-score-card">
+        # 1. Master Score Obsidian Banner
+        st.markdown(f"""<div class="master-score-card">
 <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
 <div>
 <div style="font-size:0.80rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
-GTM Revenue Intelligence Report &bull; {cfg.company_name}
+GTM Revenue Intelligence Report &bull; {esc(cfg.company_name)}
 </div>
 <div style="font-size:1.9rem; font-weight:800; color:#FFFFFF; letter-spacing:-0.5px; margin-bottom:6px;">
-{res.company_name or 'Unspecified Account'}
+{esc(res.company_name) or 'Unspecified Account'}
 </div>
 <div style="display:flex; align-items:center; gap:14px; font-size:0.92rem; color:#CBD5E1; flex-wrap:wrap;">
-<span>Industry: <strong style="color:#FFFFFF;">{res.lead_summary.get('industry', 'N/A')}</strong></span>
+<span>Industry: <strong style="color:#FFFFFF;">{esc(res.lead_summary.get('industry', 'N/A'))}</strong></span>
 <span>&bull;</span>
-<span>HQ: <strong style="color:#FFFFFF;">{res.lead_summary.get('location') or 'Global'}</strong></span>
+<span>HQ: <strong style="color:#FFFFFF;">{esc(res.lead_summary.get('location') or 'Global')}</strong></span>
 {branch_badge}
 <span>&bull;</span>
-<span>SLA: <strong style="color:#38BDF8;">{res.urgency_sla}</strong></span>
+<span>SLA: <strong style="color:#38BDF8;">{esc(res.urgency_sla)}</strong></span>
 </div>
 </div>
 <div style="text-align:right;">
@@ -704,125 +719,126 @@ Master ICP Score
 {res.master_icp_score:.1f}<span style="font-size:1.2rem; color:#94A3B8; font-weight:500;">/100</span>
 </div>
 <div>
-<span class="{badge_class}">{res.priority_tier}</span>
+<span class="{badge_class}">{esc(res.priority_tier)}</span>
 </div>
 </div>
 </div>
 </div>""", unsafe_allow_html=True)
 
-    if res.is_disqualified:
-        st.error(f"❌ **Hard Disqualification Detected**: {res.disqualification_reason}")
+        if res.is_disqualified:
+            st.error(f"❌ **Hard Disqualification Detected**: {esc(res.disqualification_reason)}")
 
-    # 2. 🤖 AI Semantic Strategic Intelligence Grid (GTM Partners Taxonomy)
-    st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>🤖 AI Strategic Intelligence & GTM Readiness</h4>", unsafe_allow_html=True)
-    ai_col1, ai_col2, ai_col3, ai_col4 = st.columns(4)
+        # 2. 🤖 AI Semantic Strategic Intelligence Grid (GTM Partners Taxonomy)
+        if not res.is_disqualified:
+            st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>🤖 AI Strategic Intelligence & GTM Readiness</h4>", unsafe_allow_html=True)
+            ai_col1, ai_col2, ai_col3, ai_col4 = st.columns(4)
 
-    with ai_col1:
-        market_str = res.ai_niche.market_complexity if res.ai_niche else "Established Market"
-        niche_rat = res.ai_niche.rationale if res.ai_niche else ""
-        reach_str = res.ai_footprint.geographic_reach if res.ai_footprint else "Single Market"
-        st.markdown(f"""<div class="ai-feature-card">
+            with ai_col1:
+                market_str = res.ai_niche.market_complexity if res.ai_niche else "Established Market"
+                niche_rat = res.ai_niche.rationale if res.ai_niche else ""
+                reach_str = res.ai_footprint.geographic_reach if res.ai_footprint else "Single Market"
+                st.markdown(f"""<div class="ai-feature-card">
 <div>
 <div style="font-size:0.75rem; font-weight:700; color:#38BDF8; text-transform:uppercase; letter-spacing:0.8px;">
 🏢 1. Firmographics
 </div>
 <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-{market_str}
+{esc(market_str)}
 </div>
 <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-<span class="tag-chip tag-cyan">{res.lead_summary.get('industry', 'General')}</span>
-<span class="tag-chip tag-emerald">{reach_str}</span>
+<span class="tag-chip tag-cyan">{esc(res.lead_summary.get('industry', 'General'))}</span>
+<span class="tag-chip tag-emerald">{esc(reach_str)}</span>
 </div>
 </div>
 <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-<div style="font-style:italic; color:#7DD3FC;">"{niche_rat}"</div>
+<div style="font-style:italic; color:#7DD3FC;">"{esc(niche_rat)}"</div>
 </div>
 </div>""", unsafe_allow_html=True)
 
-    with ai_col2:
-        fit_str = res.ai_tech.ecosystem_fit if res.ai_tech else "Standard Fit"
-        tech_rat = res.ai_tech.rationale if res.ai_tech else ""
-        st.markdown(f"""<div class="ai-feature-card">
+            with ai_col2:
+                fit_str = res.ai_tech.ecosystem_fit if res.ai_tech else "Standard Fit"
+                tech_rat = res.ai_tech.rationale if res.ai_tech else ""
+                st.markdown(f"""<div class="ai-feature-card">
 <div>
 <div style="font-size:0.75rem; font-weight:700; color:#34D399; text-transform:uppercase; letter-spacing:0.8px;">
 💻 2. Technographics
 </div>
 <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-{fit_str}
+{esc(fit_str)}
 </div>
 <div style="margin-top:8px;">
 <span class="tag-chip tag-emerald">Ecosystem Fit</span>
 </div>
 </div>
 <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-<div style="font-style:italic; color:#6EE7B7;">"{tech_rat}"</div>
+<div style="font-style:italic; color:#6EE7B7;">"{esc(tech_rat)}"</div>
 </div>
 </div>""", unsafe_allow_html=True)
 
-    with ai_col3:
-        persona_str = res.ai_role.persona_type if res.ai_role else "End User"
-        sen_str = res.ai_role.seniority_level if res.ai_role else "Standard"
-        dept_str = res.ai_role.department if res.ai_role else "General"
-        rat_str = res.ai_role.rationale if res.ai_role else ""
-        st.markdown(f"""<div class="ai-feature-card">
+            with ai_col3:
+                persona_str = res.ai_role.persona_type if res.ai_role else "End User"
+                sen_str = res.ai_role.seniority_level if res.ai_role else "Standard"
+                dept_str = res.ai_role.department if res.ai_role else "General"
+                rat_str = res.ai_role.rationale if res.ai_role else ""
+                st.markdown(f"""<div class="ai-feature-card">
 <div>
 <div style="font-size:0.75rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:0.8px;">
 👤 3. Qualifying Characteristics
 </div>
 <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-{persona_str}
+{esc(persona_str)}
 </div>
 <div style="margin-top:8px;">
-<span class="tag-chip tag-purple">{sen_str}</span>
+<span class="tag-chip tag-purple">{esc(sen_str)}</span>
 </div>
 </div>
 <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-<div style="color:#94A3B8; font-size:0.76rem;">Dept: <strong style="color:#E2E8F0;">{dept_str}</strong></div>
-<div style="font-style:italic; margin-top:4px; color:#A78BFA;">"{rat_str}"</div>
+<div style="color:#94A3B8; font-size:0.76rem;">Dept: <strong style="color:#E2E8F0;">{esc(dept_str)}</strong></div>
+<div style="font-style:italic; margin-top:4px; color:#A78BFA;">"{esc(rat_str)}"</div>
 </div>
 </div>""", unsafe_allow_html=True)
 
-    with ai_col4:
-        urgency_str = res.ai_intent.urgency_tier if res.ai_intent else "Moderate Urgency"
-        timeline_str = res.ai_intent.timeline_detected or "Standard Inbound"
-        intent_rat = res.ai_intent.rationale if res.ai_intent else ""
-        st.markdown(f"""<div class="ai-feature-card">
+            with ai_col4:
+                urgency_str = res.ai_intent.urgency_tier if res.ai_intent else "Moderate Urgency"
+                timeline_str = res.ai_intent.timeline_detected or "Standard Inbound"
+                intent_rat = res.ai_intent.rationale if res.ai_intent else ""
+                st.markdown(f"""<div class="ai-feature-card">
 <div>
 <div style="font-size:0.75rem; font-weight:700; color:#FBBF24; text-transform:uppercase; letter-spacing:0.8px;">
 ⚡ 4. Readiness to Buy
 </div>
 <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-{urgency_str}
+{esc(urgency_str)}
 </div>
 <div style="margin-top:8px;">
-<span class="tag-chip tag-amber">{timeline_str}</span>
+<span class="tag-chip tag-amber">{esc(timeline_str)}</span>
 </div>
 </div>
 <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-<div style="font-style:italic; color:#FDE68A;">"{intent_rat}"</div>
+<div style="font-style:italic; color:#FDE68A;">"{esc(intent_rat)}"</div>
 </div>
 </div>""", unsafe_allow_html=True)
 
-    # 3. ⚡ 4-Dimensional Revenue Intelligence Score Cards
-    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-    st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>⚡ GTM Partners 4-Pillar Revenue Scores</h4>", unsafe_allow_html=True)
-    p1, p2, p3, p4 = st.columns(4)
+            # 3. ⚡ 4-Dimensional Revenue Intelligence Score Cards
+            st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#0F172A; font-weight:700; margin-bottom:12px;'>⚡ GTM Partners 4-Pillar Revenue Scores</h4>", unsafe_allow_html=True)
+            p1, p2, p3, p4 = st.columns(4)
 
-    pillars = [
-        (p1, "1. FIRMOGRAPHICS", res.pillar_firmographics, cfg.weight_firmographics, "#38BDF8"),
-        (p2, "2. TECHNOGRAPHICS", res.pillar_value, cfg.weight_value, "#34D399"),
-        (p3, "3. QUALIFYING FIT", res.pillar_authority, cfg.weight_authority, "#A78BFA"),
-        (p4, "4. READINESS TO BUY", res.pillar_intent, cfg.weight_intent, "#FBBF24")
-    ]
+            pillars = [
+                (p1, "1. FIRMOGRAPHICS", res.pillar_firmographics, cfg.weight_firmographics, "#38BDF8"),
+                (p2, "2. TECHNOGRAPHICS", res.pillar_value, cfg.weight_value, "#34D399"),
+                (p3, "3. QUALIFYING FIT", res.pillar_authority, cfg.weight_authority, "#A78BFA"),
+                (p4, "4. READINESS TO BUY", res.pillar_intent, cfg.weight_intent, "#FBBF24")
+            ]
 
-    for col, title, p_res, weight, col_accent in pillars:
-        with col:
-            diff = p_res.score - 50.0
-            diff_str = f"+{diff:.0f} pts" if diff >= 0 else f"{diff:.0f} pts"
-            st.markdown(f"""<div class="metric-pillar-card">
+            for col, title, p_res, weight, col_accent in pillars:
+                with col:
+                    diff = p_res.score - 50.0
+                    diff_str = f"+{diff:.0f} pts" if diff >= 0 else f"{diff:.0f} pts"
+                    st.markdown(f"""<div class="metric-pillar-card">
 <div style="display:flex; justify-content:space-between; align-items:center;">
 <div style="font-size:0.72rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.6px;">
-{title}
+{esc(title)}
 </div>
 <div style="font-size:0.72rem; font-weight:700; color:{col_accent};">
 {weight*100:.0f}% Weight
@@ -836,80 +852,81 @@ Master ICP Score
 </div>
 </div>""", unsafe_allow_html=True)
 
-    # 3.5 📊 Scoring Audit Trail & Decision Tracker (Why & On What Basis Points Were Allotted)
-    if res.scoring_tracker:
-        st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
-        with st.expander("📊 4-Pillar Scoring Audit Trail & Decision Tracker (Why & On What Basis Score Was Allotted)", expanded=True):
-            st.caption("Detailed GTM audit ledger documenting exact criteria, positive scoring drivers, and deduction factors for every pillar:")
-            for item in res.scoring_tracker:
-                with st.container(border=True):
-                    tc1, tc2, tc3 = st.columns([3, 1, 1])
-                    with tc1:
-                        st.markdown(f"**{item.pillar_name}**")
-                        st.markdown(f"<div style='font-size:0.82rem; color:#475569;'><strong>Decision Basis:</strong> {item.basis_criterion}</div>", unsafe_allow_html=True)
-                    with tc2:
-                        st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#4338CA;'>{item.allotted_score:.0f}</span> / 100<br/><span style='font-size:0.75rem; color:#64748B;'>Weight: {item.weight_pct:.0f}%</span></div>", unsafe_allow_html=True)
-                    with tc3:
-                        st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#059669;'>+{item.points_contributed:.1f}</span> pts<br/><span style='font-size:0.75rem; color:#64748B;'>to Master Score</span></div>", unsafe_allow_html=True)
+            # 3.5 📊 Scoring Audit Trail & Decision Tracker
+            if res.scoring_tracker:
+                st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+                with st.expander("📊 4-Pillar Scoring Audit Trail & Decision Tracker (Why & On What Basis Score Was Allotted)", expanded=True):
+                    st.caption("Detailed GTM audit ledger documenting exact criteria, positive scoring drivers, and deduction factors for every pillar:")
+                    for item in res.scoring_tracker:
+                        with st.container(border=True):
+                            tc1, tc2, tc3 = st.columns([3, 1, 1])
+                            with tc1:
+                                st.markdown(f"**{esc(item.pillar_name)}**")
+                                st.markdown(f"<div style='font-size:0.82rem; color:#475569;'><strong>Decision Basis:</strong> {esc(item.basis_criterion)}</div>", unsafe_allow_html=True)
+                            with tc2:
+                                st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#4338CA;'>{item.allotted_score:.0f}</span> / 100<br/><span style='font-size:0.75rem; color:#64748B;'>Weight: {item.weight_pct:.0f}%</span></div>", unsafe_allow_html=True)
+                            with tc3:
+                                st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#059669;'>+{item.points_contributed:.1f}</span> pts<br/><span style='font-size:0.75rem; color:#64748B;'>to Master Score</span></div>", unsafe_allow_html=True)
 
-                    st.markdown(f"<div style='font-size:0.84rem; color:#334155; margin-top:4px;'><em>💡 {item.decision_rationale}</em></div>", unsafe_allow_html=True)
-                    
-                    if item.verified_signals or item.deduction_gaps:
-                        sc_a, sc_b = st.columns(2)
-                        with sc_a:
-                            if item.verified_signals:
-                                st.markdown("<div style='font-size:0.78rem; font-weight:700; color:#059669;'>✓ Verified Positive Drivers:</div>", unsafe_allow_html=True)
-                                for sig in item.verified_signals:
-                                    st.markdown(f"<div style='font-size:0.78rem; color:#065F46;'>• {sig}</div>", unsafe_allow_html=True)
-                        with sc_b:
-                            if item.deduction_gaps:
-                                st.markdown("<div style='font-size:0.78rem; font-weight:700; color:#D97706;'>⚠ Missing / Deduction Factors:</div>", unsafe_allow_html=True)
-                                for gap in item.deduction_gaps:
-                                    st.markdown(f"<div style='font-size:0.78rem; color:#92400E;'>• {gap}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='font-size:0.84rem; color:#334155; margin-top:4px;'><em>💡 {esc(item.decision_rationale)}</em></div>", unsafe_allow_html=True)
+                            
+                            if item.verified_signals or item.deduction_gaps:
+                                sc_a, sc_b = st.columns(2)
+                                with sc_a:
+                                    if item.verified_signals:
+                                        st.markdown("<div style='font-size:0.78rem; font-weight:700; color:#059669;'>✓ Verified Positive Drivers:</div>", unsafe_allow_html=True)
+                                        for sig in item.verified_signals:
+                                            st.markdown(f"<div style='font-size:0.78rem; color:#065F46;'>• {esc(sig)}</div>", unsafe_allow_html=True)
+                                chi_b = sc_b
+                                with chi_b:
+                                    if item.deduction_gaps:
+                                        st.markdown("<div style='font-size:0.78rem; font-weight:700; color:#D97706;'>⚠ Missing / Deduction Factors:</div>", unsafe_allow_html=True)
+                                        for gap in item.deduction_gaps:
+                                            st.markdown(f"<div style='font-size:0.78rem; color:#92400E;'>• {esc(gap)}</div>", unsafe_allow_html=True)
 
-
-    # 4. 🎯 Next Best Action & Routing Card
-    st.markdown(f"""<div class="action-routing-card">
+            # 4. 🎯 Next Best Action & Routing Card
+            st.markdown(f"""<div class="action-routing-card">
 <div style="font-size:0.78rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
-🎯 Strategic Next Best Action & Routing &bull; SLA: {res.urgency_sla}
+🎯 Strategic Next Best Action & Routing &bull; SLA: {esc(res.urgency_sla)}
 </div>
 <div style="font-size:1.25rem; font-weight:700; color:#FFFFFF; margin-bottom:10px;">
-Channel: <span style="color:#FDE68A;">{res.recommended_channel}</span>
+Channel: <span style="color:#FDE68A;">{esc(res.recommended_channel)}</span>
 </div>
 <div style="font-size:0.92rem; color:#F1F5F9; line-height:1.5; margin-bottom:12px;">
-<strong>Strategic Value Wedge:</strong> {res.value_wedge}
+<strong>Strategic Value Wedge:</strong> {esc(res.value_wedge)}
 </div>
 <div style="background:rgba(0,0,0,0.3); border-left:4px solid #F472B6; padding:12px 16px; border-radius:8px;">
 <div style="font-size:0.76rem; font-weight:700; color:#F472B6; text-transform:uppercase; letter-spacing:0.5px;">🔥 Recommended 1-Sentence Outreach Hook (Ready to Copy):</div>
-<div style="font-size:0.92rem; color:#FFFFFF; font-style:italic; margin-top:4px;">"{res.outreach_hook}"</div>
+<div style="font-size:0.92rem; color:#FFFFFF; font-style:italic; margin-top:4px;">"{esc(res.outreach_hook)}"</div>
 </div>
 </div>""", unsafe_allow_html=True)
 
-    # 5. Strengths vs Risks
-    c_why, c_risk = st.columns(2)
-    with c_why:
-        with st.container(border=True):
-            st.markdown("#### 🟢 Verified ICP Strengths & Scale Drivers")
-            if res.key_strengths:
-                for s in res.key_strengths:
-                    clean_s = s.lstrip("✓").lstrip("•").strip()
-                    st.success(f"✓ {clean_s}")
-            else:
-                st.info("Standard baseline profile.")
-    with c_risk:
-        with st.container(border=True):
-            st.markdown("#### ⚠️ Enterprise Discovery Risks & Considerations")
-            if res.key_risks:
-                for r in res.key_risks:
-                    clean_r = r.lstrip("⚠").lstrip("•").strip()
-                    st.warning(f"⚠ {clean_r}")
-            else:
-                st.success("✓ Zero critical risks detected.")
+            # 5. Strengths vs Risks
+            c_why, c_risk = st.columns(2)
+            with c_why:
+                with st.container(border=True):
+                    st.markdown("#### 🟢 Verified ICP Strengths & Scale Drivers")
+                    if res.key_strengths:
+                        for s in res.key_strengths:
+                            clean_s = s.lstrip("✓").lstrip("•").strip()
+                            st.success(f"✓ {esc(clean_s)}")
+                    else:
+                        st.info("Standard baseline profile.")
+            with c_risk:
+                with st.container(border=True):
+                    st.markdown("#### ⚠️ Enterprise Discovery Risks & Considerations")
+                    if res.key_risks:
+                        for r in res.key_risks:
+                            clean_r = r.lstrip("⚠").lstrip("•").strip()
+                            st.warning(f"⚠ {esc(clean_r)}")
+                    else:
+                        st.success("✓ Zero critical risks detected.")
 
-    # 6. Structured Consultative Discovery Prompts
-    if res.discovery_questions:
-        with st.expander("❓ Consultative Discovery Questions (For SDR & AE Qualification Calls)", expanded=True):
-            for i, q in enumerate(res.discovery_questions, 1):
-                clean_q = q.lstrip("•").lstrip(f"{i}.").strip()
-                st.markdown(f"**{i}. Discovery Prompt:** *{clean_q}*")
+            # 6. Structured Consultative Discovery Prompts
+            if res.discovery_questions:
+                with st.expander("❓ Consultative Discovery Questions (For SDR & AE Qualification Calls)", expanded=True):
+                    for i, q in enumerate(res.discovery_questions, 1):
+                        clean_q = q.lstrip("•").lstrip(f"{i}.").strip()
+                        st.markdown(f"**{i}. Discovery Prompt:** *{esc(clean_q)}*")
+
 
