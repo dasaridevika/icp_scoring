@@ -540,8 +540,8 @@ with st.form("lead_qualification_form"):
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_rev_curr", curr_label))
                 )
 
-            # Row 4: Revenue Scale Unit & Live Evaluated Scale
-            c1_r4_a, c1_r4_b = st.columns(2)
+            # Row 4: Revenue Scale Unit
+            c1_r4_a, _ = st.columns(2)
             with c1_r4_a:
                 f_rev_unit = st.selectbox(
                     "Revenue Scale Unit",
@@ -561,10 +561,6 @@ with st.form("lead_qualification_form"):
                     rev_stated_str = f"{rev_sym}{f_rev_total:,.0f} {rev_code}"
             else:
                 rev_stated_str = f"{rev_sym}0 {rev_code}"
-
-            with c1_r4_b:
-                st.markdown("<label style='font-size:0.83rem; font-weight:700; color:#0F172A;'>Evaluated Scale</label>", unsafe_allow_html=True)
-                st.markdown(f"<div style='background:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:7px 12px; font-weight:700; color:#4338CA; font-size:0.85rem; height:42px; display:flex; align-items:center;'>💡 {rev_stated_str}</div>", unsafe_allow_html=True)
 
     with col_f2:
         with st.container(border=True):
@@ -608,8 +604,8 @@ with st.form("lead_qualification_form"):
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label))
                 )
 
-            # Row 4: Deal Scale Unit & Live Evaluated ACV
-            c2_r4_a, c2_r4_b = st.columns(2)
+            # Row 4: Deal Scale Unit
+            c2_r4_a, _ = st.columns(2)
             with c2_r4_a:
                 f_deal_unit = st.selectbox(
                     "Deal Scale Unit",
@@ -629,10 +625,6 @@ with st.form("lead_qualification_form"):
                     deal_stated_str = f"{deal_sym}{f_deal_total:,.0f} {deal_code}"
             else:
                 deal_stated_str = f"{deal_sym}0 {deal_code}"
-
-            with c2_r4_b:
-                st.markdown("<label style='font-size:0.83rem; font-weight:700; color:#0F172A;'>Evaluated Target ACV</label>", unsafe_allow_html=True)
-                st.markdown(f"<div style='background:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:7px 12px; font-weight:700; color:#059669; font-size:0.85rem; height:42px; display:flex; align-items:center;'>🎯 {deal_stated_str}</div>", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c_btn1, c_btn2, _ = st.columns([2, 1, 3])
