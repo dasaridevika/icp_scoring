@@ -63,21 +63,19 @@ st.markdown("""
 
     /* Hero Header */
     .hero-title {
-        font-size: 2.15rem;
+        font-size: 1.85rem;
         font-weight: 800;
-        letter-spacing: -0.6px;
+        letter-spacing: -0.5px;
         background: linear-gradient(135deg, #0F172A 0%, #4338CA 50%, #7C3AED 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 0.15rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        margin-bottom: 0.2rem;
+        line-height: 1.25;
     }
 
     .hero-subtitle {
         color: #475569 !important;
-        font-size: 0.95rem;
+        font-size: 0.88rem;
         font-weight: 500;
         margin-bottom: 0.4rem;
     }
@@ -86,16 +84,16 @@ st.markdown("""
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
-        margin-top: 4px;
+        margin-top: 6px;
     }
 
     .hero-pill {
         background: #F1F5F9;
         color: #334155;
         border: 1px solid #CBD5E1;
-        font-size: 0.76rem;
+        font-size: 0.72rem;
         font-weight: 700;
-        padding: 3px 10px;
+        padding: 3px 9px;
         border-radius: 20px;
         text-transform: uppercase;
         letter-spacing: 0.4px;
@@ -105,6 +103,34 @@ st.markdown("""
         background: #EEF2FF;
         color: #4338CA;
         border: 1px solid #C7D2FE;
+    }
+
+    /* Status Bar Styling */
+    .status-bar-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 0.88rem;
+        color: #334155;
+        padding: 2px 4px;
+    }
+
+    .status-bar-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-pill {
+        background: #F1F5F9;
+        border: 1px solid #CBD5E1;
+        padding: 2px 8px;
+        border-radius: 5px;
+        font-weight: 700;
+        color: #0F172A;
+        font-size: 0.82rem;
     }
 
     /* Field Labels - Clean spacing & readable typography */
@@ -407,16 +433,16 @@ curr_code = curr_label.split()[0]
 # ==============================================================================
 # HERO HEADER BAR & CONTROLS
 # ==============================================================================
-head_col1, head_col2 = st.columns([5, 3])
+head_col1, head_col2 = st.columns([5.5, 2.3])
 
 with head_col1:
     st.markdown("""
     <div>
         <div class="hero-title">⚡ Enterprise ICP Revenue Intelligence Studio</div>
-        <div class="hero-subtitle">High-Velocity Lead Qualification • AI Semantic Text Field Analysis • Deterministic GTM Scoring Engine</div>
+        <div class="hero-subtitle">High-Velocity Lead Qualification • AI Semantic Analysis • Deterministic GTM Scoring Engine</div>
         <div class="pill-badge-row">
-            <span class="hero-pill hero-pill-ai">🤖 AI Role & Persona Classifier</span>
-            <span class="hero-pill hero-pill-ai">⚡ AI Timeline & Urgency Signal</span>
+            <span class="hero-pill hero-pill-ai">🤖 AI Persona Classifier</span>
+            <span class="hero-pill hero-pill-ai">⚡ AI Timeline Signal</span>
             <span class="hero-pill">⚖️ 4-Pillar Weighted Score</span>
             <span class="hero-pill">🎯 Dynamic Org Thresholds</span>
         </div>
@@ -424,15 +450,15 @@ with head_col1:
     """, unsafe_allow_html=True)
 
 with head_col2:
-    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-    c_cur, c_sett = st.columns([1.3, 1])
+    st.markdown("<div style='margin-top: 6px;'></div>", unsafe_allow_html=True)
+    c_cur, c_sett = st.columns([1.1, 1])
     with c_cur:
         selected_curr = st.selectbox(
             "Currency",
             options=list(CURRENCY_OPTIONS.keys()),
             index=list(CURRENCY_OPTIONS.keys()).index(st.session_state["selected_curr"]),
             label_visibility="collapsed",
-            help="Select reporting and evaluation currency (USD $, INR ₹, EUR €, GBP £, etc.)"
+            help="Select reporting and evaluation currency"
         )
         if selected_curr != st.session_state["selected_curr"]:
             st.session_state["selected_curr"] = selected_curr
@@ -442,14 +468,26 @@ with head_col2:
             show_settings_dialog()
 
 # Clean Status Indicator Bar
+st.markdown("<div style='margin-top: 4px;'></div>", unsafe_allow_html=True)
 with st.container(border=True):
-    bar_c1, bar_c2, bar_c3 = st.columns([4, 4, 3])
-    with bar_c1:
-        st.markdown(f"🏢 **Standards Org**: `{cfg.company_name}`")
-    with bar_c2:
-        st.markdown(f"🎯 **Target Verticals**: `{len(cfg.target_focus_industries)} Focus Sectors`")
-    with bar_c3:
-        st.markdown(f"💱 **Currency**: `{curr_label}` &bull; 🤖 **AI Active**")
+    st.markdown(f"""
+    <div class="status-bar-container">
+        <div class="status-bar-item">
+            <span>🏢</span>
+            <span>Standards Org: <strong class="status-pill">{esc(cfg.company_name)}</strong></span>
+        </div>
+        <div class="status-bar-item">
+            <span>🎯</span>
+            <span>Target Verticals: <strong class="status-pill">{len(cfg.target_focus_industries)} Focus Sectors</strong></span>
+        </div>
+        <div class="status-bar-item">
+            <span>💱</span>
+            <span>Currency: <strong class="status-pill">{esc(curr_label)}</strong></span>
+            <span style="color:#CBD5E1;">&bull;</span>
+            <span style="color:#059669; font-weight:700;">🤖 AI Engine Active</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ==============================================================================
