@@ -144,6 +144,7 @@ class StreamlinedLeadForm(BaseModel):
     timeline: str = ""
     target_deal_size_usd: float = 0.0
     tech_stack_notes: Optional[str] = ""
+    uses_existing_platform: Optional[str] = ""
     existing_platform: Optional[str] = ""
 
 
@@ -493,7 +494,19 @@ class GTMScoringEngine:
             ]
         )
 
-        tech_receipt_val = f"{form.tech_stack_notes} (Platform: {form.existing_platform})" if form.existing_platform and form.tech_stack_notes else (form.existing_platform or form.tech_stack_notes or "Cloud Baseline")
+        platform_raw = (form.uses_existing_platform or form.existing_platform or "").strip()
+        if platform_raw:
+            p_lower = platform_raw.lower()
+            if p_lower in ["false", "no", "0", "none"]:
+                platform_desc = "No Incumbent (Greenfield Lead)"
+            elif p_lower in ["true", "yes", "1"]:
+                platform_desc = "Has Existing Incumbent"
+            else:
+                platform_desc = f"Incumbent: {platform_raw}"
+            tech_receipt_val = f"{form.tech_stack_notes} • {platform_desc}" if form.tech_stack_notes else platform_desc
+        else:
+            tech_receipt_val = form.tech_stack_notes or "Cloud Baseline"
+
         pillar_val = PillarScoreSummary(
             pillar_name="Technographics & Ecosystem Fit",
             score=techno_score,

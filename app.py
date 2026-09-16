@@ -588,7 +588,7 @@ with st.form("lead_qualification_form"):
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label))
                 )
 
-            # Row 5: Budget Scale Unit & Existing Platform (Optional)
+            # Row 5: Budget Scale Unit & Uses Existing Platform (Optional)
             c2_r5_a, c2_r5_b = st.columns(2)
             with c2_r5_a:
                 f_deal_unit = st.selectbox(
@@ -598,10 +598,10 @@ with st.form("lead_qualification_form"):
                 )
             with c2_r5_b:
                 f_platform = st.text_input(
-                    "Existing Platform",
+                    "Uses Existing Platform",
                     value=st.session_state.get("f_platform", ""),
-                    placeholder="e.g. Bloomberg (Optional)",
-                    help="Optional: incumbent or currently used platform"
+                    placeholder="e.g. false, Bloomberg",
+                    help="Optional: whether the prospect uses an incumbent or existing tool"
                 )
 
             deal_mult = SCALE_UNITS.get(f_deal_unit, 1)
