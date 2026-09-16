@@ -499,30 +499,31 @@ with st.form("lead_qualification_form"):
             </div>
             """, unsafe_allow_html=True)
             
-            # Row 1: Company Name & Corporate Domain
+            # Row 1: Company Name & Primary Headquarters
             c1_r1_a, c1_r1_b = st.columns(2)
             with c1_r1_a:
-                f_company = st.text_input("Company / Account Name", value=st.session_state.get("f_company", ""))
+                f_company = st.text_input("Company / Account Name", value=st.session_state.get("f_company", ""), placeholder="e.g. Apex Global Cloud Solutions")
             with c1_r1_b:
-                f_domain = st.text_input("Corporate Website / Domain", value=st.session_state.get("f_domain", ""))
-            
-            # Row 2: HQ Location & Branch Locations
+                f_loc = st.text_input("Primary Headquarters", value=st.session_state.get("f_loc", ""), placeholder="e.g. San Francisco, California, United States")
+
+            # Row 2: Industry / Niche & Headcount
             c1_r2_a, c1_r2_b = st.columns(2)
             with c1_r2_a:
-                f_loc = st.text_input("Primary Headquarters", value=st.session_state.get("f_loc", ""))
+                f_ind = st.text_input("Industry / Sector & Focus Niche", value=st.session_state.get("f_ind", "Technology, SaaS & IT"), placeholder="e.g. Technology - Hybrid Cloud Security & SaaS")
             with c1_r2_b:
-                f_branches = st.text_input("Regional Branch Hubs", value=st.session_state.get("f_branches", ""))
+                f_hc = st.number_input(
+                    "Employee Headcount",
+                    min_value=0,
+                    max_value=10_000_000,
+                    value=max(0, int(st.session_state.get("f_hc", 0))),
+                    step=25,
+                    format="%d",
+                    help="Max allowed entry: 10 Million employees"
+                )
 
-            # Row 3: Industry Macro Sector & Sub-Vertical Niche
+            # Row 3: Annual Revenue Amount & Currency
             c1_r3_a, c1_r3_b = st.columns(2)
             with c1_r3_a:
-                f_ind = st.text_input("Industry / Macro Sector", value=st.session_state.get("f_ind", "Technology, SaaS & IT"), placeholder="e.g. Technology, SaaS & IT, Manufacturing...")
-            with c1_r3_b:
-                f_subv = st.text_input("Sub-Vertical / Niche (AI)", value=st.session_state.get("f_subv", ""))
-
-            # Row 4: Annual Revenue Amount & Currency
-            c1_r4_a, c1_r4_b = st.columns(2)
-            with c1_r4_a:
                 f_rev_val = st.number_input(
                     "Annual Revenue (Amount)",
                     min_value=0.0,
@@ -532,30 +533,20 @@ with st.form("lead_qualification_form"):
                     format="%.2f",
                     help="Enter numerical amount in client's native unit"
                 )
-            with c1_r4_b:
+            with c1_r3_b:
                 f_rev_curr = st.selectbox(
                     "Revenue Currency",
                     list(CURRENCY_OPTIONS.keys()),
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_rev_curr", curr_label))
                 )
 
-            # Row 5: Revenue Scale Unit & Headcount
-            c1_r5_a, c1_r5_b = st.columns(2)
-            with c1_r5_a:
+            # Row 4: Revenue Scale Unit & Live Evaluated Scale
+            c1_r4_a, c1_r4_b = st.columns(2)
+            with c1_r4_a:
                 f_rev_unit = st.selectbox(
                     "Revenue Scale Unit",
                     list(SCALE_UNITS.keys()),
                     index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_rev_unit", "Millions (M)"))
-                )
-            with c1_r5_b:
-                f_hc = st.number_input(
-                    "Employee Headcount",
-                    min_value=0,
-                    max_value=10_000_000,
-                    value=max(0, int(st.session_state.get("f_hc", 0))),
-                    step=25,
-                    format="%d",
-                    help="Max allowed entry: 10 Million employees"
                 )
 
             rev_mult = SCALE_UNITS.get(f_rev_unit, 1)
@@ -568,34 +559,37 @@ with st.form("lead_qualification_form"):
                     rev_stated_str = f"{rev_sym}{f_rev_val:g} {f_rev_unit} ({rev_sym}{f_rev_total:,.0f} {rev_code})"
                 else:
                     rev_stated_str = f"{rev_sym}{f_rev_total:,.0f} {rev_code}"
-                st.caption(f"💡 Evaluated Scale: **{rev_stated_str}**")
             else:
                 rev_stated_str = f"{rev_sym}0 {rev_code}"
+
+            with c1_r4_b:
+                st.markdown("<label style='font-size:0.83rem; font-weight:700; color:#0F172A;'>Evaluated Scale</label>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:7px 12px; font-weight:700; color:#4338CA; font-size:0.85rem; height:42px; display:flex; align-items:center;'>💡 {rev_stated_str}</div>", unsafe_allow_html=True)
 
     with col_f2:
         with st.container(border=True):
             st.markdown("""
             <div class="form-card-header">
-                <span>👤 2. Decision Authority, Intent & Ecosystem</span>
+                <span>👤 2. Decision Authority, Intent & Commercials</span>
                 <span class="tag">AI Signal Engine</span>
             </div>
             """, unsafe_allow_html=True)
 
-            # Row 1: Contact Full Name & Work Email
+            # Row 1: Contact Full Name & Role Authority
             c2_r1_a, c2_r1_b = st.columns(2)
             with c2_r1_a:
-                f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""))
+                f_name = st.text_input("Contact Full Name", value=st.session_state.get("f_name", ""), placeholder="e.g. Elena Rostova")
             with c2_r1_b:
-                f_email = st.text_input("Work Email Address", value=st.session_state.get("f_email", ""))
+                f_role = st.text_input("Role Title / Authority (AI)", value=st.session_state.get("f_role", ""), placeholder="e.g. VP of Revenue Operations & Systems")
 
-            # Row 2: Role Title & Buying Intent
+            # Row 2: Buying Intent & Horizon (Merged) | Tech Stack & Environment (Merged)
             c2_r2_a, c2_r2_b = st.columns(2)
             with c2_r2_a:
-                f_role = st.text_input("Role Title / Authority (AI)", value=st.session_state.get("f_role", ""))
+                f_intent = st.text_input("Buying Intent, Horizon & Signals (AI)", value=st.session_state.get("f_intent", ""), placeholder="e.g. Budget approved for Q3 rollout; evaluating 2 vendors within 30 days")
             with c2_r2_b:
-                f_intent = st.text_input("Buying Intent / Signal (AI)", value=st.session_state.get("f_intent", ""))
+                f_tech = st.text_input("Current Tech Stack & Environment (AI)", value=st.session_state.get("f_tech", ""), placeholder="e.g. Salesforce, Snowflake, migrating off legacy SQL")
 
-            # Row 3: Deal Size Amount & Currency
+            # Row 3: Deal Value Amount & Deal Currency
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
                 f_deal_val = st.number_input(
@@ -614,7 +608,7 @@ with st.form("lead_qualification_form"):
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label))
                 )
 
-            # Row 4: Deal Scale Unit & Timeline
+            # Row 4: Deal Scale Unit & Live Evaluated ACV
             c2_r4_a, c2_r4_b = st.columns(2)
             with c2_r4_a:
                 f_deal_unit = st.selectbox(
@@ -622,8 +616,6 @@ with st.form("lead_qualification_form"):
                     list(SCALE_UNITS.keys()),
                     index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_deal_unit", "Thousands (k)"))
                 )
-            with c2_r4_b:
-                f_timeline = st.text_input("Buying Timeline / Horizon", value=st.session_state.get("f_timeline", ""))
 
             deal_mult = SCALE_UNITS.get(f_deal_unit, 1)
             f_deal_total = float(f_deal_val) * deal_mult
@@ -635,16 +627,12 @@ with st.form("lead_qualification_form"):
                     deal_stated_str = f"{deal_sym}{f_deal_val:g} {f_deal_unit} ({deal_sym}{f_deal_total:,.0f} {deal_code})"
                 else:
                     deal_stated_str = f"{deal_sym}{f_deal_total:,.0f} {deal_code}"
-                st.caption(f"🎯 Evaluated ACV: **{deal_stated_str}**")
             else:
                 deal_stated_str = f"{deal_sym}0 {deal_code}"
 
-            # Row 5: Tech Stack & Notes
-            c2_r5_a, c2_r5_b = st.columns(2)
-            with c2_r5_a:
-                f_tech = st.text_input("Current Tech Stack & Tools (AI)", value=st.session_state.get("f_tech", ""))
-            with c2_r5_b:
-                f_notes = st.text_input("Tech / Migration Notes (AI)", value=st.session_state.get("f_notes", ""))
+            with c2_r4_b:
+                st.markdown("<label style='font-size:0.83rem; font-weight:700; color:#0F172A;'>Evaluated Target ACV</label>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:7px 12px; font-weight:700; color:#059669; font-size:0.85rem; height:42px; display:flex; align-items:center;'>🎯 {deal_stated_str}</div>", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c_btn1, c_btn2, _ = st.columns([2, 1, 3])
@@ -655,23 +643,17 @@ with st.form("lead_qualification_form"):
 
 if clear_btn:
     st.session_state["f_company"] = ""
-    st.session_state["f_domain"] = ""
     st.session_state["f_loc"] = ""
-    st.session_state["f_branches"] = ""
     st.session_state["f_ind"] = "Technology, SaaS & IT"
-    st.session_state["f_subv"] = ""
     st.session_state["f_rev_val"] = 0.0
     st.session_state["f_rev_unit"] = "Millions (M)"
     st.session_state["f_deal_val"] = 0.0
     st.session_state["f_deal_unit"] = "Thousands (k)"
     st.session_state["f_hc"] = 50
     st.session_state["f_name"] = ""
-    st.session_state["f_email"] = ""
     st.session_state["f_role"] = ""
     st.session_state["f_intent"] = ""
-    st.session_state["f_timeline"] = ""
     st.session_state["f_tech"] = ""
-    st.session_state["f_notes"] = ""
     if "streamlined_res" in st.session_state:
         del st.session_state["streamlined_res"]
     st.rerun()
@@ -682,11 +664,8 @@ if calc_btn:
         st.warning("⚠️ Please provide a Company Name to qualify the account.")
     else:
         st.session_state["f_company"] = f_company
-        st.session_state["f_domain"] = f_domain
         st.session_state["f_loc"] = f_loc
-        st.session_state["f_branches"] = f_branches
         st.session_state["f_ind"] = f_ind
-        st.session_state["f_subv"] = f_subv
         st.session_state["f_rev_val"] = f_rev_val
         st.session_state["f_rev_curr"] = f_rev_curr
         st.session_state["f_rev_unit"] = f_rev_unit
@@ -695,16 +674,9 @@ if calc_btn:
         st.session_state["f_deal_unit"] = f_deal_unit
         st.session_state["f_hc"] = f_hc
         st.session_state["f_name"] = f_name
-        st.session_state["f_email"] = f_email
         st.session_state["f_role"] = f_role
         st.session_state["f_intent"] = f_intent
-        st.session_state["f_timeline"] = f_timeline
         st.session_state["f_tech"] = f_tech
-        st.session_state["f_notes"] = f_notes
-
-        branches_list = [b.strip() for b in f_branches.split(",") if b.strip()]
-        combined_intent = f"{f_intent.strip()} {f_timeline.strip()}".strip()
-        combined_tech = f"{f_tech.strip()} {f_notes.strip()}".strip()
 
         submission = StreamlinedLeadForm(
             company_name=f_company.strip(),
@@ -716,18 +688,18 @@ if calc_btn:
             deal_entered_value=float(f_deal_val),
             deal_unit=f_deal_unit,
             deal_display_str=deal_stated_str,
-            industry_sector=f_ind,
-            sub_vertical=f_subv.strip(),
+            industry_sector=f_ind.strip(),
+            sub_vertical=f_ind.strip(),
             annual_revenue_usd=float(f_rev_total),
             employee_count=int(f_hc),
             location=f_loc.strip(),
-            branch_locations=branches_list,
+            branch_locations=[],
             contact_name=f_name.strip(),
-            contact_email=f_email.strip(),
+            contact_email="",
             contact_role_title=f_role.strip(),
-            buying_intent=combined_intent,
+            buying_intent=f_intent.strip(),
             target_deal_size_usd=float(f_deal_total),
-            tech_stack_notes=combined_tech
+            tech_stack_notes=f_tech.strip()
         )
         res: StreamlinedScoringResult = GTMScoringEngine.evaluate(submission, cfg)
         st.session_state["streamlined_res"] = res
