@@ -303,79 +303,46 @@ cfg: CompanyStandardsConfig = st.session_state["company_config"]
 # ==============================================================================
 @st.dialog("⚙️ Company ICP Standards & Thresholds", width="large")
 def show_settings_dialog():
-    st.caption("Configure dynamic commercial revenue thresholds, focus industries, territory whitelists, and 4-pillar percentage weights:")
+    st.caption("Configure dynamic commercial revenue thresholds, focus industries, and territory rules:")
 
     with st.form("modal_company_standards_form"):
         col_s1, col_s2 = st.columns(2, gap="large")
 
         with col_s1:
             with st.container(border=True):
-                st.markdown('<div class="settings-section-title">🏢 Commercial Margins & Scale Sweet-Spots</div>', unsafe_allow_html=True)
+                st.markdown('<div class="settings-section-title">🏢 Commercial Margins & Deal Floors</div>', unsafe_allow_html=True)
                 s_name = st.text_input("Company / Org Identifier", value=cfg.company_name)
 
                 c_s1, c_s2 = st.columns(2)
                 with c_s1:
-                     s_min_deal = st.number_input(f"Minimum Viable Deal ({curr_sym})", min_value=0, max_value=1_000_000_000, value=int(cfg.min_deal_size_usd), step=5000, format="%d")
+                     s_min_deal = st.number_input(f"Minimum Viable Deal ({curr_sym})", min_value=0, max_value=1_000_000_000, value=int(cfg.min_deal_size_usd), step=5000, format="%d", help="Deals below this trigger commercial margin warnings")
                 with c_s2:
-                     s_target_deal = st.number_input(f"Target Ideal Deal ({curr_sym})", min_value=0, max_value=1_000_000_000, value=int(cfg.target_deal_size_usd), step=10000, format="%d")
+                     s_target_deal = st.number_input(f"Target Ideal Deal ({curr_sym})", min_value=0, max_value=1_000_000_000, value=int(cfg.target_deal_size_usd), step=10000, format="%d", help="Deals reaching this earn full commercial points")
 
                 c_s3, c_s4 = st.columns(2)
                 with c_s3:
-                     s_min_rev = st.number_input(f"Minimum Prospect Revenue ({curr_sym})", min_value=0, max_value=100_000_000_000, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
+                     s_min_rev = st.number_input(f"Minimum Prospect ARR ({curr_sym})", min_value=0, max_value=100_000_000_000, value=int(cfg.min_company_revenue_usd), step=500000, format="%d")
                 with c_s4:
-                     s_ideal_rev = st.number_input(f"Ideal Prospect Target ARR ({curr_sym})", min_value=0, max_value=100_000_000_000, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
+                     s_ideal_rev = st.number_input(f"Ideal Target ARR ({curr_sym})", min_value=0, max_value=100_000_000_000, value=int(cfg.ideal_revenue_usd), step=5000000, format="%d")
 
-                c_s5, c_s6 = st.columns(2)
-                with c_s5:
-                     s_min_hc = st.number_input("Min Headcount Floor", min_value=0, max_value=10_000_000, value=max(0, int(cfg.min_headcount)), step=10, format="%d")
-                with c_s6:
-                     s_ideal_hc = st.number_input("Ideal Headcount Target", min_value=0, max_value=10_000_000, value=max(0, int(cfg.ideal_headcount)), step=50, format="%d")
-
+        with col_s2:
             with st.container(border=True):
-                st.markdown('<div class="settings-section-title">🎯 Primary Focus Verticals (+5 Pts)</div>', unsafe_allow_html=True)
+                st.markdown('<div class="settings-section-title">🎯 Targeting & Geographic Rules</div>', unsafe_allow_html=True)
                 s_focus_ind_raw = st.text_input(
-                    "Sweet-Spot Verticals / Focus Industries (comma separated)",
+                    "Sweet-Spot Focus Industries (+5 Pts Bonus)",
                     value=", ".join(cfg.target_focus_industries) if cfg.target_focus_industries else "Technology, SaaS & IT, Manufacturing & Industrial Goods, Energy, Utilities & Renewables",
                     placeholder="e.g. Enterprise Software, CleanTech, Healthcare, Industrial"
                 )
                 s_focus_ind = [i.strip() for i in s_focus_ind_raw.split(",") if i.strip()]
 
-        with col_s2:
-            with st.container(border=True):
-                st.markdown('<div class="settings-section-title">🌍 Geographic Parameters</div>', unsafe_allow_html=True)
-                s_t1_geo = st.text_area(
+                s_t1_geo = st.text_input(
                     "Tier 1 Supported Territories",
-                    value=", ".join(cfg.tier1_territories),
-                    height=65
+                    value=", ".join(cfg.tier1_territories)
                 )
                 s_proh_geo = st.text_input(
                     "Sanctioned / Prohibited Territories (Hard Disqualification)",
                     value=", ".join(cfg.prohibited_countries)
                 )
-
-                st.markdown('<div class="settings-section-title">⚖️ GTM Partners 4-Pillar Weights (Must = 100%)</div>', unsafe_allow_html=True)
-                c_w1, c_w2 = st.columns(2)
-                with c_w1:
-                    s_w_firmo = st.number_input("1. Firmographics Weight (%)", min_value=0, max_value=100, value=int(cfg.weight_firmographics * 100), step=1, format="%d")
-                    s_w_auth = st.number_input("3. Qualifying Characteristics (%)", min_value=0, max_value=100, value=int(cfg.weight_authority * 100), step=1, format="%d")
-                with c_w2:
-                    s_w_val = st.number_input("2. Technographics Weight (%)", min_value=0, max_value=100, value=int(cfg.weight_value * 100), step=1, format="%d")
-                    s_w_intent = st.number_input("4. Readiness to Buy Weight (%)", min_value=0, max_value=100, value=int(cfg.weight_intent * 100), step=1, format="%d")
-
-                total_w = s_w_firmo + s_w_auth + s_w_intent + s_w_val
-                if total_w != 100:
-                    st.warning(f"⚠️ Current weight sum is {total_w}%. Must equal 100%.")
-                else:
-                    st.success("✓ Total weights sum to 100%.")
-
-                st.markdown('<div style="margin-top: 8px; font-weight:700; font-size:0.84rem; color:#1E293B;">Priority Tier Cutoff Margins:</div>', unsafe_allow_html=True)
-                c_t_a1, c_t_a2, c_t_b1 = st.columns(3)
-                with c_t_a1:
-                    s_tier_a1 = st.number_input("Tier A1 Cutoff", min_value=70.0, max_value=95.0, value=float(cfg.tier_a1_threshold), step=5.0, format="%.0f")
-                with c_t_a2:
-                    s_tier_a2 = st.number_input("Tier A2 Cutoff", min_value=55.0, max_value=85.0, value=float(cfg.tier_a2_threshold), step=5.0, format="%.0f")
-                with c_t_b1:
-                    s_tier_b1 = st.number_input("Tier B1 Cutoff", min_value=40.0, max_value=70.0, value=float(cfg.tier_b1_threshold), step=5.0, format="%.0f")
 
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         save_btn = st.form_submit_button("💾 Save ICP Standards & Recalibrate", type="primary", use_container_width=True)
@@ -387,18 +354,18 @@ def show_settings_dialog():
             target_deal_size_usd=float(s_target_deal),
             min_company_revenue_usd=float(s_min_rev),
             ideal_revenue_usd=float(s_ideal_rev),
-            min_headcount=int(s_min_hc),
-            ideal_headcount=int(s_ideal_hc),
+            min_headcount=cfg.min_headcount,
+            ideal_headcount=cfg.ideal_headcount,
             target_focus_industries=s_focus_ind,
             tier1_territories=[t.strip() for t in s_t1_geo.split(",") if t.strip()],
             prohibited_countries=[p.strip() for p in s_proh_geo.split(",") if p.strip()],
-            weight_firmographics=s_w_firmo / 100.0,
-            weight_authority=s_w_auth / 100.0,
-            weight_intent=s_w_intent / 100.0,
-            weight_value=s_w_val / 100.0,
-            tier_a1_threshold=s_tier_a1,
-            tier_a2_threshold=s_tier_a2,
-            tier_b1_threshold=s_tier_b1
+            weight_firmographics=cfg.weight_firmographics,
+            weight_authority=cfg.weight_authority,
+            weight_intent=cfg.weight_intent,
+            weight_value=cfg.weight_value,
+            tier_a1_threshold=cfg.tier_a1_threshold,
+            tier_a2_threshold=cfg.tier_a2_threshold,
+            tier_b1_threshold=cfg.tier_b1_threshold
         )
         st.session_state["company_config"] = new_cfg
         st.rerun()
