@@ -559,12 +559,16 @@ with st.form("lead_qualification_form"):
                     value=st.session_state.get("f_timeline", "")
                 )
 
-            # Row 3: Buying Intent & Tech Stack
+            # Row 3: Buying Intent & Uses Existing Platform (Optional)
             c2_r3_a, c2_r3_b = st.columns(2)
             with c2_r3_a:
                 f_intent = st.text_input("Buying Intent", value=st.session_state.get("f_intent", ""))
             with c2_r3_b:
-                f_tech = st.text_input("Tech Stack", value=st.session_state.get("f_tech", ""))
+                f_platform = st.text_input(
+                    "Uses Existing Platform",
+                    value=st.session_state.get("f_platform", ""),
+                    help="Optional: whether the prospect uses an incumbent or existing tool"
+                )
 
             # Row 4: Budget Range & Budget Currency
             c2_r4_a, c2_r4_b = st.columns(2)
@@ -585,19 +589,13 @@ with st.form("lead_qualification_form"):
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label))
                 )
 
-            # Row 5: Budget Scale Unit & Uses Existing Platform (Optional)
-            c2_r5_a, c2_r5_b = st.columns(2)
+            # Row 5: Budget Scale Unit
+            c2_r5_a, _ = st.columns(2)
             with c2_r5_a:
                 f_deal_unit = st.selectbox(
                     "Budget Scale Unit",
                     list(SCALE_UNITS.keys()),
                     index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_deal_unit", "Thousands (k)"))
-                )
-            with c2_r5_b:
-                f_platform = st.text_input(
-                    "Uses Existing Platform",
-                    value=st.session_state.get("f_platform", ""),
-                    help="Optional: whether the prospect uses an incumbent or existing tool"
                 )
 
             deal_mult = SCALE_UNITS.get(f_deal_unit, 1)
@@ -634,7 +632,6 @@ if clear_btn:
     st.session_state["f_buying_role"] = ""
     st.session_state["f_timeline"] = ""
     st.session_state["f_intent"] = ""
-    st.session_state["f_tech"] = ""
     st.session_state["f_platform"] = ""
     if "streamlined_res" in st.session_state:
         del st.session_state["streamlined_res"]
@@ -660,7 +657,6 @@ if calc_btn:
         st.session_state["f_buying_role"] = f_buying_role
         st.session_state["f_timeline"] = f_timeline
         st.session_state["f_intent"] = f_intent
-        st.session_state["f_tech"] = f_tech
         st.session_state["f_platform"] = f_platform
 
         submission = StreamlinedLeadForm(
@@ -686,7 +682,7 @@ if calc_btn:
             buying_intent=f_intent.strip(),
             timeline=f_timeline.strip(),
             target_deal_size_usd=float(f_deal_total),
-            tech_stack_notes=f_tech.strip(),
+            tech_stack_notes="",
             existing_platform=f_platform.strip()
         )
         with st.spinner("🤖 Evaluating prospect across GTM 4-Pillar ICP standards..."):
