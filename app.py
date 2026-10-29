@@ -333,6 +333,60 @@ if "company_config" not in st.session_state:
 cfg: CompanyStandardsConfig = st.session_state["company_config"]
 
 
+def get_configured_worker_connection() -> Tuple[str, str, str]:
+    """
+    Safely resolves (worker_url, worker_key, source_name).
+    Sources checked in priority order:
+    1. Streamlit Session State (entered in Settings modal and saved)
+    2. Streamlit Secrets (st.secrets) - case-insensitive, flat and nested
+    3. Environment variables (os.environ) - case-insensitive
+    """
+    # 1. Session state
+    url = str(st.session_state.get("custom_worker_url", "")).strip()
+    key = str(st.session_state.get("custom_worker_key", "")).strip()
+    if url:
+        if not url.startswith("http://") and not url.startswith("https://"):
+            url = f"https://{url}"
+        return url, key, "UI Settings Dialog"
+
+    # 2. Streamlit Secrets
+    try:
+        if hasattr(st, "secrets"):
+            def _find_secret(d, candidates):
+                if hasattr(d, "items"):
+                    for k, v in d.items():
+                        if isinstance(v, (str, int, float)) and any(k.lower() == c.lower() for c in candidates):
+                            val = str(v).strip().strip("'\"")
+                            if val:
+                                return val
+                    for k, v in d.items():
+                        if hasattr(v, "items") or isinstance(v, dict):
+                            nested = _find_secret(v, candidates)
+                            if nested:
+                                return nested
+                return ""
+
+            sec_url = _find_secret(st.secrets, ["ICP_WORKER_URL", "WORKER_URL", "CF_WORKER_URL", "URL"])
+            sec_key = _find_secret(st.secrets, ["ICP_WORKER_KEY", "ICP_AUTH_KEY", "WORKER_KEY", "KEY"])
+            if sec_url:
+                if not sec_url.startswith("http://") and not sec_url.startswith("https://"):
+                    sec_url = f"https://{sec_url}"
+                return sec_url, sec_key, "Streamlit Secrets"
+    except Exception:
+        pass
+
+    # 3. Environment Variables
+    for env_var in ["ICP_WORKER_URL", "WORKER_URL", "CF_WORKER_URL"]:
+        env_val = os.environ.get(env_var, "").strip().strip("'\"")
+        if env_val:
+            if not env_val.startswith("http://") and not env_val.startswith("https://"):
+                env_val = f"https://{env_val}"
+            env_key = os.environ.get("ICP_WORKER_KEY", os.environ.get("ICP_AUTH_KEY", "")).strip()
+            return env_val, env_key, "Environment Variable"
+
+    return "", "", "Not Configured"
+
+
 # ==============================================================================
 # SETTINGS MODAL DIALOG (UNIFORMLY ALIGNED & PROFESSIONAL)
 # ==============================================================================
@@ -362,17 +416,11 @@ def show_settings_dialog():
             st.markdown("<hr style='margin:12px 0;'>", unsafe_allow_html=True)
             st.markdown("**🔌 AI Engine Worker Connection**")
 
-            cur_w_url = st.session_state.get("custom_worker_url", "")
-            if not cur_w_url and hasattr(st, "secrets"):
-                cur_w_url = st.secrets.get("ICP_WORKER_URL") or st.secrets.get("WORKER_URL") or ""
-            if not cur_w_url:
-                cur_w_url = os.environ.get("ICP_WORKER_URL", "")
-
-            cur_w_key = st.session_state.get("custom_worker_key", "")
-            if not cur_w_key and hasattr(st, "secrets"):
-                cur_w_key = st.secrets.get("ICP_WORKER_KEY") or st.secrets.get("ICP_AUTH_KEY") or ""
-            if not cur_w_key:
-                cur_w_key = os.environ.get("ICP_WORKER_KEY", os.environ.get("ICP_AUTH_KEY", ""))
+            cur_w_url, cur_w_key, conn_src = get_configured_worker_connection()
+            if cur_w_url:
+                st.success(f"🟢 Configured via **{conn_src}**: `{cur_w_url}`")
+            else:
+                st.warning("⚠️ No worker URL detected. Enter your worker URL below and click **💾 Save Settings**.")
 
             s_worker_url = st.text_input(
                 "Worker URL (Cloudflare Worker or http://localhost:8787)",
@@ -488,6 +536,12 @@ with head_col2:
             show_settings_dialog()
 
 # Clean Status Indicator Bar
+active_w_url, _, active_src = get_configured_worker_connection()
+if active_w_url:
+    ai_status_html = f'<span style="color:#059669; font-weight:700;">🟢 AI Worker Active ({esc(active_src)})</span>'
+else:
+    ai_status_html = '<span style="color:#DC2626; font-weight:700;">⚠️ AI Worker Not Configured</span>'
+
 st.markdown("<div style='margin-top: 4px;'></div>", unsafe_allow_html=True)
 with st.container(border=True):
     st.markdown(f"""
@@ -504,7 +558,7 @@ with st.container(border=True):
             <span>💱</span>
             <span>Currency: <strong class="status-pill">{esc(curr_label)}</strong></span>
             <span style="color:#CBD5E1;">&bull;</span>
-            <span style="color:#059669; font-weight:700;">🤖 AI Engine Active</span>
+            {ai_status_html}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -669,6 +723,9 @@ with st.form("lead_qualification_form"):
             else:
                 deal_stated_str = f"{deal_sym}0 {deal_code}"
 
+    if not active_w_url:
+        st.warning("⚠️ **AI Engine Worker is not configured.** Please click **⚙️ Settings** at the top right to enter your Cloudflare Worker URL, or add `ICP_WORKER_URL` to Streamlit secrets.")
+
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c_btn1, c_btn2, _ = st.columns([2, 1, 3])
     with c_btn1:
@@ -750,17 +807,7 @@ if calc_btn:
             existing_platform=f_platform.strip()
         )
         # Extract Worker URL and Secret Key from Settings session state, Streamlit Secrets, or Environment
-        worker_url = st.session_state.get("custom_worker_url")
-        if not worker_url and hasattr(st, "secrets"):
-            worker_url = st.secrets.get("ICP_WORKER_URL") or st.secrets.get("WORKER_URL")
-        if not worker_url:
-            worker_url = os.environ.get("ICP_WORKER_URL", "")
-
-        worker_key = st.session_state.get("custom_worker_key")
-        if not worker_key and hasattr(st, "secrets"):
-            worker_key = st.secrets.get("ICP_WORKER_KEY") or st.secrets.get("ICP_AUTH_KEY") or st.secrets.get("WORKER_KEY")
-        if not worker_key:
-            worker_key = os.environ.get("ICP_WORKER_KEY", os.environ.get("ICP_AUTH_KEY", ""))
+        worker_url, worker_key, _ = get_configured_worker_connection()
 
         with st.spinner("🤖 Evaluating prospect across GTM 4-Pillar ICP standards..."):
             res: StreamlinedScoringResult = GTMScoringEngine.evaluate(
