@@ -359,10 +359,39 @@ def show_settings_dialog():
                 value=", ".join(cfg.prohibited_countries)
             )
 
+            st.markdown("<hr style='margin:12px 0;'>", unsafe_allow_html=True)
+            st.markdown("**🔌 AI Engine Worker Connection**")
+
+            cur_w_url = st.session_state.get("custom_worker_url", "")
+            if not cur_w_url and hasattr(st, "secrets"):
+                cur_w_url = st.secrets.get("ICP_WORKER_URL") or st.secrets.get("WORKER_URL") or ""
+            if not cur_w_url:
+                cur_w_url = os.environ.get("ICP_WORKER_URL", "")
+
+            cur_w_key = st.session_state.get("custom_worker_key", "")
+            if not cur_w_key and hasattr(st, "secrets"):
+                cur_w_key = st.secrets.get("ICP_WORKER_KEY") or st.secrets.get("ICP_AUTH_KEY") or ""
+            if not cur_w_key:
+                cur_w_key = os.environ.get("ICP_WORKER_KEY", os.environ.get("ICP_AUTH_KEY", ""))
+
+            s_worker_url = st.text_input(
+                "Worker URL (Cloudflare Worker or http://localhost:8787)",
+                value=cur_w_url,
+                help="URL of your Cloudflare Worker AI or local worker.py service"
+            )
+            s_worker_key = st.text_input(
+                "Worker Secret Key (Optional)",
+                value=cur_w_key,
+                type="password",
+                help="API key for worker authentication if configured"
+            )
+
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         save_btn = st.form_submit_button("💾 Save Settings", type="primary", use_container_width=True)
 
     if save_btn:
+        st.session_state["custom_worker_url"] = s_worker_url.strip()
+        st.session_state["custom_worker_key"] = s_worker_key.strip()
         new_cfg = CompanyStandardsConfig(
             company_name=s_name,
             min_deal_size_usd=cfg.min_deal_size_usd,
@@ -720,12 +749,18 @@ if calc_btn:
             tech_stack_notes="",
             existing_platform=f_platform.strip()
         )
-        # Extract Worker URL and Secret Key from Streamlit Secrets or Environment
-        worker_url = None
-        worker_key = None
-        if hasattr(st, "secrets"):
+        # Extract Worker URL and Secret Key from Settings session state, Streamlit Secrets, or Environment
+        worker_url = st.session_state.get("custom_worker_url")
+        if not worker_url and hasattr(st, "secrets"):
             worker_url = st.secrets.get("ICP_WORKER_URL") or st.secrets.get("WORKER_URL")
+        if not worker_url:
+            worker_url = os.environ.get("ICP_WORKER_URL", "")
+
+        worker_key = st.session_state.get("custom_worker_key")
+        if not worker_key and hasattr(st, "secrets"):
             worker_key = st.secrets.get("ICP_WORKER_KEY") or st.secrets.get("ICP_AUTH_KEY") or st.secrets.get("WORKER_KEY")
+        if not worker_key:
+            worker_key = os.environ.get("ICP_WORKER_KEY", os.environ.get("ICP_AUTH_KEY", ""))
 
         with st.spinner("🤖 Evaluating prospect across GTM 4-Pillar ICP standards..."):
             res: StreamlinedScoringResult = GTMScoringEngine.evaluate(
@@ -751,7 +786,7 @@ if "streamlined_res" in st.session_state:
     # Handle Fail-Loud AI Error Mode
     if getattr(res, "analysis_mode", "live") == "failed":
         st.error(f"⚠️ **AI Engine Unreachable**: {esc(res.disqualification_reason)}")
-        st.info("Scoring was halted to prevent fake score fabrication. Please verify your connection to the Cloudflare AI worker and try again.")
+        st.info("💡 **How to connect**: Click **⚙️ Settings** at the top right to enter your Worker URL (or set `ICP_WORKER_URL` in `.streamlit/secrets.toml`). If testing locally without Cloudflare, run `python worker.py` in your terminal and enter `http://localhost:8787`.")
     else:
         badge_class = "badge-disq" if res.is_disqualified else (
             "badge-amber" if "Needs review" in res.priority_tier else (
