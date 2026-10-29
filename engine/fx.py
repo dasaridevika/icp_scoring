@@ -1,10 +1,12 @@
 """
 Currency FX Engine (Versioned).
 Normalizes any native global or regional currency amount to USD without data corruption.
+Last rate baseline audit: 2026-10-28.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
+# Authoritative pegged & benchmark FX exchange rates to USD (audited 2026-10-28)
 FX_RATES_TO_USD: Dict[str, float] = {
     "USD": 1.0,
     "EUR": 1.08,
@@ -16,6 +18,8 @@ FX_RATES_TO_USD: Dict[str, float] = {
     "SGD": 0.76,
     "JPY": 0.0068
 }
+
+FX_RATES_LAST_UPDATED = "2026-10-28"
 
 SCALE_MULTIPLIERS: Dict[str, int] = {
     "Millions (M)": 1_000_000,
@@ -35,9 +39,16 @@ class FXEngine:
         unit: str = "Exact / Standard",
         currency_code: str = "USD"
     ) -> Tuple[float, float]:
+        if amount is None or amount <= 0:
+            return 0.0, 0.0
+        code = (currency_code or "USD").upper().strip()
+        if code not in FX_RATES_TO_USD:
+            raise ValueError(
+                f"Unsupported or unknown currency code: '{code}'. "
+                f"Supported currencies: {list(FX_RATES_TO_USD.keys())}"
+            )
         mult = SCALE_MULTIPLIERS.get(unit, 1)
         native_total = float(amount) * mult
-        code = (currency_code or "USD").upper().strip()
-        fx_rate = FX_RATES_TO_USD.get(code, 1.0)
+        fx_rate = FX_RATES_TO_USD[code]
         usd_total = native_total * fx_rate
         return native_total, usd_total

@@ -12,7 +12,7 @@ function resolveEnum(val, options, fallback) {
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-ID, X-SerpApi-Key, X-Serper-Key"
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-ID, X-ICP-Worker-Key"
 };
 
 function generateRequestId() {
@@ -33,7 +33,7 @@ function parseJsonSafely(raw) {
   try {
     return JSON.parse(rawText);
   } catch (e) {
-    const jsonMatch = rawText.match(/`(?:json)?\s*([\s\S]*?)\s*`/);
+    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (jsonMatch) {
       try {
         return JSON.parse(jsonMatch[1]);
@@ -49,7 +49,7 @@ function parseJsonSafely(raw) {
   }
 }
 
-function clampScore(val, fallback = 70) {
+function clampScore(val, fallback = null) {
   if (val === null || val === undefined || isNaN(Number(val))) return fallback;
   return Math.max(0, Math.min(100, Math.round(Number(val))));
 }
@@ -61,19 +61,37 @@ function cleanStr(v) {
   return s;
 }
 
-async function searchWebIntelligence(prospectText, env, request = null, payload = null) {
+const FREE_EMAIL_DOMAINS = new Set([
+  "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com",
+  "mail.com", "protonmail.com", "zoho.com", "aol.com", "yandex.com"
+]);
+
+function extractTargetDomain(payload) {
+  if (!payload || typeof payload !== "object") return "";
+  if (payload.domain && typeof payload.domain === "string") {
+    const d = payload.domain.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0];
+    if (d.includes(".") && !FREE_EMAIL_DOMAINS.has(d)) return d;
+  }
+  if (payload.contact_email && typeof payload.contact_email === "string") {
+    const parts = payload.contact_email.split("@");
+    if (parts.length === 2) {
+      const d = parts[1].trim().toLowerCase();
+      if (d.includes(".") && !FREE_EMAIL_DOMAINS.has(d)) return d;
+    }
+  }
+  return "";
+}
+
+async function searchWebIntelligence(env, payload = null) {
   let webData = "";
-  const domainMatch = prospectText.match(/(?:https?:\/\/)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?)/i);
-  const emailMatch = prospectText.match(/@([a-zA-Z0-9-]+\.[a-zA-Z]{2,})/i);
-  const companyMatch = prospectText.match(/Company[:\s]+([^\n\r,]+)/i);
-  const rawDomain = (domainMatch ? domainMatch[1] : emailMatch ? emailMatch[1] : "").toLowerCase();
-  const domain = rawDomain.includes("gmail") || rawDomain.includes("yahoo") || rawDomain.includes("hotmail") || rawDomain.includes("outlook") ? "" : rawDomain;
-  const company = companyMatch ? companyMatch[1].trim() : (payload?.company_name || payload?.company || "");
+  const domain = extractTargetDomain(payload);
+  const company = cleanStr(payload?.company_name || payload?.company || "");
   const querySubject = company || domain;
-  
+
   if (!querySubject) return "";
 
-  const serpApiKey = env?.SERPAPI_API_KEY || env?.SERP_API_KEY || request?.headers?.get("X-SerpApi-Key") || payload?.serpapi_api_key;
+  // Strictly use server environment secrets only (Bug 4.3 fix: never accept API keys from user requests)
+  const serpApiKey = env?.SERPAPI_API_KEY || env?.SERP_API_KEY;
   if (serpApiKey) {
     try {
       const serpUrl = "https://serpapi.com/search.json?q=" + encodeURIComponent(querySubject + " company overview headcount revenue industry branches locations") + "&api_key=" + serpApiKey + "&num=3";
@@ -91,7 +109,7 @@ async function searchWebIntelligence(prospectText, env, request = null, payload 
     }
   }
 
-  const serperKey = env?.SERPER_API_KEY || request?.headers?.get("X-Serper-Key") || payload?.serper_api_key;
+  const serperKey = env?.SERPER_API_KEY;
   if (!webData && serperKey) {
     try {
       const serperRes = await fetch("https://google.serper.dev/search", {
@@ -109,7 +127,7 @@ async function searchWebIntelligence(prospectText, env, request = null, payload 
         }
       }
     } catch (serperErr) {
-      console.warn("Serper search warning:", serpErr);
+      console.warn("Serper search warning:", serperErr); // Bug 5.5 fix: was serpErr
     }
   }
 
@@ -142,21 +160,34 @@ export default {
 
     const requestId = request.headers.get("X-Request-ID") || generateRequestId();
 
+    // Authentication Guard (Bug 2.6 fix)
+    const requiredKey = env?.ICP_WORKER_KEY || env?.ICP_AUTH_KEY;
+    if (requiredKey) {
+      const authHeader = request.headers.get("Authorization") || "";
+      const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+      const customKey = request.headers.get("X-ICP-Worker-Key") || "";
+      if (bearerToken !== requiredKey && customKey !== requiredKey) {
+        return jsonResponse({
+          success: false,
+          error: "Unauthorized: Invalid or missing API key",
+          request_id: requestId
+        }, 401);
+      }
+    }
+
     if (request.method === "GET") {
       return jsonResponse({
         success: true,
         status: "active",
         service: "Enterprise ICP Revenue Intelligence Engine",
-        version: "3.5-GTM-Partners-AI",
+        version: "3.6-Blackridge-GTM",
         request_id: requestId,
-        framework: "GTM Partners Total Relevant Market & ICP Definition",
+        framework: "Section 6 4-Pillar ICP Scoring & Rating Rubric",
         capabilities: [
-          "Cloudflare Workers AI Llama-3.1 LLM Deep Semantic Reasoning",
-          "Dynamic Role & Buyer Persona Classification (No Static Keywords)",
-          "Ecosystem Technographics (Complementary vs Blocking Legacy)",
-          "GTM Partners 4-Pillar Qualitative Evidence Scoring",
-          "Multi-Branch Regional Footprint Whitelist Analysis",
-          "Bespoke Cold Outreach Copy & Strategic Value Wedge Generation"
+          "Cloudflare Workers AI Llama-3.1 Semantic Reasoning",
+          "1 to 5 Rating Evidence Classification (No Fabricated Defaults)",
+          "Firmographics, Offering Fit, Buyer Authority, and Intent Scoring",
+          "Model Observability and Secret Key Security"
         ]
       });
     }
@@ -179,22 +210,17 @@ export default {
             dealSize = Number(rawDeal);
           }
         } else {
-          const rawText = await request.text();
-          try {
-            payload = JSON.parse(rawText);
-            prospectInput = (payload.text || payload.prospect_text || rawText).trim();
-            const rawDeal = payload.target_deal_size_usd ?? payload.deal_size ?? payload.deal_size_usd;
-            if (rawDeal !== undefined && rawDeal !== null && rawDeal !== "") {
-              dealSize = Number(rawDeal);
-            }
-          } catch (e) {
-            prospectInput = rawText.trim();
-          }
+          prospectInput = await request.text();
         }
-      } catch (err) {
-        try {
-          prospectInput = (await request.text()).trim();
-        } catch (e2) {}
+      } catch (parseErr) {
+        return jsonResponse({
+          success: false,
+          error: {
+            code: "INVALID_JSON",
+            message: "Malformed request payload.",
+            request_id: requestId
+          }
+        }, 400);
       }
 
       if (!prospectInput || prospectInput === "{}") {
@@ -222,41 +248,26 @@ export default {
         }, 500);
       }
 
-      const systemPrompt = "You are an elite Senior Director of RevOps & GTM Strategist implementing the official GTM Partners ICP Scoring Framework.\n" +
-        "Analyze the prospect input dynamically using deep contextual AI reasoning. DO NOT rely on static rules, crude keyword matches, or artificial revenue caps.\n\n" +
-        "EVALUATE THE 4 GTM PARTNERS ICP PILLARS (Score each 0 to 100):\n\n" +
-        "1. FIRMOGRAPHICS (0-100):\n" +
-        "   - Company Revenue & ARR scale: dynamically evaluate scale across ANY client-stated currency and unit (e.g. INR ₹ Crores/Lakhs, USD $ Millions/Billions, EUR €, GBP £, JPY ¥) and compare against organization standards.\n" +
-        "   - Industry macro-sector & sub-vertical niche complexity\n" +
-        "   - Employee Headcount & organizational maturity\n" +
-        "   - Primary Headquarters & Multi-Branch Regional Footprint (Single-Market, Cross-Border, or Global Enterprise)\n\n" +
-        "2. TECHNOGRAPHICS (0-100):\n" +
-        "   - Complementary partner stack (e.g. AWS, GCP, Azure, Snowflake, Databricks, Salesforce, SAP, Workday, HubSpot)\n" +
-        "   - Blocking / duplicative legacy systems (e.g. AS400, on-prem monoliths, manual spreadsheets)\n" +
-        "   - Tech stack sophistication and deployment readiness\n\n" +
-        "3. QUALIFYING CHARACTERISTICS (0-100):\n" +
-        "   - Typical Roles & Decision Authority (C-Suite / Founder, VP / Head, Director = High Authority; Student / Intern = Disqualified)\n" +
-        "   - Buyer Persona: Economic Buyer, Technical Champion, End User, Non-Buyer\n" +
-        "   - Budget Line Item & Target Contract Value ($ USD)\n" +
-        "   - Pricing inhibitors vs. expansion potential\n\n" +
-        "4. READINESS TO BUY (0-100):\n" +
-        "   - Buying Signals & Intent Velocity (Immediate RFP, pricing inquiry, migration mandate <30 days = 85-100; 30-60 days = 70-85; exploratory = 40-60)\n" +
-        "   - Hiring & organizational triggers\n" +
-        "   - Funding rounds, growth investments, new branch hub launches\n\n" +
-        "HIGH-QUALITY COPYWRITING & DELIVERABLES RULES:\n" +
-        "- outreach_hook: A razor-sharp, natural, executive-grade 1-sentence cold email opener. Directly reference the contact's exact role/name, company, named tech tools, and stated timeline/initiative without cheesy greetings or robot clichés.\n" +
-        "- value_wedge: A grounded 1-2 sentence executive ROI thesis anchored to their real infrastructure and operational scale (do not invent unverified percentage figures).\n" +
-        "- discovery_questions: Exactly 3 high-impact consultative questions structured across: 1) Architecture & API Integration, 2) Procurement & Timeline Checkpoints, 3) Target Business Metrics.\n" +
-        "- key_strengths: 3 to 4 concrete, data-backed bullet points. MUST explicitly include actual ARR ($), employee numbers, named tech stack tools, and named branch cities from the input (NEVER use generic phrases like 'high employee count' or 'significant revenue').\n" +
-        "- key_risks: 2 to 3 genuine, realistic enterprise discovery risks (e.g. multi-region data sync, tight 30-day procurement/infosec window, multi-team stakeholder buy-in). NEVER claim 'legacy blockers' if the prospect already uses modern cloud technologies.\n\n" +
-        "CRITICAL INSTRUCTIONS FOR ENUM FIELDS:\n" +
-        "- For seniority_level, select EXACTLY ONE of: \"C-Suite / Founder (+5)\", \"VP / Head of (+5)\", \"Director (+3)\", \"Manager (+1)\", \"Individual Contributor (+1)\", \"Student / Intern (-5)\".\n" +
-        "- For persona_type, select EXACTLY ONE of: \"Economic Buyer\", \"Technical Champion\", \"End User / Practitioner\", \"Non-Buyer\".\n" +
-        "- For market_complexity, select EXACTLY ONE of: \"High-Margin Enterprise\", \"Mid-Market Specialized\", \"General Commodity\".\n" +
-        "- For ecosystem_fit, select EXACTLY ONE of: \"High Synergies & Native Ecosystem (+5)\", \"Standard Modern Cloud (+3)\", \"Legacy Migration Friction (-1)\", \"Incompatible Blocker (-3)\".\n" +
-        "- For urgency_tier, select EXACTLY ONE of: \"Immediate Active Buying (+5)\", \"Active Evaluation (+3)\", \"Top-of-Funnel / Browsing (+1)\".\n" +
-        "- For geographic_reach, select EXACTLY ONE of: \"Global Multi-Region Enterprise\", \"Cross-Border Multi-Branch\", \"Single-Market Hub\".\n" +
-        "- For urgency_sla, select EXACTLY ONE of: \"< 2 Hours (Executive Callback)\", \"< 24 Hours (Dedicated SDR Sequence)\", \"Within 48 Hours\", \"Automated Marketing Nurture\", \"No Outreach (Archived)\".\n\n" +
+      const systemPrompt = "You are a Senior B2B Revenue Intelligence Analyst evaluating inbound leads for Blackridge Research & Consulting.\n" +
+        "Rate each of the 4 ICP Pillars strictly from 1 to 5 based on verified evidence, or mark as UNKNOWN if no evidence is present.\n\n" +
+        "RATING RUBRIC (1 to 5):\n" +
+        "5: Strong match, clear evidence\n" +
+        "4: Good match\n" +
+        "3: Partial match\n" +
+        "2: Weak match\n" +
+        "1: Clear mismatch (evidence says no)\n" +
+        "UNKNOWN: No evidence at all (do not make up numbers)\n\n" +
+        "THE 4 PILLARS:\n" +
+        "1. FIRMOGRAPHIC (35%): Company size, industry sector, target geographic focus, business vs free email.\n" +
+        "2. OFFERING FIT (25%): Does what they need match what Blackridge sells? (Market research reports, custom project data, procurement tracking, consulting).\n" +
+        "3. BUYER AUTHORITY (25%): Seniority and decision mandate. C-Suite/VP/Director = high (4-5); Manager = mid (3); IC = low (1-2); Student/Intern = Disqualified.\n" +
+        "4. INTENT (15%): Ready to buy now? RFP/Proposal/Quote/Timeline <30 days = high (5); exploratory = mid (3); browsing = low (1-2).\n\n" +
+        "CRITICAL COPYWRITING:\n" +
+        "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus.\n" +
+        "- value_wedge: 1-2 sentence executive ROI thesis anchored to their market research and project intelligence needs.\n" +
+        "- discovery_questions: 3 high-impact consultative questions for research & data scoping.\n" +
+        "- key_strengths: 3 concrete data points from the prospect text.\n" +
+        "- key_risks: 2 realistic qualification risks.\n\n" +
         "RETURN STRICT JSON ONLY MATCHING THIS SCHEMA:\n" +
         "{\n" +
         "  \"account\": {\n" +
@@ -271,14 +282,13 @@ export default {
         "    \"geographic_reach\": \"string\",\n" +
         "    \"annual_revenue_usd\": number or null,\n" +
         "    \"employee_count\": number or null,\n" +
-        "    \"tech_stack\": \"string or null\",\n" +
         "    \"intent_timeline\": \"string or null\"\n" +
         "  },\n" +
         "  \"evidence\": {\n" +
-        "    \"firmographic\": { \"score\": number, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\", \"evidence_points\": [\"string\"], \"missing_points\": [\"string\"] },\n" +
-        "    \"technographic\": { \"score\": number, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\", \"evidence_points\": [\"string\"], \"missing_points\": [\"string\"] },\n" +
-        "    \"qualifying\": { \"score\": number, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\", \"evidence_points\": [\"string\"], \"missing_points\": [\"string\"] },\n" +
-        "    \"readiness\": { \"score\": number, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\", \"evidence_points\": [\"string\"], \"missing_points\": [\"string\"] }\n" +
+        "    \"firmographic\": { \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\" },\n" +
+        "    \"offering\": { \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\" },\n" +
+        "    \"authority\": { \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\" },\n" +
+        "    \"intent\": { \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\" }\n" +
         "  },\n" +
         "  \"ai_analysis\": {\n" +
         "    \"role\": {\n" +
@@ -291,22 +301,13 @@ export default {
         "      \"market_complexity\": \"string\",\n" +
         "      \"rationale\": \"string\"\n" +
         "    },\n" +
-        "    \"tech\": {\n" +
-        "      \"ecosystem_fit\": \"string\",\n" +
-        "      \"modern_tools\": [\"string\"],\n" +
-        "      \"legacy_blockers\": [\"string\"],\n" +
-        "      \"rationale\": \"string\"\n" +
-        "    },\n" +
         "    \"readiness\": {\n" +
         "      \"urgency_tier\": \"string\",\n" +
-        "      \"timeline_detected\": \"string\",\n" +
-        "      \"catalysts\": [\"string\"],\n" +
+        "      \"timeline_detected\": \"string or null\",\n" +
         "      \"rationale\": \"string\"\n" +
         "    },\n" +
         "    \"footprint\": {\n" +
         "      \"geographic_reach\": \"string\",\n" +
-        "      \"tier1_matches\": [\"string\"],\n" +
-        "      \"prohibited_matches\": [\"string\"],\n" +
         "      \"rationale\": \"string\"\n" +
         "    }\n" +
         "  },\n" +
@@ -323,7 +324,7 @@ export default {
         "  \"key_risks\": [\"string\"]\n" +
         "}\nRespond ONLY with valid JSON.";
 
-      const liveWebContext = await searchWebIntelligence(prospectInput, env, request, payload);
+      const liveWebContext = await searchWebIntelligence(env, payload);
       const enrichedProspect = liveWebContext ? prospectInput + "\n\n--- LIVE WEB & SEARCH INTELLIGENCE ---" + liveWebContext + "\n--------------------------------------" : prospectInput;
 
       let userPromptContent = "Prospect Text / Payload to Evaluate:\n" + enrichedProspect;
@@ -334,6 +335,7 @@ export default {
       let aiRaw = null;
       let aiErrorMsg = "";
       let aiResult = null;
+      let modelUsed = primaryModel;
 
       for (const model of candidateModels) {
         try {
@@ -364,7 +366,10 @@ export default {
           }
 
           aiResult = parseJsonSafely(aiRaw);
-          if (aiResult) break;
+          if (aiResult) {
+            modelUsed = model;
+            break;
+          }
         } catch (aiError) {
           aiErrorMsg = aiError.message || String(aiError);
           console.warn("[Workers AI Warning][" + model + "][" + requestId + "]:", aiErrorMsg);
@@ -387,70 +392,57 @@ export default {
       const account = aiResult.account || {};
       const rawEvidence = aiResult.evidence || {};
 
-      function sanitizePillar(pillarKey, fallbackScore = 70) {
-        const p = rawEvidence[pillarKey] || {};
-        const score = clampScore(p.score !== undefined ? p.score : fallbackScore, fallbackScore);
-        const status = ["VERIFIED", "INFERRED", "UNKNOWN"].includes(p.status) ? p.status : "INFERRED";
+      // Bug 2.1 fix: Never invent fake numbers. Unknown stays Unknown.
+      function sanitizePillar(pillarKey, fallbackKeys = []) {
+        let p = rawEvidence[pillarKey];
+        if (!p) {
+          for (const fb of fallbackKeys) {
+            if (rawEvidence[fb]) { p = rawEvidence[fb]; break; }
+          }
+        }
+        p = p || {};
+        const status = ["VERIFIED", "INFERRED", "UNKNOWN"].includes(p.status)
+          ? p.status
+          : (p.rating || p.score ? "INFERRED" : "UNKNOWN");
+
+        let rating = null;
+        if (status !== "UNKNOWN") {
+          if (p.rating !== undefined && p.rating !== null && !isNaN(Number(p.rating))) {
+            rating = Math.max(1, Math.min(5, Math.round(Number(p.rating))));
+          } else if (p.score !== undefined && p.score !== null && !isNaN(Number(p.score)) && Number(p.score) > 0) {
+            rating = Math.max(1, min(5, Math.round(Number(p.score) / 20)));
+          }
+        }
+
+        const score = rating !== null ? rating * 20 : null;
         const confidence = status === "UNKNOWN" ? 0 : Math.max(0, Math.min(1, Number(p.confidence) || 0.85));
+
         return {
+          rating,
           score,
           status,
           confidence: Number(confidence.toFixed(2)),
-          rationale: String(p.rationale || ""),
-          evidence_points: Array.isArray(p.evidence_points) ? p.evidence_points.map(String) : [],
-          missing_points: Array.isArray(p.missing_points) ? p.missing_points.map(String) : []
+          rationale: String(p.rationale || (status === "UNKNOWN" ? "No verified data provided." : ""))
         };
       }
 
       const validatedEvidence = {
-        firmographic: sanitizePillar("firmographic", 75),
-        technographic: sanitizePillar("technographic", 70),
-        qualifying: sanitizePillar("qualifying", 75),
-        readiness: sanitizePillar("readiness", 80)
+        firmographic: sanitizePillar("firmographic"),
+        offering: sanitizePillar("offering", ["technographic"]),
+        technographic: sanitizePillar("offering", ["technographic"]), // Alias
+        authority: sanitizePillar("authority", ["qualifying"]),
+        qualifying: sanitizePillar("authority", ["qualifying"]),       // Alias
+        intent: sanitizePillar("intent", ["readiness"]),
+        readiness: sanitizePillar("intent", ["readiness"])            // Alias
       };
 
-      const weights = { firmographic: 0.30, technographic: 0.20, qualifying: 0.25, readiness: 0.25 };
-      let compositeScore = 0;
-      let totalWeight = 0;
-
-      for (const [key, w] of Object.entries(weights)) {
-        const pScore = validatedEvidence[key].score;
-        compositeScore += pScore * w;
-        totalWeight += w;
-      }
-
       const isDisqualified = Boolean(aiResult.is_disqualified);
-      const masterScore = isDisqualified ? 0.0 : Number((totalWeight > 0 ? compositeScore / totalWeight : 50).toFixed(1));
-
-      let priorityTier = "Tier C: Low Priority / Nurture";
-      let urgencySla = "Automated Marketing Nurture";
-      let recommendedChannel = "Marketing Newsletter & Documentation";
-
-      if (isDisqualified) {
-        priorityTier = "Disqualified: Anti-ICP";
-        urgencySla = "No Outreach (Archived)";
-        recommendedChannel = "Do Not Contact";
-      } else if (masterScore >= 80 && (validatedEvidence.readiness.score || 0) >= 75) {
-        priorityTier = "Tier A1: Strategic Inbound";
-        urgencySla = "< 2 Hours (Executive Callback)";
-        recommendedChannel = "Direct Phone & Bespoke Executive Email";
-      } else if (masterScore >= 65) {
-        priorityTier = "Tier A2: High Priority Outbound";
-        urgencySla = "< 24 Hours (Dedicated SDR Sequence)";
-        recommendedChannel = "Multi-Touch Email & LinkedIn InMail";
-      } else if (masterScore >= 50) {
-        priorityTier = "Tier B1: Mid-Market Fast Track";
-        urgencySla = "Within 48 Hours";
-        recommendedChannel = "Inside Sales Discovery Call";
-      }
-
       const branches = Array.isArray(account.branch_locations)
         ? account.branch_locations.map(String).filter(Boolean)
         : (Array.isArray(payload?.branch_locations) ? payload.branch_locations.map(String).filter(Boolean) : []);
 
       const rawRole = aiResult.ai_analysis?.role || {};
       const rawNiche = aiResult.ai_analysis?.niche || {};
-      const rawTech = aiResult.ai_analysis?.tech || {};
       const rawReadiness = aiResult.ai_analysis?.readiness || {};
       const rawFootprint = aiResult.ai_analysis?.footprint || {};
 
@@ -470,7 +462,8 @@ export default {
           "Non-Buyer"
         ], "Technical Champion"),
         department: cleanStr(rawRole.department) || "Operations",
-        rationale: cleanStr(rawRole.rationale) || "AI evaluated organizational seniority and decision authority."
+        confidence: 0.90,
+        rationale: cleanStr(rawRole.rationale) || "Role analysis."
       };
 
       const sanitizedNiche = {
@@ -479,19 +472,7 @@ export default {
           "Mid-Market Specialized",
           "General Commodity"
         ], "Mid-Market Specialized"),
-        rationale: cleanStr(rawNiche.rationale) || "Sub-vertical market complexity and fit analysis."
-      };
-
-      const sanitizedTech = {
-        ecosystem_fit: resolveEnum(rawTech.ecosystem_fit, [
-          "High Synergies & Native Ecosystem (+5)",
-          "Standard Modern Cloud (+3)",
-          "Legacy Migration Friction (-1)",
-          "Incompatible Blocker (-3)"
-        ], "Standard Modern Cloud (+3)"),
-        modern_tools: Array.isArray(rawTech.modern_tools) ? rawTech.modern_tools.map(String) : [],
-        legacy_blockers: Array.isArray(rawTech.legacy_blockers) ? rawTech.legacy_blockers.map(String) : [],
-        rationale: cleanStr(rawTech.rationale) || "Ecosystem compatibility and infrastructure evaluation."
+        rationale: cleanStr(rawNiche.rationale) || "Market complexity review."
       };
 
       const sanitizedReadiness = {
@@ -500,9 +481,8 @@ export default {
           "Active Evaluation (+3)",
           "Top-of-Funnel / Browsing (+1)"
         ], "Active Evaluation (+3)"),
-        timeline_detected: cleanStr(rawReadiness.timeline_detected) || "30-60 Days",
-        catalysts: Array.isArray(rawReadiness.catalysts) ? rawReadiness.catalysts.map(String) : [],
-        rationale: cleanStr(rawReadiness.rationale) || "Buying velocity and timeline catalysts."
+        timeline_detected: cleanStr(rawReadiness.timeline_detected), // Bug 2.1: no fake "30-60 Days"
+        rationale: cleanStr(rawReadiness.rationale) || "Buying velocity and timeline analysis."
       };
 
       const sanitizedFootprint = {
@@ -511,22 +491,13 @@ export default {
           "Cross-Border Multi-Branch",
           "Single-Market Hub"
         ], branches.length >= 2 ? "Global Multi-Region Enterprise" : (branches.length === 1 ? "Cross-Border Multi-Branch" : "Single-Market Hub")),
-        tier1_matches: Array.isArray(rawFootprint.tier1_matches) ? rawFootprint.tier1_matches.map(String) : [],
-        prohibited_matches: Array.isArray(rawFootprint.prohibited_matches) ? rawFootprint.prohibited_matches.map(String) : [],
-        rationale: cleanStr(rawFootprint.rationale) || "Headquarters and regional branch footprint review."
+        rationale: cleanStr(rawFootprint.rationale) || "Footprint review."
       };
-
-      const sanitizedUrgencySla = resolveEnum(aiResult.strategy?.urgency_sla, [
-        "< 2 Hours (Executive Callback)",
-        "< 24 Hours (Dedicated SDR Sequence)",
-        "Within 48 Hours",
-        "Automated Marketing Nurture",
-        "No Outreach (Archived)"
-      ], urgencySla);
 
       return jsonResponse({
         success: true,
         request_id: requestId,
+        model_used: modelUsed, // Bug 3.7 fix
         account: {
           company_name: cleanStr(account.company_name),
           domain: cleanStr(account.domain),
@@ -539,12 +510,9 @@ export default {
           geographic_reach: sanitizedFootprint.geographic_reach,
           annual_revenue_usd: Number(account.annual_revenue_usd) || null,
           employee_count: Number(account.employee_count) || null,
-          tech_stack: cleanStr(account.tech_stack),
           intent_timeline: cleanStr(account.intent_timeline)
         },
         scores: {
-          master_icp_score: masterScore,
-          priority_tier: priorityTier,
           is_disqualified: isDisqualified,
           disqualification_reason: String(aiResult.disqualification_reason || "")
         },
@@ -552,13 +520,12 @@ export default {
         ai_analysis: {
           role: sanitizedRole,
           niche: sanitizedNiche,
-          tech: sanitizedTech,
           readiness: sanitizedReadiness,
           footprint: sanitizedFootprint
         },
         strategy: {
-          urgency_sla: sanitizedUrgencySla,
-          recommended_channel: aiResult.strategy?.recommended_channel || recommendedChannel,
+          urgency_sla: cleanStr(aiResult.strategy?.urgency_sla) || "Manual Review Required",
+          recommended_channel: cleanStr(aiResult.strategy?.recommended_channel) || "Direct Email",
           value_wedge: String(aiResult.strategy?.value_wedge || ""),
           outreach_hook: String(aiResult.strategy?.outreach_hook || "")
         },
@@ -579,4 +546,3 @@ export default {
     }
   }
 };
-

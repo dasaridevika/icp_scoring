@@ -396,12 +396,17 @@ def show_settings_dialog():
             tier1_territories=[t.strip() for t in s_t1_geo.split(",") if t.strip()],
             prohibited_countries=[p.strip() for p in s_proh_geo.split(",") if p.strip()],
             weight_firmographics=cfg.weight_firmographics,
+            weight_offering=cfg.weight_offering,
             weight_authority=cfg.weight_authority,
             weight_intent=cfg.weight_intent,
-            weight_value=cfg.weight_value,
+            weight_value=cfg.weight_offering,
+            tier_a_threshold=cfg.tier_a_threshold,
+            tier_b_threshold=cfg.tier_b_threshold,
+            tier_c_threshold=cfg.tier_c_threshold,
             tier_a1_threshold=cfg.tier_a1_threshold,
             tier_a2_threshold=cfg.tier_a2_threshold,
-            tier_b1_threshold=cfg.tier_b1_threshold
+            tier_b1_threshold=cfg.tier_b1_threshold,
+            min_coverage_threshold=cfg.min_coverage_threshold
         )
         st.session_state["company_config"] = new_cfg
         st.rerun()
@@ -704,10 +709,16 @@ if calc_btn:
         st.session_state["f_intent"] = f_intent
         st.session_state["f_platform"] = f_platform
 
+        deal_sym = CURRENCY_OPTIONS.get(f_deal_curr, "$")
+        deal_code = f_deal_curr.split()[0] if f_deal_curr else rev_code
+        hc_count = int(f_hc) if (f_hc and str(f_hc).strip() != "" and int(f_hc) > 0) else None
+
         submission = StreamlinedLeadForm(
             company_name=f_company.strip(),
             currency_symbol=rev_sym,
             currency_code=rev_code,
+            deal_currency_code=deal_code,
+            deal_currency_symbol=deal_sym,
             revenue_entered_value=float(f_rev_val),
             revenue_unit=f_rev_unit,
             revenue_display_str=rev_stated_str,
@@ -716,8 +727,8 @@ if calc_btn:
             deal_display_str=deal_stated_str,
             industry_sector=f_ind.strip(),
             sub_vertical=f_ind.strip(),
-            annual_revenue_usd=float(f_rev_total),
-            employee_count=int(f_hc),
+            annual_revenue_usd=float(f_rev_total) if f_rev_total > 0 else None,
+            employee_count=hc_count,
             location=f_loc.strip(),
             branch_locations=[],
             contact_name=f_name.strip(),
@@ -726,7 +737,7 @@ if calc_btn:
             buying_role=f_buying_role.strip(),
             buying_intent=f_intent.strip(),
             timeline=f_timeline.strip(),
-            target_deal_size_usd=float(f_deal_total),
+            target_deal_size_usd=float(f_deal_total) if f_deal_total > 0 else None,
             tech_stack_notes="",
             existing_platform=f_platform.strip()
         )
@@ -751,10 +762,21 @@ if "streamlined_res" in st.session_state:
         st.error(f"⚠️ **AI Engine Unreachable**: {esc(res.disqualification_reason)}")
         st.info("Scoring was halted to prevent fake score fabrication. Please verify your connection to the Cloudflare AI worker and try again.")
     else:
-        badge_class = "badge-disq" if res.is_disqualified else ("badge-a1" if "A1" in res.priority_tier else ("badge-a2" if "A2" in res.priority_tier else "badge-b1"))
-        fit_color = "#EF4444" if res.is_disqualified else ("#10B981" if res.master_icp_score >= 70 else ("#3B82F6" if res.master_icp_score >= 55 else "#F59E0B"))
+        badge_class = "badge-disq" if res.is_disqualified else (
+            "badge-amber" if "Needs review" in res.priority_tier else (
+                "badge-a1" if "Tier A" in res.priority_tier else (
+                    "badge-a2" if "Tier B" in res.priority_tier else "badge-b1"
+                )
+            )
+        )
+        fit_color = "#EF4444" if res.is_disqualified else (
+            "#F59E0B" if "Needs review" in res.priority_tier else (
+                "#10B981" if res.master_icp_score >= 80 else ("#3B82F6" if res.master_icp_score >= 60 else "#94A3B8")
+            )
+        )
 
         branch_badge = f"<span>&bull;</span><span>Branches: <strong style='color:#38BDF8;'>{len(res.lead_summary.get('branches', []))} Locations</strong></span>" if res.lead_summary.get('branches') else ""
+        model_badge = f"<span>&bull;</span><span>Model: <strong style='color:#A78BFA;'>{esc(res.model_used)}</strong></span>" if getattr(res, "model_used", "") else ""
 
         # 1. Master Score Obsidian Banner
         st.markdown(f"""<div class="master-score-card">
@@ -773,11 +795,12 @@ GTM Revenue Intelligence Report &bull; {esc(cfg.company_name)}
 {branch_badge}
 <span>&bull;</span>
 <span>SLA: <strong style="color:#38BDF8;">{esc(res.urgency_sla)}</strong></span>
+{model_badge}
 </div>
 </div>
 <div style="text-align:right;">
 <div style="font-size:0.78rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">
-Master ICP Score
+Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct:.0f}%</span>
 </div>
 <div style="font-size:2.8rem; font-weight:800; color:{fit_color}; line-height:1; letter-spacing:-1px; margin-bottom:8px;">
 {res.master_icp_score:.1f}<span style="font-size:1.2rem; color:#94A3B8; font-weight:500;">/100</span>
@@ -820,22 +843,22 @@ Master ICP Score
 </div>""", unsafe_allow_html=True)
 
             with ai_col2:
-                fit_str = res.ai_tech.ecosystem_fit if res.ai_tech else "Standard Fit"
-                tech_rat = res.ai_tech.rationale if res.ai_tech else ""
+                offering_title = "Market Intelligence & Research"
+                offering_rat = res.pillar_offering.field_receipts[0].rationale if (res.pillar_offering and res.pillar_offering.field_receipts) else "Offering alignment evaluation."
                 st.markdown(f"""<div class="ai-feature-card">
 <div>
 <div style="font-size:0.75rem; font-weight:700; color:#34D399; text-transform:uppercase; letter-spacing:0.8px;">
-💻 2. Technographics
+📑 2. Offering Fit
 </div>
 <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; margin-top:6px; line-height:1.3;">
-{esc(fit_str)}
+{esc(offering_title)}
 </div>
 <div style="margin-top:8px;">
-<span class="tag-chip tag-emerald">Ecosystem Fit</span>
+<span class="tag-chip tag-emerald">Blackridge Alignment</span>
 </div>
 </div>
 <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-<div style="font-style:italic; color:#6EE7B7;">"{esc(tech_rat)}"</div>
+<div style="font-style:italic; color:#6EE7B7;">"{esc(offering_rat)}"</div>
 </div>
 </div>""", unsafe_allow_html=True)
 
@@ -889,16 +912,23 @@ Master ICP Score
             p1, p2, p3, p4 = st.columns(4)
 
             pillars = [
-                (p1, "1. FIRMOGRAPHICS", res.pillar_firmographics, cfg.weight_firmographics, "#38BDF8"),
-                (p2, "2. TECHNOGRAPHICS", res.pillar_value, cfg.weight_value, "#34D399"),
-                (p3, "3. QUALIFYING FIT", res.pillar_authority, cfg.weight_authority, "#A78BFA"),
-                (p4, "4. READINESS TO BUY", res.pillar_intent, cfg.weight_intent, "#FBBF24")
+                (p1, "1. FIRMOGRAPHIC FIT", res.pillar_firmographics, cfg.weight_firmographics, "#38BDF8"),
+                (p2, "2. OFFERING FIT", res.pillar_offering, cfg.weight_offering, "#34D399"),
+                (p3, "3. BUYER AUTHORITY", res.pillar_authority, cfg.weight_authority, "#A78BFA"),
+                (p4, "4. INTENT & VELOCITY", res.pillar_intent, cfg.weight_intent, "#FBBF24")
             ]
 
             for col, title, p_res, weight, col_accent in pillars:
                 with col:
-                    diff = p_res.score - 50.0
-                    diff_str = f"+{diff:.0f} pts" if diff >= 0 else f"{diff:.0f} pts"
+                    if p_res.is_known and p_res.score is not None:
+                        score_disp = f"{p_res.score:.0f}"
+                        diff = p_res.score - 50.0
+                        diff_str = f"+{diff:.0f} pts" if diff >= 0 else f"{diff:.0f} pts"
+                        sub_str = f"{diff_str} vs baseline"
+                    else:
+                        score_disp = "UNKNOWN"
+                        sub_str = "No verified data"
+
                     st.markdown(f"""<div class="metric-pillar-card">
 <div style="display:flex; justify-content:space-between; align-items:center;">
 <div style="font-size:0.72rem; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.6px;">
@@ -908,11 +938,11 @@ Master ICP Score
 {weight*100:.0f}% Weight
 </div>
 </div>
-<div style="font-size:2.1rem; font-weight:800; color:#FFFFFF; margin:8px 0; letter-spacing:-0.5px;">
-{p_res.score:.0f} <span style="font-size:1.0rem; font-weight:500; color:#94A3B8;">/100</span>
+<div style="font-size:1.85rem; font-weight:800; color:#FFFFFF; margin:8px 0; letter-spacing:-0.5px;">
+{score_disp} <span style="font-size:0.95rem; font-weight:500; color:#94A3B8;">{'/100' if score_disp != 'UNKNOWN' else ''}</span>
 </div>
 <div style="font-size:0.80rem; font-weight:600; color:{col_accent};">
-{diff_str} vs baseline
+{sub_str}
 </div>
 </div>""", unsafe_allow_html=True)
 

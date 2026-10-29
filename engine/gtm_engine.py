@@ -1,9 +1,9 @@
 """
 Enterprise ICP Revenue Intelligence - Dynamic GTM Engine.
 All AI semantic analysis, role hierarchy, niche complexity, tech stack synergy,
-and GTM Partners 4-Pillar reasoning are handled 100% dynamically by the Cloudflare Workers AI engine.
-Includes deterministic policy rules (sanctions, anti-ICP roles), FX currency normalization,
-and fail-loud observability.
+and GTM 4-Pillar reasoning follow the Section 6 Authoritative Rubric.
+Includes deterministic compliance rules, versioned FX currency normalization,
+coverage-weighted mathematical scoring, and fail-loud observability.
 """
 
 import os
@@ -11,6 +11,7 @@ import json
 import urllib.request
 import urllib.error
 from typing import Dict, Any, List, Optional, Union, Tuple
+
 try:
     from pydantic import BaseModel, Field
 except (ImportError, ModuleNotFoundError):
@@ -20,6 +21,8 @@ except (ImportError, ModuleNotFoundError):
                 setattr(self, k, v)
         def dict(self):
             return self.__dict__
+        def model_dump(self):
+            return self.__dict__
     def Field(default=None, default_factory=None):
         if default_factory is not None:
             return default_factory()
@@ -28,10 +31,9 @@ except (ImportError, ModuleNotFoundError):
 from engine.fx import FXEngine
 from engine.rules import PolicyEngine, PolicyCheckResult
 
-DEFAULT_WORKER_URL = os.environ.get(
-    "ICP_WORKER_URL",
-    "https://icp-revenue-intelligence-worker.devika-worker.workers.dev"
-)
+# Read worker URL and Secret Key strictly from environment with no default personal account
+DEFAULT_WORKER_URL = os.environ.get("ICP_WORKER_URL", "")
+DEFAULT_WORKER_KEY = os.environ.get("ICP_WORKER_KEY", os.environ.get("ICP_AUTH_KEY", ""))
 
 
 # ==============================================================================
@@ -53,6 +55,13 @@ class NicheAIAnalysis(BaseModel):
     raw_niche: str = ""
     suggested_sector: str = ""
     market_complexity: str = "Specialized Enterprise"
+    fit_points: int = 3
+    rationale: str = ""
+
+
+class OfferingAIAnalysis(BaseModel):
+    offering_category: str = "Market Intelligence Reports"
+    matched_offerings: List[str] = Field(default_factory=list)
     fit_points: int = 3
     rationale: str = ""
 
@@ -111,19 +120,30 @@ class CompanyStandardsConfig(BaseModel):
     prohibited_countries: List[str] = Field(default_factory=lambda: [
         "North Korea", "Iran", "Syria", "Cuba", "Russia", "Belarus"
     ])
-    weight_firmographics: float = 0.30
+    # Authoritative Section 6 Rubric Weights
+    weight_firmographics: float = 0.35
+    weight_offering: float = 0.25
     weight_authority: float = 0.25
-    weight_intent: float = 0.25
-    weight_value: float = 0.20
+    weight_intent: float = 0.15
+    # Backward compatibility alias
+    weight_value: float = 0.25
+
+    # Authoritative Section 6 Tiers & Coverage Threshold
+    tier_a_threshold: float = 80.0
+    tier_b_threshold: float = 60.0
+    tier_c_threshold: float = 40.0
     tier_a1_threshold: float = 80.0
     tier_a2_threshold: float = 65.0
     tier_b1_threshold: float = 50.0
+    min_coverage_threshold: float = 60.0
 
 
 class StreamlinedLeadForm(BaseModel):
     company_name: str = ""
     currency_symbol: str = "$"
     currency_code: str = "USD"
+    deal_currency_code: Optional[str] = None
+    deal_currency_symbol: Optional[str] = None
     revenue_entered_value: float = 0.0
     revenue_unit: str = "Standard"
     revenue_display_str: str = ""
@@ -132,8 +152,8 @@ class StreamlinedLeadForm(BaseModel):
     deal_display_str: str = ""
     industry_sector: str = ""
     sub_vertical: str = ""
-    annual_revenue_usd: float = 0.0
-    employee_count: int = 0
+    annual_revenue_usd: Optional[float] = None
+    employee_count: Optional[int] = None
     location: str = ""
     branch_locations: List[str] = Field(default_factory=list)
     contact_name: str = ""
@@ -142,7 +162,8 @@ class StreamlinedLeadForm(BaseModel):
     buying_role: str = ""
     buying_intent: str = ""
     timeline: str = ""
-    target_deal_size_usd: float = 0.0
+    offering_interest: str = ""
+    target_deal_size_usd: Optional[float] = None
     tech_stack_notes: Optional[str] = ""
     uses_existing_platform: Optional[str] = ""
     existing_platform: Optional[str] = ""
@@ -159,8 +180,11 @@ class FieldScoreReceipt(BaseModel):
 
 class PillarScoreSummary(BaseModel):
     pillar_name: str
-    score: float
-    weight_pct: float
+    rating: Optional[int] = None       # 1 to 5, or None if UNKNOWN
+    score: Optional[float] = None      # rating * 20, or None if UNKNOWN
+    weight_pct: float = 0.0
+    is_known: bool = True
+    status: str = "VERIFIED"           # "VERIFIED", "INFERRED", "UNKNOWN"
     field_receipts: List[FieldScoreReceipt] = Field(default_factory=list)
 
 
@@ -176,23 +200,26 @@ class ScoringTrackerItem(BaseModel):
 
 
 class StreamlinedScoringResult(BaseModel):
-    company_name: str
-    master_icp_score: float
-    priority_tier: str
-    is_disqualified: bool
-    disqualification_reason: str
-    urgency_sla: str
-    recommended_channel: str
-    value_wedge: str
-    outreach_hook: str
+    company_name: str = ""
+    master_icp_score: float = 0.0
+    coverage_pct: float = 100.0
+    priority_tier: str = ""
+    is_disqualified: bool = False
+    disqualification_reason: str = ""
+    urgency_sla: str = ""
+    recommended_channel: str = ""
+    value_wedge: str = ""
+    outreach_hook: str = ""
     pillar_firmographics: PillarScoreSummary
+    pillar_offering: PillarScoreSummary
     pillar_authority: PillarScoreSummary
     pillar_intent: PillarScoreSummary
-    pillar_value: PillarScoreSummary
+    pillar_value: Optional[PillarScoreSummary] = None
     ai_role: Optional[RoleAIAnalysis] = None
     ai_niche: Optional[NicheAIAnalysis] = None
     ai_intent: Optional[IntentAIAnalysis] = None
     ai_tech: Optional[TechStackAIAnalysis] = None
+    ai_offering: Optional[OfferingAIAnalysis] = None
     ai_footprint: Optional[FootprintAIAnalysis] = None
     scoring_tracker: List[ScoringTrackerItem] = Field(default_factory=list)
     lead_summary: Dict[str, Any] = Field(default_factory=dict)
@@ -201,6 +228,12 @@ class StreamlinedScoringResult(BaseModel):
     key_risks: List[str] = Field(default_factory=list)
     analysis_mode: str = "live"  # "live" | "degraded" | "failed"
     degraded_reasons: List[str] = Field(default_factory=list)
+    model_used: str = ""
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if self.pillar_value is None and hasattr(self, "pillar_offering"):
+            self.pillar_value = self.pillar_offering
 
 
 # Backward compatibility aliases
@@ -209,13 +242,13 @@ GTMScoringResult = StreamlinedScoringResult
 
 
 # ==============================================================================
-# 2. Cloudflare Workers AI Client & GTM Scoring Engine
+# 2. GTM Scoring Engine & Cloudflare Workers AI Client
 # ==============================================================================
 
 class GTMScoringEngine:
     """
-    Evaluates prospect leads by combining deterministic compliance policy checks,
-    versioned FX currency normalization, and semantic AI reasoning.
+    Authoritative GTM ICP Scoring Engine (Section 6 Rubric).
+    Deterministic Policy Checks -> Normalized FX -> AI 1-5 Ratings -> Weighted Math Scoring & Tiering in Python.
     """
 
     @classmethod
@@ -223,71 +256,128 @@ class GTMScoringEngine:
         cls,
         payload: Dict[str, Any],
         worker_url: Optional[str] = None,
+        worker_key: Optional[str] = None,
         timeout: float = 25.0
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         url = worker_url or DEFAULT_WORKER_URL
         if not url:
-            return None
+            return None, "Worker URL is not configured. Set ICP_WORKER_URL environment variable or specify worker_url."
+
+        auth_key = worker_key or DEFAULT_WORKER_KEY
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "EnterpriseICPClient/3.6 (Hardened-GTM-Bridge)",
+            "Accept": "application/json"
+        }
+        if auth_key:
+            headers["X-ICP-Worker-Key"] = auth_key
+            headers["Authorization"] = f"Bearer {auth_key}"
 
         try:
             req_data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                url,
-                data=req_data,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "EnterpriseICPClient/3.6 (Hardened-GTM-Bridge)",
-                    "Accept": "application/json"
-                }
-            )
+            req = urllib.request.Request(url, data=req_data, headers=headers)
             with urllib.request.urlopen(req, timeout=timeout) as response:
                 if response.status == 200:
-                    return json.loads(response.read().decode("utf-8"))
-        except Exception:
-            return None
-        return None
+                    resp_body = response.read().decode("utf-8")
+                    return json.loads(resp_body), None
+                return None, f"Worker returned unexpected HTTP {response.status}"
+        except urllib.error.HTTPError as e:
+            try:
+                err_body = e.read().decode("utf-8")
+                err_json = json.loads(err_body)
+                err_detail = err_json.get("error", err_json)
+            except Exception:
+                err_detail = e.reason
+            return None, f"Worker HTTP {e.code}: {err_detail}"
+        except urllib.error.URLError as e:
+            return None, f"Network connection failed: {e.reason}"
+        except TimeoutError:
+            return None, f"Request timed out after {timeout}s"
+        except json.JSONDecodeError as e:
+            return None, f"Malformed JSON from worker: {str(e)}"
+        except Exception as e:
+            return None, f"Worker call error: {str(e)}"
 
     @classmethod
     def evaluate(
         cls,
         form: StreamlinedLeadForm,
         config: Optional[CompanyStandardsConfig] = None,
-        worker_url: Optional[str] = None
+        worker_url: Optional[str] = None,
+        worker_key: Optional[str] = None,
+        mock_ai_response: Optional[Dict[str, Any]] = None
     ) -> StreamlinedScoringResult:
         cfg = config or CompanyStandardsConfig()
         sym = form.currency_symbol or cfg.currency_symbol or "$"
         curr_code = form.currency_code or "USD"
+        deal_curr_code = form.deal_currency_code or form.currency_code or "USD"
+        deal_sym = form.deal_currency_symbol or form.currency_symbol or "$"
 
-        # 1. Normalize Native Currency to True USD (FX Engine)
-        native_rev, norm_rev_usd = FXEngine.normalize_to_usd(
-            form.revenue_entered_value,
-            form.revenue_unit,
-            curr_code
-        )
-        native_deal, norm_deal_usd = FXEngine.normalize_to_usd(
-            form.deal_entered_value,
-            form.deal_unit,
-            curr_code
-        )
+        # -------------------------------------------------------------
+        # 1. FX Normalization (Unified Field Ingestion - Bug 3.3, 3.4, 3.6)
+        # -------------------------------------------------------------
+        # Revenue
+        native_rev = None
+        norm_rev_usd = None
+        prospect_rev_str = "Unknown"
+        if form.revenue_entered_value > 0:
+            native_rev, norm_rev_usd = FXEngine.normalize_to_usd(
+                form.revenue_entered_value,
+                form.revenue_unit,
+                curr_code
+            )
+            prospect_rev_str = form.revenue_display_str or f"{sym}{form.revenue_entered_value:g} {form.revenue_unit} ({curr_code})"
+        elif form.annual_revenue_usd is not None and form.annual_revenue_usd > 0:
+            norm_rev_usd = float(form.annual_revenue_usd)
+            native_rev = norm_rev_usd
+            prospect_rev_str = f"${norm_rev_usd:,.0f} USD"
 
-        prospect_rev_str = form.revenue_display_str or f"{sym}{native_rev:,.0f} {curr_code}"
-        prospect_deal_str = form.deal_display_str or f"{sym}{native_deal:,.0f} {curr_code}"
+        # Deal Size / Budget (converted with deal currency, not revenue currency)
+        native_deal = None
+        norm_deal_usd = None
+        prospect_deal_str = "Unknown"
+        if form.deal_entered_value > 0:
+            native_deal, norm_deal_usd = FXEngine.normalize_to_usd(
+                form.deal_entered_value,
+                form.deal_unit,
+                deal_curr_code
+            )
+            prospect_deal_str = form.deal_display_str or f"{deal_sym}{form.deal_entered_value:g} {form.deal_unit} ({deal_curr_code})"
+        elif form.target_deal_size_usd is not None and form.target_deal_size_usd > 0:
+            norm_deal_usd = float(form.target_deal_size_usd)
+            native_deal = norm_deal_usd
+            prospect_deal_str = f"${norm_deal_usd:,.0f} USD"
 
-        # 2. Deterministic Policy & Compliance Check (Short-circuit on Sanctions/Anti-ICP)
+        # Headcount
+        hc_val = form.employee_count if (form.employee_count is not None and form.employee_count > 0) else None
+        hc_str = f"{hc_val:,} employees" if hc_val is not None else "Unknown"
+
+        # -------------------------------------------------------------
+        # 2. Hard Stops: Deterministic Compliance Check (Step 1)
+        # -------------------------------------------------------------
         policy_res: PolicyCheckResult = PolicyEngine.evaluate_compliance(
             location=form.location,
             role_title=form.contact_role_title,
+            branch_locations=form.branch_locations,
             prohibited_countries=cfg.prohibited_countries,
             min_deal_size_usd=cfg.min_deal_size_usd,
-            target_deal_size_usd=norm_deal_usd
+            target_deal_size_usd=norm_deal_usd or 0.0
         )
 
         if policy_res.is_disqualified:
-            empty_pillar = PillarScoreSummary(pillar_name="Disqualified", score=0.0, weight_pct=0.0, field_receipts=[])
+            empty_pillar = PillarScoreSummary(
+                pillar_name="Disqualified",
+                rating=None,
+                score=0.0,
+                weight_pct=0.0,
+                is_known=False,
+                status="UNKNOWN"
+            )
             return StreamlinedScoringResult(
                 company_name=form.company_name or "Unspecified",
                 master_icp_score=0.0,
-                priority_tier="Disqualified: Compliance / Anti-ICP",
+                coverage_pct=0.0,
+                priority_tier="Disqualified: Anti-ICP",
                 is_disqualified=True,
                 disqualification_reason=policy_res.disqualification_reason,
                 urgency_sla="No Outreach (Archived)",
@@ -295,44 +385,48 @@ class GTMScoringEngine:
                 value_wedge="Account is blocked by organizational compliance policy.",
                 outreach_hook="Disqualified prospect.",
                 pillar_firmographics=empty_pillar,
+                pillar_offering=empty_pillar,
                 pillar_authority=empty_pillar,
                 pillar_intent=empty_pillar,
                 pillar_value=empty_pillar,
                 analysis_mode="live",
                 degraded_reasons=[],
                 lead_summary={
-                    "industry": form.industry_sector,
-                    "location": form.location,
-                    "contact_title": form.contact_role_title
+                    "industry": form.industry_sector or "Unknown",
+                    "location": form.location or "Unknown",
+                    "contact_title": form.contact_role_title or "Unknown"
                 }
             )
 
-        # 3. Build enriched payload for Cloudflare Workers AI
+        # -------------------------------------------------------------
+        # 3. AI Worker Query & Fail-Loud Observability
+        # -------------------------------------------------------------
         worker_payload = {
             "company_name": form.company_name,
-            "industry_sector": form.industry_sector,
-            "sub_vertical": form.sub_vertical,
+            "industry_sector": form.industry_sector or None,
+            "sub_vertical": form.sub_vertical or None,
             "annual_revenue_usd": norm_rev_usd,
             "annual_revenue_native": native_rev,
-            "stated_annual_revenue": prospect_rev_str,
+            "stated_annual_revenue": prospect_rev_str if prospect_rev_str != "Unknown" else None,
             "currency_code": curr_code,
             "currency_symbol": sym,
+            "deal_currency_code": deal_curr_code,
             "revenue_unit": form.revenue_unit,
-            "employee_count": form.employee_count,
-            "location": form.location,
+            "employee_count": hc_val,
+            "location": form.location or None,
             "branch_locations": form.branch_locations,
-            "contact_name": form.contact_name,
-            "contact_email": form.contact_email,
-            "contact_role_title": form.contact_role_title,
-            "buying_role": form.buying_role,
-            "buying_intent": form.buying_intent,
-            "timeline": form.timeline,
+            "contact_name": form.contact_name or None,
+            "contact_email": form.contact_email or None,
+            "contact_role_title": form.contact_role_title or None,
+            "buying_role": form.buying_role or None,
+            "buying_intent": form.buying_intent or None,
+            "timeline": form.timeline or None,
+            "offering_interest": form.offering_interest or None,
             "target_deal_size_usd": norm_deal_usd,
             "target_deal_size_native": native_deal,
-            "stated_deal_size": prospect_deal_str,
+            "stated_deal_size": prospect_deal_str if prospect_deal_str != "Unknown" else None,
             "deal_unit": form.deal_unit,
-            "tech_stack_notes": form.tech_stack_notes,
-            "existing_platform": form.existing_platform or "",
+            "existing_platform": form.existing_platform or None,
             "company_standards": {
                 "org_name": cfg.company_name,
                 "target_focus_industries": cfg.target_focus_industries,
@@ -344,261 +438,342 @@ class GTMScoringEngine:
             }
         }
 
-        # 4. Query Cloudflare Workers AI
-        ai_res = cls.query_ai_worker(worker_payload, worker_url=worker_url)
+        if mock_ai_response is not None:
+            ai_res, worker_err = mock_ai_response, None
+        else:
+            ai_res, worker_err = cls.query_ai_worker(
+                payload=worker_payload,
+                worker_url=worker_url,
+                worker_key=worker_key
+            )
 
-        # 5. Fail Loudly if AI is Unreachable (P0-1 Fix: Never silently fabricate fake scores)
-        if not ai_res or "scores" not in ai_res:
-            empty_pillar = PillarScoreSummary(pillar_name="Unavailable", score=0.0, weight_pct=0.0, field_receipts=[])
+        # Fail loudly if AI is unreachable (Bug 5.1, P0-1 fix)
+        if not ai_res or worker_err:
+            empty_pillar = PillarScoreSummary(
+                pillar_name="Unavailable",
+                rating=None,
+                score=0.0,
+                weight_pct=0.0,
+                is_known=False,
+                status="UNKNOWN"
+            )
+            err_msg = worker_err or "AI engine service unreachable or timed out."
             return StreamlinedScoringResult(
                 company_name=form.company_name or "Unspecified",
                 master_icp_score=0.0,
+                coverage_pct=0.0,
                 priority_tier="Evaluation Incomplete: AI Engine Offline",
                 is_disqualified=False,
-                disqualification_reason="AI service is currently unreachable. Scoring was halted to avoid data fabrication.",
+                disqualification_reason=err_msg,
                 urgency_sla="Manual Review Required",
                 recommended_channel="Hold for System Recovery",
                 value_wedge="AI Analysis Engine is offline. Please check connection or retry shortly.",
                 outreach_hook="AI Service Offline - Automated outreach hook generation suspended.",
                 pillar_firmographics=empty_pillar,
+                pillar_offering=empty_pillar,
                 pillar_authority=empty_pillar,
                 pillar_intent=empty_pillar,
                 pillar_value=empty_pillar,
                 analysis_mode="failed",
-                degraded_reasons=["Cloudflare Workers AI engine unreachable or timed out."],
+                degraded_reasons=[err_msg],
                 lead_summary={
-                    "industry": form.industry_sector,
-                    "location": form.location,
-                    "contact_title": form.contact_role_title
+                    "industry": form.industry_sector or "Unknown",
+                    "location": form.location or "Unknown",
+                    "contact_title": form.contact_role_title or "Unknown"
                 }
             )
 
-        # 6. Parse Validated AI Analysis & Evidence
-        raw_ai = ai_res.get("ai_analysis", {}) or {}
-        raw_evidence = ai_res.get("evidence", {}) or {}
-        raw_strategy = ai_res.get("strategy", {}) or {}
-        raw_scores = ai_res.get("scores", {}) or {}
+        # -------------------------------------------------------------
+        # 4. Enforce AI Disqualification (Bug 2.4 fix)
+        # -------------------------------------------------------------
+        if ai_res.get("is_disqualified") or "Disqualified" in str(ai_res.get("priority_tier", "")):
+            disq_reason = ai_res.get("disqualification_reason") or "Disqualified by evaluation policy."
+            empty_pillar = PillarScoreSummary(
+                pillar_name="Disqualified",
+                rating=None,
+                score=0.0,
+                weight_pct=0.0,
+                is_known=False,
+                status="UNKNOWN"
+            )
+            return StreamlinedScoringResult(
+                company_name=form.company_name or "Unspecified",
+                master_icp_score=0.0,
+                coverage_pct=0.0,
+                priority_tier="Disqualified: Anti-ICP",
+                is_disqualified=True,
+                disqualification_reason=disq_reason,
+                urgency_sla="No Outreach (Archived)",
+                recommended_channel="Do Not Contact",
+                value_wedge="Disqualified prospect.",
+                outreach_hook="Do Not Contact.",
+                pillar_firmographics=empty_pillar,
+                pillar_offering=empty_pillar,
+                pillar_authority=empty_pillar,
+                pillar_intent=empty_pillar,
+                pillar_value=empty_pillar,
+                analysis_mode="live",
+                degraded_reasons=[],
+                lead_summary={
+                    "industry": form.industry_sector or "Unknown",
+                    "location": form.location or "Unknown",
+                    "contact_title": form.contact_role_title or "Unknown"
+                }
+            )
 
-        # AI Role & Authority
+        # -------------------------------------------------------------
+        # 5. Extract Evidence & Ratings 1–5 (Section 6.3)
+        # -------------------------------------------------------------
+        raw_evidence = ai_res.get("evidence", {}) or {}
+        raw_ai = ai_res.get("ai_analysis", {}) or {}
+        raw_strategy = ai_res.get("strategy", {}) or {}
+        model_used = str(ai_res.get("model_used", ai_res.get("model", "")))
+
+        def extract_rating(p_data: Dict[str, Any], has_data: bool) -> Tuple[Optional[int], str, str]:
+            """Extracts rating (1 to 5) or None for Unknown."""
+            if not has_data or not p_data:
+                return None, "UNKNOWN", "No verified data provided."
+            status = str(p_data.get("status", "")).upper()
+            if status == "UNKNOWN":
+                return None, "UNKNOWN", str(p_data.get("rationale", "No verified data provided."))
+
+            # 1. Direct rating 1-5
+            if "rating" in p_data and p_data["rating"] is not None:
+                try:
+                    r = int(p_data["rating"])
+                    if 1 <= r <= 5:
+                        return r, ("VERIFIED" if status == "VERIFIED" else "INFERRED"), str(p_data.get("rationale", ""))
+                except (ValueError, TypeError):
+                    pass
+
+            # 2. Score mapping (0-100 -> 1-5)
+            if "score" in p_data and p_data["score"] is not None:
+                try:
+                    s = float(p_data["score"])
+                    if s > 0:
+                        r = max(1, min(5, int(round(s / 20.0))))
+                        return r, ("VERIFIED" if status == "VERIFIED" else "INFERRED"), str(p_data.get("rationale", ""))
+                except (ValueError, TypeError):
+                    pass
+
+            return None, "UNKNOWN", str(p_data.get("rationale", "No verified data provided."))
+
+        # Pillar 1: Firmographic Fit (35%)
+        has_firmo_data = bool(form.industry_sector or form.company_name or norm_rev_usd or hc_val or form.location)
+        ev_firmo = raw_evidence.get("firmographic", {})
+        firmo_rating, firmo_status, firmo_rationale = extract_rating(ev_firmo, has_firmo_data)
+        firmo_pts = firmo_rating or 0
+
+        # Sub-AI: Role, Niche, Intent, Offering/Tech, Footprint
         r_role = raw_ai.get("role", {})
-        sen_level = r_role.get("seniority_level", "Individual Contributor (+1)")
-        sen_pts = 5 if "+5" in sen_level else (3 if "+3" in sen_level else (-5 if "-5" in sen_level else 1))
         ai_role = RoleAIAnalysis(
             raw_title=form.contact_role_title,
-            seniority_level=sen_level,
-            seniority_points=sen_pts,
+            seniority_level=r_role.get("seniority_level", "Individual Contributor (+1)"),
+            seniority_points=5 if "+5" in r_role.get("seniority_level", "") else (3 if "+3" in r_role.get("seniority_level", "") else 1),
             persona_type=r_role.get("persona_type", "Technical Champion"),
             department=r_role.get("department", "Operations"),
-            confidence=float(r_role.get("confidence", 0.95)),
-            rationale=r_role.get("rationale", f"Authority evaluation for {form.contact_role_title or 'contact'}."),
-            is_disqualifier="-5" in sen_level
+            confidence=float(r_role.get("confidence", 0.90)),
+            rationale=r_role.get("rationale", "Role authority analysis."),
+            is_disqualifier="-5" in r_role.get("seniority_level", "")
         )
 
-        # AI Niche & Market Complexity
         r_niche = raw_ai.get("niche", {})
-        mkt_comp = r_niche.get("market_complexity", "Mid-Market Specialized")
-        fit_pts = 5 if "High-Margin" in mkt_comp else (3 if "Mid-Market" in mkt_comp else 1)
         ai_niche = NicheAIAnalysis(
             raw_niche=form.sub_vertical,
             suggested_sector=form.industry_sector,
-            market_complexity=mkt_comp,
-            fit_points=fit_pts,
-            rationale=r_niche.get("rationale", f"Market complexity analysis for {form.sub_vertical or form.industry_sector}.")
+            market_complexity=r_niche.get("market_complexity", "Specialized Enterprise"),
+            fit_points=3,
+            rationale=r_niche.get("rationale", "Market complexity analysis.")
         )
 
-        # AI Intent & Urgency
         r_readiness = raw_ai.get("readiness", {})
-        urg_tier = r_readiness.get("urgency_tier", "Active Evaluation (+3)")
-        intent_pts = 5 if "+5" in urg_tier else (3 if "+3" in urg_tier else 1)
         ai_intent = IntentAIAnalysis(
             raw_intent=form.buying_intent,
-            urgency_tier=urg_tier,
-            intent_points=intent_pts,
-            timeline_detected=form.timeline or r_readiness.get("timeline_detected", "< 60 Days"),
-            extracted_signals=r_readiness.get("catalysts", []),
-            rationale=r_readiness.get("rationale", "Commercial intent velocity analysis.")
+            urgency_tier=r_readiness.get("urgency_tier", "Active Evaluation (+3)"),
+            intent_points=5 if "+5" in r_readiness.get("urgency_tier", "") else 3,
+            timeline_detected=r_readiness.get("timeline_detected") or (form.timeline or None),
+            rationale=r_readiness.get("rationale", "Intent and timeline analysis.")
         )
 
-        # AI Tech Stack Ecosystem
-        r_tech = raw_ai.get("tech", {})
-        eco_fit = r_tech.get("ecosystem_fit", "Standard Modern Cloud (+3)")
-        tech_pts = 5 if "+5" in eco_fit else (3 if "+3" in eco_fit else (-3 if "-3" in eco_fit else -1))
-        ai_tech = TechStackAIAnalysis(
-            raw_stack=form.tech_stack_notes or "",
-            modern_tools=r_tech.get("modern_tools", []),
-            legacy_blockers=r_tech.get("legacy_blockers", []),
-            ecosystem_fit=eco_fit,
-            tech_points=tech_pts,
-            rationale=r_tech.get("rationale", "Ecosystem integration compatibility analysis.")
-        )
-
-        # AI Global Footprint
         r_footprint = raw_ai.get("footprint", {})
-        branches = [b.strip() for b in form.branch_locations if b.strip()]
-        geo_reach = r_footprint.get("geographic_reach") or (
-            "Global Multi-Region Enterprise" if len(branches) >= 2 else (
-                "Cross-Border Multi-Branch" if len(branches) == 1 else "Single-Market Hub"
-            )
-        )
         ai_footprint = FootprintAIAnalysis(
-            headquarters=form.location or "Primary Region",
-            branch_locations=branches,
-            total_locations=max(1, len(branches) + (1 if form.location else 0)),
-            geographic_reach=geo_reach,
-            tier1_matches=r_footprint.get("tier1_matches", []),
-            prohibited_matches=r_footprint.get("prohibited_matches", []),
-            footprint_points=5 if "Global" in geo_reach else 3,
+            headquarters=form.location,
+            branch_locations=form.branch_locations,
+            total_locations=1 + len(form.branch_locations),
+            geographic_reach=r_footprint.get("geographic_reach", "Multi-Region Enterprise"),
+            footprint_points=3,
             rationale=r_footprint.get("rationale", "Geographic footprint analysis.")
         )
 
-        # -------------------------------------------------------------
-        # 4-Pillar Scores (Evidence-based ingestion)
-        # -------------------------------------------------------------
-        firmo_score = float(raw_evidence.get("firmographic", {}).get("score", 70.0))
-        techno_score = float(raw_evidence.get("technographic", {}).get("score", 65.0))
-        qual_score = float(raw_evidence.get("qualifying", {}).get("score", 70.0))
-        readiness_score = float(raw_evidence.get("readiness", {}).get("score", 70.0))
-
-        firmo_pts = max(1, min(5, int(round(firmo_score / 20.0))))
-        techno_pts = max(1, min(5, int(round(techno_score / 20.0))))
-
+        # Pillar 1 receipts
         pillar_firmo = PillarScoreSummary(
-            pillar_name="Firmographics Scale",
-            score=firmo_score,
+            pillar_name="Firmographic Fit",
+            rating=firmo_rating,
+            score=float(firmo_rating * 20) if firmo_rating is not None else None,
             weight_pct=cfg.weight_firmographics,
+            is_known=firmo_rating is not None,
+            status=firmo_status,
             field_receipts=[
-                FieldScoreReceipt(field_name="Company Revenue", pillar="Firmographics", raw_value=prospect_rev_str, gtm_points=firmo_pts, rationale=f"ARR: {prospect_rev_str} (~${norm_rev_usd:,.0f} USD)"),
-                FieldScoreReceipt(field_name="Employee Headcount", pillar="Firmographics", raw_value=f"{form.employee_count:,} employees", gtm_points=firmo_pts, rationale=f"Headcount: {form.employee_count:,}"),
-                FieldScoreReceipt(field_name="Industry & AI Niche", pillar="Firmographics", raw_value=f"{form.industry_sector} • {form.sub_vertical or 'General'}", gtm_points=ai_niche.fit_points, rationale=ai_niche.rationale),
-                FieldScoreReceipt(field_name="Global Footprint (AI)", pillar="Firmographics", raw_value=geo_reach, gtm_points=ai_footprint.footprint_points, rationale=ai_footprint.rationale)
+                FieldScoreReceipt(field_name="Company Revenue", pillar="Firmographics", raw_value=prospect_rev_str, gtm_points=firmo_pts, rationale=f"Stated Revenue: {prospect_rev_str}"),
+                FieldScoreReceipt(field_name="Employee Headcount", pillar="Firmographics", raw_value=hc_str, gtm_points=firmo_pts, rationale=f"Headcount: {hc_str}"),
+                FieldScoreReceipt(field_name="Industry & Niche", pillar="Firmographics", raw_value=f"{form.industry_sector or 'Unknown'} • {form.sub_vertical or 'General'}", gtm_points=firmo_pts, rationale=firmo_rationale),
+                FieldScoreReceipt(field_name="Geographic Footprint", pillar="Firmographics", raw_value=ai_footprint.geographic_reach, gtm_points=firmo_pts, rationale=ai_footprint.rationale)
             ]
         )
 
-        auth_val = f"{form.contact_role_title or 'Unspecified'} • {form.buying_role or ai_role.persona_type}" if form.buying_role else f"{form.contact_role_title or 'Unspecified'} ({ai_role.persona_type})"
-        pillar_auth = PillarScoreSummary(
-            pillar_name="Decision Authority",
-            score=qual_score,
-            weight_pct=cfg.weight_authority,
-            field_receipts=[
-                FieldScoreReceipt(field_name="Role Title & Buying Persona", pillar="Decision Authority", raw_value=auth_val, gtm_points=ai_role.seniority_points, rationale=ai_role.rationale)
-            ]
-        )
-
-        intent_val = f"{form.buying_intent or 'Active Evaluation'} (Timeline: {form.timeline or ai_intent.timeline_detected})" if form.timeline else (form.buying_intent or "Standard")
-        pillar_intent = PillarScoreSummary(
-            pillar_name="Buying Intent & Velocity",
-            score=readiness_score,
-            weight_pct=cfg.weight_intent,
-            field_receipts=[
-                FieldScoreReceipt(field_name="Buying Intent & Timeline", pillar="Buying Intent", raw_value=intent_val, gtm_points=ai_intent.intent_points, rationale=ai_intent.rationale)
-            ]
-        )
+        # Pillar 2: Offering Fit (25%) - Replaces Tech Stack (Section 4.1, 6.2)
+        has_offering_data = bool(form.sub_vertical or form.offering_interest or form.industry_sector or form.buying_intent)
+        ev_offering = raw_evidence.get("offering") or raw_evidence.get("technographic", {})
+        offering_rating, offering_status, offering_rationale = extract_rating(ev_offering, has_offering_data)
+        offering_pts = offering_rating or 0
 
         platform_raw = (form.uses_existing_platform or form.existing_platform or "").strip()
-        if platform_raw:
-            p_lower = platform_raw.lower()
-            if p_lower in ["false", "no", "0", "none"]:
-                platform_desc = "No Incumbent (Greenfield Lead)"
-            elif p_lower in ["true", "yes", "1"]:
-                platform_desc = "Has Existing Incumbent"
-            else:
-                platform_desc = f"Incumbent: {platform_raw}"
-            tech_receipt_val = f"{form.tech_stack_notes} • {platform_desc}" if form.tech_stack_notes else platform_desc
-        else:
-            tech_receipt_val = form.tech_stack_notes or "Cloud Baseline"
+        incumbent_str = platform_raw if platform_raw else "None Stated"
 
-        pillar_val = PillarScoreSummary(
-            pillar_name="Technographics & Ecosystem Fit",
-            score=techno_score,
-            weight_pct=cfg.weight_value,
+        pillar_offering = PillarScoreSummary(
+            pillar_name="Offering Fit",
+            rating=offering_rating,
+            score=float(offering_rating * 20) if offering_rating is not None else None,
+            weight_pct=cfg.weight_offering,
+            is_known=offering_rating is not None,
+            status=offering_status,
             field_receipts=[
-                FieldScoreReceipt(field_name="Budget Range (ACV)", pillar="Commercial Scale", raw_value=prospect_deal_str, gtm_points=techno_pts, rationale=f"Budget: {prospect_deal_str} (~${norm_deal_usd:,.0f} USD)"),
-                FieldScoreReceipt(field_name="Tech Stack Ecosystem (AI)", pillar="Technographics", raw_value=tech_receipt_val, gtm_points=ai_tech.tech_points, rationale=ai_tech.rationale)
+                FieldScoreReceipt(field_name="Blackridge Offering Alignment", pillar="Offering Fit", raw_value=form.offering_interest or form.sub_vertical or "Consulting & Research", gtm_points=offering_pts, rationale=offering_rationale),
+                FieldScoreReceipt(field_name="Existing Platform / Incumbent", pillar="Offering Fit", raw_value=incumbent_str, gtm_points=offering_pts, rationale=f"Incumbent: {incumbent_str}")
             ]
         )
 
-        # Master Score & Priority Tier Calculation
-        raw_composite = (
-            (pillar_firmo.score * cfg.weight_firmographics)
-            + (pillar_auth.score * cfg.weight_authority)
-            + (pillar_intent.score * cfg.weight_intent)
-            + (pillar_val.score * cfg.weight_value)
-        )
-        master_score = round(raw_composite, 1)
+        # Pillar 3: Buyer Authority (25%) (Section 6.2)
+        has_auth_data = bool(form.contact_role_title or form.buying_role)
+        ev_auth = raw_evidence.get("authority") or raw_evidence.get("qualifying", {})
+        auth_rating, auth_status, auth_rationale = extract_rating(ev_auth, has_auth_data)
+        auth_pts = auth_rating or 0
 
-        priority_tier = raw_scores.get("priority_tier") or (
-            "Tier A1: Strategic Inbound" if master_score >= cfg.tier_a1_threshold else (
-                "Tier A2: High Priority Outbound" if master_score >= cfg.tier_a2_threshold else (
-                    "Tier B1: Mid-Market Fast Track" if master_score >= cfg.tier_b1_threshold else "Tier C: Low Priority / Nurture"
-                )
-            )
+        auth_val = f"{form.contact_role_title or 'Unspecified'} ({form.buying_role or ai_role.persona_type})"
+        pillar_auth = PillarScoreSummary(
+            pillar_name="Buyer Authority",
+            rating=auth_rating,
+            score=float(auth_rating * 20) if auth_rating is not None else None,
+            weight_pct=cfg.weight_authority,
+            is_known=auth_rating is not None,
+            status=auth_status,
+            field_receipts=[
+                FieldScoreReceipt(field_name="Role Title & Buying Persona", pillar="Buyer Authority", raw_value=auth_val, gtm_points=auth_pts, rationale=auth_rationale or ai_role.rationale)
+            ]
         )
 
-        sub_niche = form.sub_vertical or form.industry_sector
+        # Pillar 4: Intent & Velocity (15%) (Section 6.2)
+        has_intent_data = bool(form.buying_intent or form.timeline)
+        ev_intent = raw_evidence.get("intent") or raw_evidence.get("readiness", {})
+        intent_rating, intent_status, intent_rationale = extract_rating(ev_intent, has_intent_data)
+        intent_pts = intent_rating or 0
+
+        intent_val = f"{form.buying_intent or 'Active Evaluation'} (Timeline: {form.timeline or ai_intent.timeline_detected or 'Unspecified'})"
+        pillar_intent = PillarScoreSummary(
+            pillar_name="Intent & Velocity",
+            rating=intent_rating,
+            score=float(intent_rating * 20) if intent_rating is not None else None,
+            weight_pct=cfg.weight_intent,
+            is_known=intent_rating is not None,
+            status=intent_status,
+            field_receipts=[
+                FieldScoreReceipt(field_name="Buying Intent & Timeline", pillar="Intent", raw_value=intent_val, gtm_points=intent_pts, rationale=intent_rationale or ai_intent.rationale)
+            ]
+        )
+
+        # -------------------------------------------------------------
+        # 6. Authoritative Scoring & Tiering in Python (Section 6.4, 6.5)
+        # -------------------------------------------------------------
+        all_pillars = [
+            (cfg.weight_firmographics, pillar_firmo),
+            (cfg.weight_offering, pillar_offering),
+            (cfg.weight_authority, pillar_auth),
+            (cfg.weight_intent, pillar_intent)
+        ]
+        known_pillars = [(w, p) for w, p in all_pillars if p.is_known and p.rating is not None]
+
+        if not known_pillars:
+            master_score = 0.0
+            coverage_pct = 0.0
+            priority_tier = "Tier: Needs review"
+        else:
+            sum_known_weights = sum(w for w, p in known_pillars)
+            sum_weighted_ratings = sum(w * p.rating for w, p in known_pillars)
+            # Section 6.4 formula: (sum of weight * rating) / (sum of known weights) * 20
+            master_score = round((sum_weighted_ratings / sum_known_weights) * 20.0, 1)
+            coverage_pct = round(sum_known_weights * 100.0, 1)
+
+            # Section 6.5: Needs review wins over score if coverage < 60% or buyer authority unknown
+            if coverage_pct < cfg.min_coverage_threshold or not pillar_auth.is_known:
+                priority_tier = "Tier: Needs review"
+            elif master_score >= cfg.tier_a_threshold:
+                priority_tier = "Tier A: Contact First"
+            elif master_score >= cfg.tier_b_threshold:
+                priority_tier = "Tier B: Follow Up"
+            elif master_score >= cfg.tier_c_threshold:
+                priority_tier = "Tier C: Nurture"
+            else:
+                priority_tier = "Tier D: Low Priority"
+
+        # SLA and Next Actions
+        if priority_tier == "Tier: Needs review":
+            urgency_sla = "Manual Sales Review Required"
+            recommended_channel = "Human Qualification Call / LinkedIn Verification"
+        elif "Tier A" in priority_tier:
+            urgency_sla = "< 2 Hours (Executive Callback)"
+            recommended_channel = "Direct Phone & Bespoke Executive Email"
+        elif "Tier B" in priority_tier:
+            urgency_sla = "< 24 Hours (Dedicated SDR Sequence)"
+            recommended_channel = "Multi-Touch Email & LinkedIn InMail"
+        elif "Tier C" in priority_tier:
+            urgency_sla = "Within 48 Hours"
+            recommended_channel = "Automated Marketing Nurture & Educational Sequences"
+        else:
+            urgency_sla = "Automated Marketing Nurture"
+            recommended_channel = "Marketing Newsletter & Long-Tail Documentation"
+
+        sub_niche = form.sub_vertical or form.industry_sector or "Market Intelligence"
         comp = form.company_name or "your team"
         contact = form.contact_name or "there"
 
-        urgency_sla = raw_strategy.get("urgency_sla") or "< 24 Hours (Dedicated SDR Sequence)"
-        recommended_channel = raw_strategy.get("recommended_channel") or "Multi-Touch Email & LinkedIn InMail"
         value_wedge = raw_strategy.get("value_wedge") or f"Accelerate strategic market intelligence for {sub_niche} initiatives at {comp}."
         outreach_hook = raw_strategy.get("outreach_hook") or f"Hi {contact}, noticed your team's focus on {sub_niche} at {comp}—wanted to share how {cfg.company_name} supports similar enterprise teams."
 
-        discovery_questions = ai_res.get("discovery_questions", [])
-        key_strengths = ai_res.get("key_strengths", [])
-        key_risks = ai_res.get("key_risks", []) + policy_res.warnings
-
-        # 4-Pillar Scoring Audit Trail & Decision Tracker
-        ev_firmo = raw_evidence.get("firmographic", {})
-        ev_techno = raw_evidence.get("technographic", {})
-        ev_qual = raw_evidence.get("qualifying", {})
-        ev_readiness = raw_evidence.get("readiness", {})
-
-        tracker = [
-            ScoringTrackerItem(
-                pillar_name="1. Firmographics Scale",
-                allotted_score=firmo_score,
-                weight_pct=round(cfg.weight_firmographics * 100, 1),
-                points_contributed=round(firmo_score * cfg.weight_firmographics, 2),
-                basis_criterion=f"Annual ARR ({prospect_rev_str} / ~${norm_rev_usd:,.0f} USD), Headcount ({form.employee_count:,}), Niche Complexity ({ai_niche.market_complexity}), and Branch Footprint ({geo_reach}).",
-                verified_signals=ev_firmo.get("evidence_points", [f"ARR: {prospect_rev_str}", f"Headcount: {form.employee_count:,} FTEs", f"Footprint: {geo_reach}"]),
-                deduction_gaps=ev_firmo.get("missing_points", []),
-                decision_rationale=ev_firmo.get("rationale", "") or f"Firmographic scale evaluation for {form.company_name or 'account'}."
-            ),
-            ScoringTrackerItem(
-                pillar_name="2. Technographics & Ecosystem",
-                allotted_score=techno_score,
-                weight_pct=round(cfg.weight_value * 100, 1),
-                points_contributed=round(techno_score * cfg.weight_value, 2),
-                basis_criterion=f"Cloud ecosystem synergy ({ai_tech.ecosystem_fit}), modern stack tools, and absence of blocker legacy monoliths.",
-                verified_signals=ev_techno.get("evidence_points", [f"Modern Stack Tools: {', '.join(ai_tech.modern_tools) if ai_tech.modern_tools else 'Cloud Baseline'}"]),
-                deduction_gaps=ev_techno.get("missing_points", []),
-                decision_rationale=ev_techno.get("rationale", "") or ai_tech.rationale
-            ),
-            ScoringTrackerItem(
-                pillar_name="3. Decision Authority",
-                allotted_score=qual_score,
-                weight_pct=round(cfg.weight_authority * 100, 1),
-                points_contributed=round(qual_score * cfg.weight_authority, 2),
-                basis_criterion=f"Organizational seniority ({ai_role.seniority_level}), Buyer Persona ({ai_role.persona_type}), and budget ownership in {ai_role.department}.",
-                verified_signals=ev_qual.get("evidence_points", [f"Contact: {form.contact_name or 'Unspecified'} ({ai_role.seniority_level})", f"Persona Archetype: {ai_role.persona_type}"]),
-                deduction_gaps=ev_qual.get("missing_points", []),
-                decision_rationale=ev_qual.get("rationale", "") or ai_role.rationale
-            ),
-            ScoringTrackerItem(
-                pillar_name="4. Readiness to Buy",
-                allotted_score=readiness_score,
-                weight_pct=round(cfg.weight_intent * 100, 1),
-                points_contributed=round(readiness_score * cfg.weight_intent, 2),
-                basis_criterion=f"Commercial intent velocity ({ai_intent.urgency_tier}), stated buying horizon ({ai_intent.timeline_detected or '< 60 Days'}), and project triggers.",
-                verified_signals=ev_readiness.get("evidence_points", [f"Buying Velocity: {ai_intent.urgency_tier}", f"Timeline: {ai_intent.timeline_detected or 'Immediate'}"]),
-                deduction_gaps=ev_readiness.get("missing_points", []),
-                decision_rationale=ev_readiness.get("rationale", "") or ai_intent.rationale
+        # Audit Tracker
+        tracker = []
+        for w, p in all_pillars:
+            tracker.append(
+                ScoringTrackerItem(
+                    pillar_name=p.pillar_name,
+                    allotted_score=float(p.score) if p.score is not None else 0.0,
+                    weight_pct=p.weight_pct,
+                    points_contributed=round((p.rating * w * 20.0), 1) if p.is_known and p.rating else 0.0,
+                    basis_criterion=f"{p.status} (Rating: {p.rating}/5)" if p.is_known else "UNKNOWN (No Data)",
+                    verified_signals=[r.field_name for r in p.field_receipts if r.gtm_points > 0],
+                    deduction_gaps=[r.field_name for r in p.field_receipts if r.gtm_points == 0],
+                    decision_rationale=p.field_receipts[0].rationale if p.field_receipts else "Pillar evaluation."
+                )
             )
+
+        discovery_questions = raw_strategy.get("discovery_questions") or [
+            f"What specific intelligence gaps is {comp} aiming to resolve in {sub_niche}?",
+            f"What is your target decision timeline for procurement?",
+            f"Are you seeking custom project tracking or broad syndicated sector coverage?"
+        ]
+        key_strengths = raw_strategy.get("key_strengths") or [
+            f"Active interest in {sub_niche}",
+            f"Decision role: {form.contact_role_title or 'Enterprise Contact'}",
+            f"Primary market: {form.location or 'Global'}"
+        ]
+        key_risks = raw_strategy.get("key_risks") or [
+            "Timeline verification needed during discovery.",
+            "Confirm budget availability for custom consulting scope."
         ]
 
         return StreamlinedScoringResult(
-            company_name=form.company_name,
+            company_name=form.company_name or "Unspecified",
             master_icp_score=master_score,
+            coverage_pct=coverage_pct,
             priority_tier=priority_tier,
             is_disqualified=False,
             disqualification_reason="",
@@ -607,30 +782,32 @@ class GTMScoringEngine:
             value_wedge=value_wedge,
             outreach_hook=outreach_hook,
             pillar_firmographics=pillar_firmo,
+            pillar_offering=pillar_offering,
             pillar_authority=pillar_auth,
             pillar_intent=pillar_intent,
-            pillar_value=pillar_val,
+            pillar_value=pillar_offering,
             ai_role=ai_role,
             ai_niche=ai_niche,
             ai_intent=ai_intent,
-            ai_tech=ai_tech,
             ai_footprint=ai_footprint,
             scoring_tracker=tracker,
             lead_summary={
-                "industry": form.industry_sector,
-                "sub_vertical": form.sub_vertical,
-                "location": form.location,
-                "branches": branches,
-                "contact_title": form.contact_role_title,
-                "buying_role": form.buying_role,
-                "buying_intent": form.buying_intent,
-                "timeline": form.timeline,
-                "tech_stack": form.tech_stack_notes,
-                "existing_platform": form.existing_platform or ""
+                "industry": form.industry_sector or "Unknown",
+                "sub_vertical": form.sub_vertical or "Unknown",
+                "location": form.location or "Unknown",
+                "branches": form.branch_locations,
+                "contact_title": form.contact_role_title or "Unknown",
+                "buying_role": form.buying_role or "Unknown",
+                "buying_intent": form.buying_intent or "Unknown",
+                "timeline": form.timeline or "Unknown",
+                "stated_revenue": prospect_rev_str,
+                "stated_deal": prospect_deal_str,
+                "headcount": hc_str
             },
             discovery_questions=discovery_questions,
             key_strengths=key_strengths,
             key_risks=key_risks,
             analysis_mode="live",
-            degraded_reasons=[]
+            degraded_reasons=[],
+            model_used=model_used
         )
