@@ -61,97 +61,6 @@ function cleanStr(v) {
   return s;
 }
 
-const FREE_EMAIL_DOMAINS = new Set([
-  "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com",
-  "mail.com", "protonmail.com", "zoho.com", "aol.com", "yandex.com"
-]);
-
-function extractTargetDomain(payload) {
-  if (!payload || typeof payload !== "object") return "";
-  if (payload.domain && typeof payload.domain === "string") {
-    const d = payload.domain.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0];
-    if (d.includes(".") && !FREE_EMAIL_DOMAINS.has(d)) return d;
-  }
-  if (payload.contact_email && typeof payload.contact_email === "string") {
-    const parts = payload.contact_email.split("@");
-    if (parts.length === 2) {
-      const d = parts[1].trim().toLowerCase();
-      if (d.includes(".") && !FREE_EMAIL_DOMAINS.has(d)) return d;
-    }
-  }
-  return "";
-}
-
-async function searchWebIntelligence(env, payload = null) {
-  let webData = "";
-  const domain = extractTargetDomain(payload);
-  const company = cleanStr(payload?.company_name || payload?.company || "");
-  const querySubject = company || domain;
-
-  if (!querySubject) return "";
-
-  // Strictly use server environment secrets only (Bug 4.3 fix: never accept API keys from user requests)
-  const serpApiKey = env?.SERPAPI_API_KEY || env?.SERP_API_KEY;
-  if (serpApiKey) {
-    try {
-      const serpUrl = "https://serpapi.com/search.json?q=" + encodeURIComponent(querySubject + " company overview headcount revenue industry branches locations") + "&api_key=" + serpApiKey + "&num=3";
-      const serpRes = await fetch(serpUrl, { cf: { cacheTtl: 86400 } });
-      if (serpRes.ok) {
-        const serpData = await serpRes.json();
-        const organic = serpData.organic_results || [];
-        const snippets = organic.slice(0, 3).map((r) => "• " + r.title + ": " + (r.snippet || "")).join("\n");
-        if (snippets) {
-          webData += "\n[SerpAPI Live Web Search for \"" + querySubject + "\"]:\n" + snippets;
-        }
-      }
-    } catch (serpErr) {
-      console.warn("SerpAPI search warning:", serpErr);
-    }
-  }
-
-  const serperKey = env?.SERPER_API_KEY;
-  if (!webData && serperKey) {
-    try {
-      const serperRes = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q: querySubject + " company overview headcount revenue industry branches locations", num: 3 }),
-        cf: { cacheTtl: 86400 }
-      });
-      if (serperRes.ok) {
-        const serperData = await serperRes.json();
-        const organic = serperData.organic || [];
-        const snippets = organic.slice(0, 3).map((r) => "• " + r.title + ": " + (r.snippet || "")).join("\n");
-        if (snippets) {
-          webData += "\n[Serper Live Web Search for \"" + querySubject + "\"]:\n" + snippets;
-        }
-      }
-    } catch (serperErr) {
-      console.warn("Serper search warning:", serperErr); // Bug 5.5 fix: was serpErr
-    }
-  }
-
-  if (!webData && domain) {
-    try {
-      const siteRes = await fetch("https://" + domain, {
-        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
-        cf: { cacheTtl: 86400 }
-      });
-      if (siteRes.ok) {
-        const html = await siteRes.text();
-        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-        const metaDescMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
-        const title = titleMatch ? titleMatch[1].trim() : "";
-        const desc = metaDescMatch ? metaDescMatch[1].trim() : "";
-        if (title || desc) {
-          webData += "\n[Direct Live Website Meta for " + domain + "]:\nTitle: " + title + "\nDescription: " + desc;
-        }
-      }
-    } catch (siteErr) {}
-  }
-  return webData;
-}
-
 export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
@@ -324,10 +233,7 @@ export default {
         "  \"key_risks\": [\"string\"]\n" +
         "}\nRespond ONLY with valid JSON.";
 
-      const liveWebContext = await searchWebIntelligence(env, payload);
-      const enrichedProspect = liveWebContext ? prospectInput + "\n\n--- LIVE WEB & SEARCH INTELLIGENCE ---" + liveWebContext + "\n--------------------------------------" : prospectInput;
-
-      let userPromptContent = "Prospect Text / Payload to Evaluate:\n" + enrichedProspect;
+      let userPromptContent = "Prospect Text / Payload to Evaluate:\n" + prospectInput;
       if (dealSize !== null && !isNaN(dealSize) && dealSize > 0) {
         userPromptContent += "\nTarget Contract Size: $" + dealSize.toLocaleString() + " USD";
       }
