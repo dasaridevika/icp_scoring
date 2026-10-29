@@ -754,7 +754,7 @@ if calc_btn:
         if not worker_url and hasattr(st, "secrets"):
             worker_url = st.secrets.get("ICP_WORKER_URL") or st.secrets.get("WORKER_URL")
         if not worker_url:
-            worker_url = os.environ.get("ICP_WORKER_URL", "")
+            worker_url = os.environ.get("ICP_WORKER_URL", "https://icp-revenue-intelligence-worker.devika-worker.workers.dev")
 
         worker_key = st.session_state.get("custom_worker_key")
         if not worker_key and hasattr(st, "secrets"):

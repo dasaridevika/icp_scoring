@@ -31,8 +31,11 @@ except (ImportError, ModuleNotFoundError):
 from engine.fx import FXEngine
 from engine.rules import PolicyEngine, PolicyCheckResult
 
-# Read worker URL and Secret Key strictly from environment with no default personal account
-DEFAULT_WORKER_URL = os.environ.get("ICP_WORKER_URL", "")
+# Read worker URL and Secret Key from environment, with default fallback to active worker
+DEFAULT_WORKER_URL = os.environ.get(
+    "ICP_WORKER_URL",
+    "https://icp-revenue-intelligence-worker.devika-worker.workers.dev"
+)
 DEFAULT_WORKER_KEY = os.environ.get("ICP_WORKER_KEY", os.environ.get("ICP_AUTH_KEY", ""))
 
 
