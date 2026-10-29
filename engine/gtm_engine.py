@@ -391,7 +391,25 @@ class GTMScoringEngine:
         # -------------------------------------------------------------
         # 3. AI Worker Query & Fail-Loud Observability
         # -------------------------------------------------------------
+        summary_lines = []
+        if form.company_name: summary_lines.append(f"Company: {form.company_name}")
+        if form.industry_sector: summary_lines.append(f"Industry: {form.industry_sector}")
+        if form.location: summary_lines.append(f"Headquarters: {form.location}")
+        if hc_val: summary_lines.append(f"Headcount: {hc_val}")
+        if prospect_rev_str != "Unknown": summary_lines.append(f"Annual Revenue: {prospect_rev_str}")
+        if form.contact_name: summary_lines.append(f"Contact Name: {form.contact_name}")
+        if form.contact_role_title: summary_lines.append(f"Role Title: {form.contact_role_title}")
+        if form.buying_role: summary_lines.append(f"Buying Role: {form.buying_role}")
+        if form.timeline: summary_lines.append(f"Timeline: {form.timeline}")
+        if form.buying_intent: summary_lines.append(f"Buying Intent: {form.buying_intent}")
+        if form.existing_platform: summary_lines.append(f"Uses Existing Platform: {form.existing_platform}")
+        if prospect_deal_str != "Unknown": summary_lines.append(f"Budget / Deal Size: {prospect_deal_str}")
+
+        lead_text_summary = "\n".join(summary_lines)
+
         worker_payload = {
+            "text": lead_text_summary,
+            "prospect_text": lead_text_summary,
             "company_name": form.company_name,
             "industry_sector": form.industry_sector or None,
             "sub_vertical": form.sub_vertical or None,
@@ -615,6 +633,15 @@ class GTMScoringEngine:
         has_offering_data = bool(form.sub_vertical or form.offering_interest or form.industry_sector or form.buying_intent)
         ev_offering = raw_evidence.get("offering") or raw_evidence.get("technographic", {})
         offering_rating, offering_status, offering_rationale = extract_rating(ev_offering, has_offering_data)
+
+        # Deterministic Section 6 Rubric Fallback if AI marked UNKNOWN despite verified intent / offerings
+        if offering_rating is None and has_offering_data:
+            intent_l = (form.buying_intent or "").lower()
+            if any(kw in intent_l for kw in ["report", "rfp", "procuring", "consulting", "analysis", "market share", "modernisation", "modernization", "solution", "software", "service", "platform"]):
+                offering_rating = 4 if ("rfp" in intent_l or "procuring" in intent_l) else 3
+                offering_status = "INFERRED"
+                offering_rationale = f"Offering alignment derived from verified commercial intent: {form.buying_intent[:90]}"
+
         offering_pts = offering_rating or 0
 
         platform_raw = (form.uses_existing_platform or form.existing_platform or "").strip()
@@ -637,6 +664,28 @@ class GTMScoringEngine:
         has_auth_data = bool(form.contact_role_title or form.buying_role)
         ev_auth = raw_evidence.get("authority") or raw_evidence.get("qualifying", {})
         auth_rating, auth_status, auth_rationale = extract_rating(ev_auth, has_auth_data)
+
+        # Deterministic Section 6 Rubric Fallback if AI marked UNKNOWN despite explicit role title
+        if auth_rating is None and has_auth_data:
+            role_l = (form.contact_role_title or "").lower()
+            brole_l = (form.buying_role or "").lower()
+            if any(t in role_l for t in ["vp", "vice president", "chief", "cxo", "cro", "cfo", "cto", "ceo", "president", "head of", "partner", "general manager"]) or "economic buyer" in brole_l:
+                auth_rating = 5
+                auth_status = "VERIFIED"
+                auth_rationale = f"Executive decision authority verified: {form.contact_role_title or form.buying_role}"
+            elif any(t in role_l for t in ["director", "senior director", "managing director"]):
+                auth_rating = 4
+                auth_status = "VERIFIED"
+                auth_rationale = f"Director-level authority verified: {form.contact_role_title}"
+            elif any(t in role_l for t in ["manager", "lead", "principal", "supervisor"]):
+                auth_rating = 3
+                auth_status = "VERIFIED"
+                auth_rationale = f"Management-level authority verified: {form.contact_role_title}"
+            elif any(t in role_l for t in ["engineer", "analyst", "specialist", "coordinator", "associate"]):
+                auth_rating = 2
+                auth_status = "INFERRED"
+                auth_rationale = f"Individual contributor verified: {form.contact_role_title}"
+
         auth_pts = auth_rating or 0
 
         auth_val = f"{form.contact_role_title or 'Unspecified'} ({form.buying_role or ai_role.persona_type})"
