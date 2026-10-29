@@ -720,8 +720,20 @@ if calc_btn:
             tech_stack_notes="",
             existing_platform=f_platform.strip()
         )
+        # Extract Worker URL and Secret Key from Streamlit Secrets or Environment
+        worker_url = None
+        worker_key = None
+        if hasattr(st, "secrets"):
+            worker_url = st.secrets.get("ICP_WORKER_URL") or st.secrets.get("WORKER_URL")
+            worker_key = st.secrets.get("ICP_WORKER_KEY") or st.secrets.get("ICP_AUTH_KEY") or st.secrets.get("WORKER_KEY")
+
         with st.spinner("🤖 Evaluating prospect across GTM 4-Pillar ICP standards..."):
-            res: StreamlinedScoringResult = GTMScoringEngine.evaluate(submission, cfg)
+            res: StreamlinedScoringResult = GTMScoringEngine.evaluate(
+                submission,
+                cfg,
+                worker_url=worker_url,
+                worker_key=worker_key
+            )
         st.session_state["streamlined_res"] = res
         st.rerun()
 
