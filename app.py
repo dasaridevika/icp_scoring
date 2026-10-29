@@ -16,7 +16,11 @@ ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+import importlib
+
 try:
+    import engine.gtm_engine as _gtm_engine_module
+    importlib.reload(_gtm_engine_module)
     from engine.gtm_engine import (
         CompanyStandardsConfig,
         StreamlinedLeadForm,
@@ -26,6 +30,8 @@ try:
     )
 except (ImportError, ModuleNotFoundError):
     sys.path.insert(0, str(ROOT_DIR / "engine"))
+    import gtm_engine as _gtm_engine_module
+    importlib.reload(_gtm_engine_module)
     from gtm_engine import (
         CompanyStandardsConfig,
         StreamlinedLeadForm,
@@ -809,8 +815,16 @@ if calc_btn:
         # Extract Worker URL and Secret Key from Settings session state, Streamlit Secrets, or Environment
         worker_url, worker_key, _ = get_configured_worker_connection()
 
+        import importlib
+        try:
+            import engine.gtm_engine as _ge
+            importlib.reload(_ge)
+            _evaluate_fn = _ge.GTMScoringEngine.evaluate
+        except Exception:
+            _evaluate_fn = GTMScoringEngine.evaluate
+
         with st.spinner("🤖 Evaluating prospect across GTM 4-Pillar ICP standards..."):
-            res: StreamlinedScoringResult = GTMScoringEngine.evaluate(
+            res: StreamlinedScoringResult = _evaluate_fn(
                 submission,
                 cfg,
                 worker_url=worker_url,
