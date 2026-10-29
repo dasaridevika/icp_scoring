@@ -291,8 +291,7 @@ class GTMScoringEngine:
         form: StreamlinedLeadForm,
         config: Optional[CompanyStandardsConfig] = None,
         worker_url: Optional[str] = None,
-        worker_key: Optional[str] = None,
-        mock_ai_response: Optional[Dict[str, Any]] = None
+        worker_key: Optional[str] = None
     ) -> StreamlinedScoringResult:
         cfg = config or CompanyStandardsConfig()
         sym = form.currency_symbol or cfg.currency_symbol or "$"
@@ -443,14 +442,11 @@ class GTMScoringEngine:
             }
         }
 
-        if mock_ai_response is not None:
-            ai_res, worker_err = mock_ai_response, None
-        else:
-            ai_res, worker_err = cls.query_ai_worker(
-                payload=worker_payload,
-                worker_url=worker_url,
-                worker_key=worker_key
-            )
+        ai_res, worker_err = cls.query_ai_worker(
+            payload=worker_payload,
+            worker_url=worker_url,
+            worker_key=worker_key
+        )
 
         # Fail loudly if AI is unreachable (Bug 5.1, P0-1 fix)
         if not ai_res or worker_err:
@@ -792,20 +788,9 @@ class GTMScoringEngine:
                 )
             )
 
-        discovery_questions = raw_strategy.get("discovery_questions") or [
-            f"What specific intelligence gaps is {comp} aiming to resolve in {sub_niche}?",
-            f"What is your target decision timeline for procurement?",
-            f"Are you seeking custom project tracking or broad syndicated sector coverage?"
-        ]
-        key_strengths = raw_strategy.get("key_strengths") or [
-            f"Active interest in {sub_niche}",
-            f"Decision role: {form.contact_role_title or 'Enterprise Contact'}",
-            f"Primary market: {form.location or 'Global'}"
-        ]
-        key_risks = raw_strategy.get("key_risks") or [
-            "Timeline verification needed during discovery.",
-            "Confirm budget availability for custom consulting scope."
-        ]
+        discovery_questions = raw_strategy.get("discovery_questions") or []
+        key_strengths = raw_strategy.get("key_strengths") or []
+        key_risks = raw_strategy.get("key_risks") or []
 
         return StreamlinedScoringResult(
             company_name=form.company_name or "Unspecified",
