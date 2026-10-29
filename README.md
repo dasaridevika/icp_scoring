@@ -1,63 +1,73 @@
-# Enterprise ICP Intelligence & Revenue Qualification Engine (v2.0)
+# Enterprise ICP Intelligence & Revenue Qualification Engine
 
-A production-grade, 100% self-contained, evidence-driven B2B Revenue Intelligence Engine. Powered by a deterministic Python extraction and scoring pipeline for real-time account qualification, priority tiering, win propensity calibration, and sales outreach generation — with zero external API dependencies and sub-50ms execution.
+A production-grade, evidence-driven B2B Revenue Intelligence Engine. Powered by a deterministic Python extraction and scoring pipeline for real-time account qualification, priority tiering, win propensity calibration, and sales outreach generation.
 
 ---
 
 ## 🏛️ System Architecture
 
 ```text
-Streamlit UI / Lead Inbound Input
+Streamlit Dashboard / API Input
          ↓
-Lead Evidence Extractor (`engine/extractor.py`)
-  • Deterministic entity parsing (Company, Contact, Domain, Industry, Scale, Tech Stack, Intent Timeline)
-  • Evidence pillar classification (Firmographic, Technographic, Intent, Readiness, Value)
-  • Anti-ICP & freemail detection (student, personal freemail, non-commercial)
+Compliance & Policy Hard Stops (`engine/rules.py`)
+  • Prohibited & sanctioned territory checks (whole-word matching & branch location review)
+  • Non-commercial persona checks (students, interns, trainees, academic research)
          ↓
-Disqualification Engine (`engine/disqualifier.py`)
-  • Hard eligibility checks (Prohibited industries, non-business domains, compliance)
+Currency FX Normalization Engine (`engine/fx.py`)
+  • Verified regional currency conversion to USD
+  • Independent deal/budget currency normalization
          ↓
-Deterministic Scoring Engine (`engine/scorer.py`)
-  • Centralized authoritative weights & thresholds (`engine/config.py`)
-  • 4-Dimensional mathematical scoring (Fit, Intent, Readiness, Value)
-  • Probability calibration & expected value modeling (`engine/calibration.py`)
+AI Evidence & Rating Extractor (`index.js` / Worker API)
+  • Semantic classification: Firmographic, Offering Fit, Buyer Authority, Intent & Velocity
+  • 1 to 5 criteria ratings (or UNKNOWN for unverified attributes; zero data fabrication)
          ↓
-Canonical Assessment Contract (`AccountAssessment`)
+Deterministic Scoring & Coverage Engine (`engine/gtm_engine.py`)
+  • Dynamic weight renormalization across known pillars
+  • Mathematical scoring based on verified evidence
+  • "Needs review" safety-tier override when coverage < 60% or authority is unknown
          ↓
-Interactive Streamlit Dashboard (`app.py`)
+Interactive RevOps Dashboard (`app.py`) / REST API (`worker.py`)
 ```
 
 ### Key Capabilities
-* **100% Self-Contained & Offline**: Zero network calls, zero external API keys, zero cloud worker bindings required. Runs anywhere Python 3.9+ runs.
-* **Deterministic Scoring Engine (`engine/scorer.py`)**: Owns 100% of final score computation, weighted dimensional aggregation, tier assignment, and expected value calculation using authoritative weights from `engine/config.py`.
-* **Zero Mock Datasets & Zero Fake Fallbacks**: Parses real inbound lead text dynamically and scores mathematically based on verified evidence points.
-* **Granular Confidence & Missing Data Tracking**: Missing attributes are marked as `UNKNOWN` ($0$ contribution) rather than assuming inflated values, triggering targeted sales discovery questions.
+* **100% Self-Contained Core**: Hard compliance rules and mathematical scoring reside entirely in Python.
+* **Deterministic Scoring Engine (`engine/gtm_engine.py`)**: Computes master composite score, tier assignment, coverage percentage, and next-action SLAs.
+* **Zero Mock Datasets & Zero Fake Fallbacks**: Missing attributes are classified as `UNKNOWN` ($0$ contribution) rather than assuming inflated values, triggering targeted sales discovery questions.
+* **Dynamic Weight Renormalization**: Scoring dynamically scales across verified pillars, ensuring incomplete leads are flagged for manual review rather than falsely awarded high-priority tiers.
 
 ---
 
-## 📐 Scoring Methodology & Authoritative Configuration
+## 📐 Scoring Methodology
 
-All scoring weights, tier thresholds, and disqualifiers are centrally managed in `engine/config.py`.
+### 1. 4-Pillar Qualitative Rubric
+* **Firmographic Fit (35%)**: Organization scale, focus sector, geography, and corporate email verification.
+* **Offering Fit (25%)**: Alignment between prospect needs and company product/service offerings, including incumbent displacement.
+* **Buyer Authority (25%)**: Decision-making authority, seniority hierarchy, and executive mandate.
+* **Intent & Velocity (15%)**: Active buying urgency, RFP, timeline checkpoints, and stated project catalysts.
 
-### 1. 4-Dimensional Core Engine (0–100)
-* **ICP Fit Score**: Firmographic Scale ($0.65$) + Technographic Sophistication ($0.35$).
-* **Intent & Timing Score**: Active Research, RFP, and Buying Urgency Signals.
-* **Readiness & Authority Score**: Decision-Maker Title, C-Suite Mandate, and Budget Authority.
-* **Value & Expansion Score**: Contract ARR Scale and Expansion Potential.
+### 2. Rating Scale (1 to 5)
+* **5**: Strong match, clear verified evidence
+* **4**: Good match
+* **3**: Partial match
+* **2**: Weak match
+* **1**: Clear mismatch (evidence indicates incompatibility)
+* **UNKNOWN**: No evidence provided (excluded from score calculation)
 
-### 2. Master ICP Score
-$$\text{Master ICP Score} = (0.35 \times \text{Fit}) + (0.25 \times \text{Intent}) + (0.20 \times \text{Readiness}) + (0.20 \times \text{Value})$$
+### 3. Master ICP Score & Coverage
+$$\text{Score} = \frac{\sum_{\text{known pillars}} (\text{weight} \times \text{rating})}{\sum_{\text{known pillars}} \text{weight}} \times 20$$
 
-### 3. Business Priority Tiers & Action Matrix
+$$\text{Coverage} = \sum_{\text{known pillars}} \text{weight} \times 100\%$$
 
-| Priority Tier | Fit Score | Intent Score | Sales SLA & Recommended Action |
+### 4. Priority Tiers & Action Matrix
+
+| Priority Tier | Score | Qualification Condition | Recommended Sales SLA & Action |
 | :--- | :---: | :---: | :--- |
-| **Tier A1: Strategic Inbound** | $\ge 80$ | $\ge 70$ | **<2 hours** outreach by Senior AE & Research Director. Deliver bespoke proposal. |
-| **Tier A2: High Priority Outbound** | $\ge 65$ | Any | **<24 hours** SDR strategic outbound sequence. |
-| **Tier B1: Mid-Market Fast Track** | $\ge 50$ | $\ge 50$ | Inside Sales rapid qualification call. |
-| **Tier A3: Outbound Nurture** | $\ge 40$ | $< 50$ | Automated marketing educational sequences and trigger tracking. |
-| **Tier C: Low Priority / Long-Tail** | $< 40$ | Any | Marketing newsletter and self-service documentation. |
-| **Disqualified / Anti-ICP** | N/A | N/A | Personal freemail, prohibited industry, or non-commercial inquiry. |
+| **Tier A: Contact First** | $\ge 80$ | High Coverage & Strong Match | **< 2 hours**: Executive callback by Senior AE & Research Director. |
+| **Tier B: Follow Up** | $60 - 79$ | Qualified Opportunity | **< 24 hours**: Dedicated SDR strategic outbound sequence. |
+| **Tier C: Nurture** | $40 - 59$ | Moderate Match | **Within 48 hours**: Automated marketing educational nurture sequences. |
+| **Tier D: Low Priority** | $< 40$ | Low ICP Fit | Automated marketing newsletter and documentation. |
+| **Tier: Needs review** | Any | Coverage $< 60\%$ OR Authority Unknown | **Manual Review**: Human sales qualification call required. |
+| **Disqualified: Anti-ICP** | $0.0$ | Compliance violation or non-buyer role | **Archived**: Do Not Contact. |
 
 ---
 
@@ -75,29 +85,38 @@ streamlit run app.py
 
 ### 3. Python SDK Usage
 ```python
-from engine import evaluate_lead
+from engine.gtm_engine import GTMScoringEngine, StreamlinedLeadForm, CompanyStandardsConfig
 
-lead_text = """
-Company: Parveen Industries Pvt. Ltd.
-Contact: Gabriel Martinez (Commercial Sales & Procurement)
-Email: sales@parvenoilfield.com
-Phone: +971 55 669 322
-Location: United Arab Emirates (UAE)
-Industry: Industrial Manufacturing & Solar Energy Infrastructure
+# Initialize custom company standards (all fields configurable)
+config = CompanyStandardsConfig(
+    company_name="",
+    min_deal_size_usd=0.0,
+    target_deal_size_usd=0.0,
+    min_company_revenue_usd=0.0
+)
 
-Inquiry Details:
-Requested an executive callback meeting scheduled for August 18 (08:30 PM - 09:30 PM IST).
-Inquiring about solar power market offerings and product range suitability to support company business expansion.
-"""
+# Provide prospect attributes dynamically
+form = StreamlinedLeadForm(
+    company_name="",
+    industry_sector="",
+    sub_vertical="",
+    location="",
+    contact_name="",
+    contact_role_title="",
+    buying_role="",
+    buying_intent="",
+    timeline="",
+    annual_revenue_usd=None,
+    employee_count=None,
+    target_deal_size_usd=None
+)
 
-assessment = evaluate_lead(lead_text, deal_size_usd=75000)
+# Run deterministic evaluation
+assessment = GTMScoringEngine.evaluate(form, config)
 
 print(f"Company: {assessment.company_name}")
 print(f"Tier: {assessment.priority_tier}")
-print(f"Master ICP Score: {assessment.scores.master_icp_score}")
-print(f"Fit: {assessment.icp_fit_score} | Intent: {assessment.intent_score} | Readiness: {assessment.readiness_score} | Value: {assessment.value_score}")
-print(f"Next Action: {assessment.sales_action}")
-print(f"Cold Outreach Opener: {assessment.outreach_hook}")
+print(f"Master ICP Score: {assessment.master_icp_score}")
+print(f"Data Coverage: {assessment.coverage_pct}%")
+print(f"Next Action SLA: {assessment.urgency_sla}")
 ```
-
-

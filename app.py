@@ -328,28 +328,7 @@ st.markdown("""
 
 # Initialize Session State
 if "company_config" not in st.session_state:
-    st.session_state["company_config"] = CompanyStandardsConfig(
-        company_name="Blackridge Research & Consulting",
-        min_deal_size_usd=5000.0,
-        target_deal_size_usd=25000.0,
-        min_company_revenue_usd=5000000.0,
-        ideal_revenue_usd=50000000.0,
-        target_focus_industries=[
-            "Energy, Utilities & Renewables",
-            "Infrastructure & Construction",
-            "Oil, Gas & Petrochemicals",
-            "Industrial Goods & Manufacturing",
-            "Automotive & Electric Mobility",
-            "Chemicals & Materials",
-            "Technology & Telecom"
-        ],
-        tier1_territories=[
-            "United States", "Canada", "United Kingdom", "Germany", "France", "Japan", "India", "Australia", "Singapore", "United Arab Emirates", "Saudi Arabia"
-        ],
-        prohibited_countries=[
-            "North Korea", "Iran", "Syria", "Cuba", "Russia", "Belarus"
-        ]
-    )
+    st.session_state["company_config"] = CompanyStandardsConfig()
 
 cfg: CompanyStandardsConfig = st.session_state["company_config"]
 
@@ -367,7 +346,7 @@ def show_settings_dialog():
             
             s_focus_ind_raw = st.text_input(
                 "Sweet-Spot Focus Industries (+5 Pts Bonus)",
-                value=", ".join(cfg.target_focus_industries) if cfg.target_focus_industries else "Technology, SaaS & IT, Manufacturing & Industrial Goods, Energy, Utilities & Renewables"
+                value=", ".join(cfg.target_focus_industries)
             )
             s_focus_ind = [i.strip() for i in s_focus_ind_raw.split(",") if i.strip()]
 
@@ -486,7 +465,7 @@ with st.container(border=True):
     <div class="status-bar-container">
         <div class="status-bar-item">
             <span>🏢</span>
-            <span>Standards Org: <strong class="status-pill">{esc(cfg.company_name)}</strong></span>
+            <span>Standards Org: <strong class="status-pill">{esc(cfg.company_name or 'Default Org')}</strong></span>
         </div>
         <div class="status-bar-item">
             <span>🎯</span>
@@ -783,7 +762,7 @@ if "streamlined_res" in st.session_state:
 <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
 <div>
 <div style="font-size:0.80rem; font-weight:700; color:#A78BFA; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
-GTM Revenue Intelligence Report &bull; {esc(cfg.company_name)}
+GTM Revenue Intelligence Report &bull; {esc(cfg.company_name or 'RevOps Engine')}
 </div>
 <div style="font-size:1.9rem; font-weight:800; color:#FFFFFF; letter-spacing:-0.5px; margin-bottom:6px;">
 {esc(res.company_name) or 'Unspecified Account'}
@@ -843,7 +822,7 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 </div>""", unsafe_allow_html=True)
 
             with ai_col2:
-                offering_title = "Market Intelligence & Research"
+                offering_title = "Product & Solution Alignment"
                 offering_rat = res.pillar_offering.field_receipts[0].rationale if (res.pillar_offering and res.pillar_offering.field_receipts) else "Offering alignment evaluation."
                 st.markdown(f"""<div class="ai-feature-card">
 <div>
@@ -854,7 +833,7 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 {esc(offering_title)}
 </div>
 <div style="margin-top:8px;">
-<span class="tag-chip tag-emerald">Blackridge Alignment</span>
+<span class="tag-chip tag-emerald">Offering Alignment</span>
 </div>
 </div>
 <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">

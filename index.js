@@ -131,7 +131,7 @@ async function searchWebIntelligence(env, payload = null) {
     }
   }
 
-  if (!webData && domain && !domain.includes("blackridgeresearch.com")) {
+  if (!webData && domain) {
     try {
       const siteRes = await fetch("https://" + domain, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
@@ -180,7 +180,7 @@ export default {
         success: true,
         status: "active",
         service: "Enterprise ICP Revenue Intelligence Engine",
-        version: "3.6-Blackridge-GTM",
+        version: "3.6",
         request_id: requestId,
         framework: "Section 6 4-Pillar ICP Scoring & Rating Rubric",
         capabilities: [
@@ -248,7 +248,7 @@ export default {
         }, 500);
       }
 
-      const systemPrompt = "You are a Senior B2B Revenue Intelligence Analyst evaluating inbound leads for Blackridge Research & Consulting.\n" +
+      const systemPrompt = "You are a Senior B2B Revenue Intelligence Analyst evaluating inbound prospect leads.\n" +
         "Rate each of the 4 ICP Pillars strictly from 1 to 5 based on verified evidence, or mark as UNKNOWN if no evidence is present.\n\n" +
         "RATING RUBRIC (1 to 5):\n" +
         "5: Strong match, clear evidence\n" +
@@ -259,13 +259,13 @@ export default {
         "UNKNOWN: No evidence at all (do not make up numbers)\n\n" +
         "THE 4 PILLARS:\n" +
         "1. FIRMOGRAPHIC (35%): Company size, industry sector, target geographic focus, business vs free email.\n" +
-        "2. OFFERING FIT (25%): Does what they need match what Blackridge sells? (Market research reports, custom project data, procurement tracking, consulting).\n" +
+        "2. OFFERING FIT (25%): Does what they need match the organization's product or service offerings?\n" +
         "3. BUYER AUTHORITY (25%): Seniority and decision mandate. C-Suite/VP/Director = high (4-5); Manager = mid (3); IC = low (1-2); Student/Intern = Disqualified.\n" +
         "4. INTENT (15%): Ready to buy now? RFP/Proposal/Quote/Timeline <30 days = high (5); exploratory = mid (3); browsing = low (1-2).\n\n" +
         "CRITICAL COPYWRITING:\n" +
         "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus.\n" +
-        "- value_wedge: 1-2 sentence executive ROI thesis anchored to their market research and project intelligence needs.\n" +
-        "- discovery_questions: 3 high-impact consultative questions for research & data scoping.\n" +
+        "- value_wedge: 1-2 sentence executive ROI thesis anchored to their product and solution needs.\n" +
+        "- discovery_questions: 3 high-impact consultative questions for discovery scoping.\n" +
         "- key_strengths: 3 concrete data points from the prospect text.\n" +
         "- key_risks: 2 realistic qualification risks.\n\n" +
         "RETURN STRICT JSON ONLY MATCHING THIS SCHEMA:\n" +

@@ -60,7 +60,7 @@ class NicheAIAnalysis(BaseModel):
 
 
 class OfferingAIAnalysis(BaseModel):
-    offering_category: str = "Market Intelligence Reports"
+    offering_category: str = "Product & Solution Offerings"
     matched_offerings: List[str] = Field(default_factory=list)
     fit_points: int = 3
     rationale: str = ""
@@ -96,27 +96,17 @@ class FootprintAIAnalysis(BaseModel):
 
 
 class CompanyStandardsConfig(BaseModel):
-    company_name: str = "Blackridge Research & Consulting"
+    company_name: str = ""
     currency_symbol: str = "$"
     currency_code: str = "USD"
-    min_deal_size_usd: float = 5000.0
-    target_deal_size_usd: float = 25000.0
-    min_company_revenue_usd: float = 5000000.0
-    ideal_revenue_usd: float = 50000000.0
-    min_headcount: int = 20
-    ideal_headcount: int = 500
-    target_focus_industries: List[str] = Field(default_factory=lambda: [
-        "Energy, Utilities & Renewables",
-        "Infrastructure & Construction",
-        "Oil, Gas & Petrochemicals",
-        "Industrial Goods & Manufacturing",
-        "Automotive & Electric Mobility",
-        "Chemicals & Materials",
-        "Technology & Telecom"
-    ])
-    tier1_territories: List[str] = Field(default_factory=lambda: [
-        "United States", "Canada", "United Kingdom", "Germany", "France", "Japan", "India", "Australia", "Singapore", "United Arab Emirates", "Saudi Arabia"
-    ])
+    min_deal_size_usd: float = 0.0
+    target_deal_size_usd: float = 0.0
+    min_company_revenue_usd: float = 0.0
+    ideal_revenue_usd: float = 0.0
+    min_headcount: int = 0
+    ideal_headcount: int = 0
+    target_focus_industries: List[str] = Field(default_factory=list)
+    tier1_territories: List[str] = Field(default_factory=list)
     prohibited_countries: List[str] = Field(default_factory=lambda: [
         "North Korea", "Iran", "Syria", "Cuba", "Russia", "Belarus"
     ])
@@ -638,7 +628,7 @@ class GTMScoringEngine:
             is_known=offering_rating is not None,
             status=offering_status,
             field_receipts=[
-                FieldScoreReceipt(field_name="Blackridge Offering Alignment", pillar="Offering Fit", raw_value=form.offering_interest or form.sub_vertical or "Consulting & Research", gtm_points=offering_pts, rationale=offering_rationale),
+                FieldScoreReceipt(field_name="Offering Alignment", pillar="Offering Fit", raw_value=form.offering_interest or form.sub_vertical or "Solution Alignment", gtm_points=offering_pts, rationale=offering_rationale),
                 FieldScoreReceipt(field_name="Existing Platform / Incumbent", pillar="Offering Fit", raw_value=incumbent_str, gtm_points=offering_pts, rationale=f"Incumbent: {incumbent_str}")
             ]
         )
@@ -732,12 +722,13 @@ class GTMScoringEngine:
             urgency_sla = "Automated Marketing Nurture"
             recommended_channel = "Marketing Newsletter & Long-Tail Documentation"
 
-        sub_niche = form.sub_vertical or form.industry_sector or "Market Intelligence"
+        sub_niche = form.sub_vertical or form.industry_sector or "target initiatives"
         comp = form.company_name or "your team"
         contact = form.contact_name or "there"
+        org_ref = cfg.company_name if cfg.company_name else "our team"
 
-        value_wedge = raw_strategy.get("value_wedge") or f"Accelerate strategic market intelligence for {sub_niche} initiatives at {comp}."
-        outreach_hook = raw_strategy.get("outreach_hook") or f"Hi {contact}, noticed your team's focus on {sub_niche} at {comp}—wanted to share how {cfg.company_name} supports similar enterprise teams."
+        value_wedge = raw_strategy.get("value_wedge") or f"Accelerate strategic initiatives for {sub_niche} at {comp}."
+        outreach_hook = raw_strategy.get("outreach_hook") or f"Hi {contact}, noticed your team's focus on {sub_niche} at {comp}—wanted to share how {org_ref} supports similar organizations."
 
         # Audit Tracker
         tracker = []
