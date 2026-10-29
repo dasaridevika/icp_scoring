@@ -423,9 +423,9 @@ def show_settings_dialog():
                 st.warning("⚠️ No worker URL detected. Enter your worker URL below and click **💾 Save Settings**.")
 
             s_worker_url = st.text_input(
-                "Worker URL (Cloudflare Worker or http://localhost:8787)",
+                "Cloudflare Worker URL",
                 value=cur_w_url,
-                help="URL of your Cloudflare Worker AI or local worker.py service"
+                help="URL of your deployed Cloudflare Worker (e.g. https://<worker-name>.<subdomain>.workers.dev)"
             )
             s_worker_key = st.text_input(
                 "Worker Secret Key (Optional)",
@@ -833,7 +833,7 @@ if "streamlined_res" in st.session_state:
     # Handle Fail-Loud AI Error Mode
     if getattr(res, "analysis_mode", "live") == "failed":
         st.error(f"⚠️ **AI Engine Unreachable**: {esc(res.disqualification_reason)}")
-        st.info("💡 **How to connect**: Click **⚙️ Settings** at the top right to enter your Worker URL (or set `ICP_WORKER_URL` in `.streamlit/secrets.toml`). If testing locally without Cloudflare, run `python worker.py` in your terminal and enter `http://localhost:8787`.")
+        st.info("💡 **How to connect**: Click **⚙️ Settings** at the top right to enter your Cloudflare Worker URL, or set `ICP_WORKER_URL` in `.streamlit/secrets.toml` or Streamlit Cloud Secrets.")
     else:
         badge_class = "badge-disq" if res.is_disqualified else (
             "badge-amber" if "Needs review" in res.priority_tier else (

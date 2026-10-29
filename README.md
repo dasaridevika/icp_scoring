@@ -17,7 +17,7 @@ Currency FX Normalization Engine (`engine/fx.py`)
   • Verified regional currency conversion to USD
   • Independent deal/budget currency normalization
          ↓
-AI Evidence & Rating Extractor (`index.js` / Worker API)
+AI Evidence & Rating Extractor (Cloudflare Worker `index.js` / Workers AI)
   • Semantic classification: Firmographic, Offering Fit, Buyer Authority, Intent & Velocity
   • 1 to 5 criteria ratings (or UNKNOWN for unverified attributes; zero data fabrication)
          ↓
@@ -26,7 +26,7 @@ Deterministic Scoring & Coverage Engine (`engine/gtm_engine.py`)
   • Mathematical scoring based on verified evidence
   • "Needs review" safety-tier override when coverage < 60% or authority is unknown
          ↓
-Interactive RevOps Dashboard (`app.py`) / REST API (`worker.py`)
+Interactive RevOps Dashboard (`app.py`) • Streamlit Cloud
 ```
 
 ### Key Capabilities
@@ -78,12 +78,19 @@ $$\text{Coverage} = \sum_{\text{known pillars}} \text{weight} \times 100\%$$
 pip install -r requirements.txt
 ```
 
-### 2. Run the Streamlit Dashboard
+### 2. Deploy Cloudflare AI Worker
+```bash
+npx wrangler deploy
+```
+*Sets up your Cloudflare Workers AI edge backend running `index.js`.*
+*Configure `ICP_WORKER_URL` in `.streamlit/secrets.toml` or Streamlit Cloud Secrets.*
+
+### 3. Run the Streamlit Dashboard
 ```bash
 streamlit run app.py
 ```
 
-### 3. Python SDK Usage
+### 4. Python SDK Usage
 ```python
 from engine.gtm_engine import GTMScoringEngine, StreamlinedLeadForm, CompanyStandardsConfig
 
