@@ -12,7 +12,7 @@ function resolveEnum(val, options, fallback) {
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-ID, X-ICP-Worker-Key"
+  "Access-Control-Allow-Headers": "Content-Type, X-Request-ID"
 };
 
 function generateRequestId() {
@@ -68,21 +68,6 @@ export default {
     }
 
     const requestId = request.headers.get("X-Request-ID") || generateRequestId();
-
-    // Authentication Guard (Bug 2.6 fix)
-    const requiredKey = env?.ICP_WORKER_KEY || env?.ICP_AUTH_KEY;
-    if (requiredKey) {
-      const authHeader = request.headers.get("Authorization") || "";
-      const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
-      const customKey = request.headers.get("X-ICP-Worker-Key") || "";
-      if (bearerToken !== requiredKey && customKey !== requiredKey) {
-        return jsonResponse({
-          success: false,
-          error: "Unauthorized: Invalid or missing API key",
-          request_id: requestId
-        }, 401);
-      }
-    }
 
     if (request.method === "GET") {
       return jsonResponse({

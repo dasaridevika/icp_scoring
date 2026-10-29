@@ -339,9 +339,9 @@ if "company_config" not in st.session_state:
 cfg: CompanyStandardsConfig = st.session_state["company_config"]
 
 
-def get_configured_worker_connection() -> Tuple[str, str, str]:
+def get_configured_worker_connection() -> Tuple[str, str]:
     """
-    Safely resolves (worker_url, worker_key, source_name).
+    Safely resolves (worker_url, source_name).
     Sources checked in priority order:
     1. Streamlit Session State (entered in Settings modal and saved)
     2. Streamlit Secrets (st.secrets) - case-insensitive, flat and nested
@@ -349,11 +349,10 @@ def get_configured_worker_connection() -> Tuple[str, str, str]:
     """
     # 1. Session state
     url = str(st.session_state.get("custom_worker_url", "")).strip()
-    key = str(st.session_state.get("custom_worker_key", "")).strip()
     if url:
         if not url.startswith("http://") and not url.startswith("https://"):
             url = f"https://{url}"
-        return url, key, "UI Settings Dialog"
+        return url, "UI Settings Dialog"
 
     # 2. Streamlit Secrets
     try:
@@ -373,11 +372,10 @@ def get_configured_worker_connection() -> Tuple[str, str, str]:
                 return ""
 
             sec_url = _find_secret(st.secrets, ["ICP_WORKER_URL", "WORKER_URL", "CF_WORKER_URL", "URL"])
-            sec_key = _find_secret(st.secrets, ["ICP_WORKER_KEY", "ICP_AUTH_KEY", "WORKER_KEY", "KEY"])
             if sec_url:
                 if not sec_url.startswith("http://") and not sec_url.startswith("https://"):
                     sec_url = f"https://{sec_url}"
-                return sec_url, sec_key, "Streamlit Secrets"
+                return sec_url, "Streamlit Secrets"
     except Exception:
         pass
 
@@ -387,10 +385,9 @@ def get_configured_worker_connection() -> Tuple[str, str, str]:
         if env_val:
             if not env_val.startswith("http://") and not env_val.startswith("https://"):
                 env_val = f"https://{env_val}"
-            env_key = os.environ.get("ICP_WORKER_KEY", os.environ.get("ICP_AUTH_KEY", "")).strip()
-            return env_val, env_key, "Environment Variable"
+            return env_val, "Environment Variable"
 
-    return "", "", "Not Configured"
+    return "", "Not Configured"
 
 
 # ==============================================================================
@@ -422,7 +419,7 @@ def show_settings_dialog():
             st.markdown("<hr style='margin:12px 0;'>", unsafe_allow_html=True)
             st.markdown("**🔌 AI Engine Worker Connection**")
 
-            cur_w_url, cur_w_key, conn_src = get_configured_worker_connection()
+            cur_w_url, conn_src = get_configured_worker_connection()
             if cur_w_url:
                 st.success(f"🟢 Configured via **{conn_src}**: `{cur_w_url}`")
             else:
@@ -433,19 +430,12 @@ def show_settings_dialog():
                 value=cur_w_url,
                 help="URL of your deployed Cloudflare Worker (e.g. https://<worker-name>.<subdomain>.workers.dev)"
             )
-            s_worker_key = st.text_input(
-                "Worker Secret Key (Optional)",
-                value=cur_w_key,
-                type="password",
-                help="API key for worker authentication if configured"
-            )
 
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         save_btn = st.form_submit_button("💾 Save Settings", type="primary", use_container_width=True)
 
     if save_btn:
         st.session_state["custom_worker_url"] = s_worker_url.strip()
-        st.session_state["custom_worker_key"] = s_worker_key.strip()
         new_cfg = CompanyStandardsConfig(
             company_name=s_name,
             min_deal_size_usd=cfg.min_deal_size_usd,
@@ -542,7 +532,7 @@ with head_col2:
             show_settings_dialog()
 
 # Clean Status Indicator Bar
-active_w_url, _, active_src = get_configured_worker_connection()
+active_w_url, active_src = get_configured_worker_connection()
 if active_w_url:
     ai_status_html = f'<span style="color:#059669; font-weight:700;">🟢 AI Worker Active ({esc(active_src)})</span>'
 else:
@@ -812,8 +802,8 @@ if calc_btn:
             tech_stack_notes="",
             existing_platform=f_platform.strip()
         )
-        # Extract Worker URL and Secret Key from Settings session state, Streamlit Secrets, or Environment
-        worker_url, worker_key, _ = get_configured_worker_connection()
+        # Extract Worker URL from Settings session state, Streamlit Secrets, or Environment
+        worker_url, _ = get_configured_worker_connection()
 
         import importlib
         try:
@@ -827,8 +817,7 @@ if calc_btn:
             res: StreamlinedScoringResult = _evaluate_fn(
                 submission,
                 cfg,
-                worker_url=worker_url,
-                worker_key=worker_key
+                worker_url=worker_url
             )
         st.session_state["streamlined_res"] = res
         st.rerun()

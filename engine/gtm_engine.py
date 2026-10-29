@@ -31,9 +31,8 @@ except (ImportError, ModuleNotFoundError):
 from engine.fx import FXEngine
 from engine.rules import PolicyEngine, PolicyCheckResult
 
-# Read worker URL and Secret Key strictly from environment with no default personal account
+# Read worker URL strictly from environment
 DEFAULT_WORKER_URL = os.environ.get("ICP_WORKER_URL", "")
-DEFAULT_WORKER_KEY = os.environ.get("ICP_WORKER_KEY", os.environ.get("ICP_AUTH_KEY", ""))
 
 
 # ==============================================================================
@@ -253,15 +252,13 @@ class GTMScoringEngine:
         if not url:
             return None, "Worker URL is not configured. Set ICP_WORKER_URL environment variable or specify worker_url."
 
-        auth_key = worker_key or DEFAULT_WORKER_KEY
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "EnterpriseICPClient/3.6 (Hardened-GTM-Bridge)",
             "Accept": "application/json"
         }
-        if auth_key:
-            headers["X-ICP-Worker-Key"] = auth_key
-            headers["Authorization"] = f"Bearer {auth_key}"
+        if worker_key:
+            headers["Authorization"] = f"Bearer {worker_key}"
 
         try:
             req_data = json.dumps(payload).encode("utf-8")
