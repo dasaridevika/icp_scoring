@@ -301,7 +301,7 @@ export default {
           if (p.rating !== undefined && p.rating !== null && !isNaN(Number(p.rating))) {
             rating = Math.max(1, Math.min(5, Math.round(Number(p.rating))));
           } else if (p.score !== undefined && p.score !== null && !isNaN(Number(p.score)) && Number(p.score) > 0) {
-            rating = Math.max(1, min(5, Math.round(Number(p.score) / 20)));
+            rating = Math.max(1, Math.min(5, Math.round(Number(p.score) / 20)));
           }
         }
 
