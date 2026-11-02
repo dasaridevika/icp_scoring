@@ -41,20 +41,42 @@ DISQUALIFYING_ROLES: List[str] = [
     "academic researcher"
 ]
 
-# Authoritative prohibited / sanctioned territories
+# Authoritative prohibited / sanctioned territories, aliases, and demonyms
 DEFAULT_PROHIBITED_COUNTRIES: List[str] = [
-    "North Korea",
-    "Iran",
-    "Syria",
-    "Cuba",
+    # Russia & Belarus
     "Russia",
-    "Belarus"
+    "Russian",
+    "Russian Federation",
+    "Belarus",
+    "Belarusian",
+    "Belorussia",
+    "Bielorussia",
+    # North Korea
+    "North Korea",
+    "North Korean",
+    "DPRK",
+    "D.P.R.K.",
+    "Democratic People's Republic of Korea",
+    # Syria
+    "Syria",
+    "Syrian",
+    "Syrian Arab Republic",
+    # Iran
+    "Iran",
+    "Iranian",
+    "Islamic Republic of Iran",
+    # Cuba
+    "Cuba",
+    "Cuban"
 ]
 
 # Major sanctioned administrative capitals, cities, or disputed regions
 SANCTIONED_CITIES_OR_REGIONS: List[str] = [
     "Tehran",
     "Moscow",
+    "Saint Petersburg",
+    "St. Petersburg",
+    "St Petersburg",
     "Minsk",
     "Damascus",
     "Pyongyang",
@@ -63,6 +85,23 @@ SANCTIONED_CITIES_OR_REGIONS: List[str] = [
     "Sevastopol",
     "Donetsk",
     "Luhansk"
+]
+
+# Exemption keywords: Leadership or administrative staff in student-facing departments
+# (e.g., 'Director of Student Affairs', 'Dean of Students', 'Student Affairs Coordinator')
+# are real enterprise buyers and university staff, not students.
+STAFF_LEADERSHIP_EXEMPTIONS: List[str] = [
+    "director",
+    "dean",
+    "head",
+    "vp",
+    "vice president",
+    "chief",
+    "president",
+    "manager",
+    "administrator",
+    "coordinator",
+    "officer"
 ]
 
 
@@ -125,6 +164,9 @@ class PolicyEngine:
         # 2. Anti-ICP Persona / Disqualifier Roles Check (Whole-word matching)
         for disq_role in DISQUALIFYING_ROLES:
             if matches_whole_word(disq_role, role_title or ""):
+                # Exemption: Leadership and staff in student affairs/services are real buyers, not students
+                if disq_role == "student" and any(matches_whole_word(exempt, role_title or "") for exempt in STAFF_LEADERSHIP_EXEMPTIONS):
+                    continue
                 result.is_disqualified = True
                 result.matched_rule = "ANTI_ICP_ROLE"
                 result.disqualification_reason = (

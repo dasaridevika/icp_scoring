@@ -41,10 +41,10 @@ DEFAULT_WORKER_URL = os.environ.get("ICP_WORKER_URL", "")
 
 class RoleAIAnalysis(BaseModel):
     raw_title: str = ""
-    seniority_level: str = "Individual Contributor (+1)"
+    seniority_level: str = "Unspecified"
     seniority_points: int = 1
-    persona_type: str = "Technical Champion"
-    department: str = "Operations"
+    persona_type: str = "Unspecified"
+    department: str = "Unspecified"
     confidence: float = 0.90
     rationale: str = ""
     is_disqualifier: bool = False
@@ -67,8 +67,8 @@ class OfferingAIAnalysis(BaseModel):
 
 class IntentAIAnalysis(BaseModel):
     raw_intent: str = ""
-    urgency_tier: str = "Active Evaluation (+3)"
-    intent_points: int = 3
+    urgency_tier: str = "Unspecified"
+    intent_points: int = 0
     timeline_detected: Optional[str] = None
     extracted_signals: List[str] = Field(default_factory=list)
     rationale: str = ""
@@ -170,6 +170,13 @@ class StreamlinedLeadForm(BaseModel):
     tech_stack_notes: Optional[str] = ""
     uses_existing_platform: Optional[str] = ""
     existing_platform: Optional[str] = ""
+
+
+FREE_EMAIL_DOMAINS = {
+    "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com",
+    "icloud.com", "zoho.com", "mail.com", "protonmail.com", "proton.me",
+    "gmx.com", "yandex.com", "fastmail.com", "live.com", "msn.com"
+}
 
 
 class FieldScoreReceipt(BaseModel):
@@ -408,6 +415,7 @@ class GTMScoringEngine:
         if form.offering_interest: summary_lines.append(f"Offering Interest: {form.offering_interest}")
         if form.location: summary_lines.append(f"Headquarters: {form.location}")
         if form.branch_locations: summary_lines.append(f"Branch Locations: {', '.join(form.branch_locations)}")
+        if form.contact_email: summary_lines.append(f"Work Email: {form.contact_email}")
         if hc_val: summary_lines.append(f"Headcount: {hc_val}")
         if prospect_rev_str != "Unknown": summary_lines.append(f"Annual Revenue: {prospect_rev_str}")
         if form.contact_name: summary_lines.append(f"Contact Name: {form.contact_name}")
@@ -595,7 +603,16 @@ class GTMScoringEngine:
             return None, "UNKNOWN", str(p_data.get("rationale", "No verified data provided."))
 
         # Pillar 1: Firmographic Fit (35%)
-        has_firmo_data = bool(form.industry_sector or form.company_name or norm_rev_usd or hc_val or form.location)
+        # Note: company_name alone does NOT count as firmographic data
+        has_firmo_data = bool(
+            form.industry_sector
+            or (form.sub_vertical and form.sub_vertical != form.company_name)
+            or (norm_rev_usd is not None and norm_rev_usd > 0)
+            or (hc_val is not None and hc_val > 0)
+            or form.location
+            or form.branch_locations
+            or form.contact_email
+        )
         ev_firmo = raw_evidence.get("firmographic", {})
         firmo_rating, firmo_status, firmo_rationale = extract_rating(ev_firmo, has_firmo_data)
         firmo_pts = firmo_rating or 0
@@ -604,10 +621,10 @@ class GTMScoringEngine:
         r_role = raw_ai.get("role", {})
         ai_role = RoleAIAnalysis(
             raw_title=form.contact_role_title,
-            seniority_level=r_role.get("seniority_level", "Individual Contributor (+1)"),
+            seniority_level=r_role.get("seniority_level", "Unspecified"),
             seniority_points=5 if "+5" in r_role.get("seniority_level", "") else (3 if "+3" in r_role.get("seniority_level", "") else 1),
-            persona_type=r_role.get("persona_type", "Technical Champion"),
-            department=r_role.get("department", "Operations"),
+            persona_type=r_role.get("persona_type", "Unspecified"),
+            department=r_role.get("department", "Unspecified"),
             confidence=float(r_role.get("confidence", 0.90)),
             rationale=r_role.get("rationale", "Role authority analysis."),
             is_disqualifier="-5" in r_role.get("seniority_level", "")
@@ -625,8 +642,8 @@ class GTMScoringEngine:
         r_readiness = raw_ai.get("readiness", {})
         ai_intent = IntentAIAnalysis(
             raw_intent=form.buying_intent,
-            urgency_tier=r_readiness.get("urgency_tier", "Active Evaluation (+3)"),
-            intent_points=5 if "+5" in r_readiness.get("urgency_tier", "") else 3,
+            urgency_tier=r_readiness.get("urgency_tier", "Unspecified"),
+            intent_points=5 if "+5" in r_readiness.get("urgency_tier", "") else (3 if "+3" in r_readiness.get("urgency_tier", "") else 0),
             timeline_detected=r_readiness.get("timeline_detected") or (form.timeline or None),
             rationale=r_readiness.get("rationale", "Intent and timeline analysis.")
         )
@@ -646,6 +663,28 @@ class GTMScoringEngine:
         hc_known = bool(hc_val is not None and hc_val > 0)
         ind_known = bool(form.industry_sector or form.sub_vertical)
         geo_known = bool(form.location or form.branch_locations)
+
+        # Email evaluation (business vs free email)
+        email_val = (form.contact_email or "").strip()
+        email_domain = email_val.split("@")[-1].lower() if "@" in email_val else ""
+        is_free_domain = email_domain in FREE_EMAIL_DOMAINS
+
+        if email_val and "@" in email_val and not is_free_domain:
+            email_pts = firmo_pts if (firmo_pts > 0) else 0
+            email_rat = f"Corporate business email domain (@{email_domain}) verified."
+            email_raw = f"Business Domain (@{email_domain})"
+        elif email_val and is_free_domain:
+            email_pts = 0
+            email_rat = f"Free/public email provider (@{email_domain}) detected; lacks corporate domain verification."
+            email_raw = f"Free Provider (@{email_domain})"
+        elif email_val:
+            email_pts = 0
+            email_rat = f"Unrecognized email format: {email_val}"
+            email_raw = email_val
+        else:
+            email_pts = 0
+            email_rat = "Work email: Unknown / Not Provided"
+            email_raw = "Not Provided"
 
         firmo_receipts = [
             FieldScoreReceipt(
@@ -675,6 +714,13 @@ class GTMScoringEngine:
                 raw_value=ai_footprint.geographic_reach if geo_known else "Unknown",
                 gtm_points=firmo_pts if (geo_known and firmo_pts > 0) else 0,
                 rationale=ai_footprint.rationale if geo_known else "Location: Unknown / Not Provided"
+            ),
+            FieldScoreReceipt(
+                field_name="Business Email Domain",
+                pillar="Firmographics",
+                raw_value=email_raw,
+                gtm_points=email_pts,
+                rationale=email_rat
             )
         ]
 
@@ -799,7 +845,7 @@ class GTMScoringEngine:
         intent_rating, intent_status, intent_rationale = extract_rating(ev_intent, has_intent_data)
         intent_pts = intent_rating or 0
 
-        intent_val = f"{form.buying_intent or 'Active Evaluation'} (Timeline: {form.timeline or ai_intent.timeline_detected or 'Unspecified'})"
+        intent_val = f"{form.buying_intent or 'Unspecified'} (Timeline: {form.timeline or ai_intent.timeline_detected or 'Unspecified'})"
         pillar_intent = PillarScoreSummary(
             pillar_name="Intent & Velocity",
             rating=intent_rating,
@@ -823,12 +869,12 @@ class GTMScoringEngine:
         ]
         known_pillars = [(w, p) for w, p in all_pillars if p.is_known and p.rating is not None]
 
+        sum_known_weights = sum(w for w, p in known_pillars)
         if not known_pillars:
             master_score = 0.0
             coverage_pct = 0.0
             priority_tier = "Tier: Needs review"
         else:
-            sum_known_weights = sum(w for w, p in known_pillars)
             sum_weighted_ratings = sum(w * p.rating for w, p in known_pillars)
             # Section 6.4 formula: (sum of weight * rating) / (sum of known weights) * 20
             master_score = round((sum_weighted_ratings / sum_known_weights) * 20.0, 1)

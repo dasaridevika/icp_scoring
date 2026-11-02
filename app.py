@@ -1,7 +1,7 @@
 """
 Enterprise ICP Revenue Intelligence Studio (v3.4)
 High-Velocity AI Lead Qualifier & Dynamic Company Standards Studio.
-100% Pure Python • Deterministic {-5 to +5} Scoring • AI Text Field Intelligence.
+100% Pure Python • Deterministic Section 6 Rubric Scoring • AI Text Field Intelligence.
 """
 
 import streamlit as st
@@ -596,11 +596,16 @@ with st.form("lead_qualification_form"):
             with c1_r1_b:
                 f_loc = st.text_input("Headquarters", value=st.session_state.get("f_loc", ""))
 
-            # Row 2: Industry & Headcount
+            # Row 2: Industry & Sub-Vertical / Specialty Niche
             c1_r2_a, c1_r2_b = st.columns(2)
             with c1_r2_a:
-                f_ind = st.text_input("Industry", value=st.session_state.get("f_ind", ""))
+                f_ind = st.text_input("Industry Sector", value=st.session_state.get("f_ind", ""))
             with c1_r2_b:
+                f_sub = st.text_input("Sub-Vertical / Specialty Niche", value=st.session_state.get("f_sub", ""), help="e.g. Energy Infrastructure, B2B SaaS, Offshore EPC")
+
+            # Row 3: Headcount & Branch Locations
+            c1_r3_a, c1_r3_b = st.columns(2)
+            with c1_r3_a:
                 f_hc = st.number_input(
                     "Headcount",
                     min_value=0,
@@ -610,10 +615,12 @@ with st.form("lead_qualification_form"):
                     format="%d",
                     help="Employee headcount"
                 )
+            with c1_r3_b:
+                f_branches = st.text_input("Branch Locations (Optional, comma-separated)", value=st.session_state.get("f_branches", ""), help="e.g. London, Singapore, Houston")
 
-            # Row 3: Annual Revenue & Revenue Currency
-            c1_r3_a, c1_r3_b = st.columns(2)
-            with c1_r3_a:
+            # Row 4: Annual Revenue & Revenue Currency
+            c1_r4_a, c1_r4_b = st.columns(2)
+            with c1_r4_a:
                 f_rev_val = st.number_input(
                     "Annual Revenue",
                     min_value=0.0,
@@ -623,16 +630,16 @@ with st.form("lead_qualification_form"):
                     format="%.2f",
                     help="Revenue amount in selected unit"
                 )
-            with c1_r3_b:
+            with c1_r4_b:
                 f_rev_curr = st.selectbox(
                     "Revenue Currency",
                     list(CURRENCY_OPTIONS.keys()),
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_rev_curr", curr_label))
                 )
 
-            # Row 4: Revenue Scale Unit
-            c1_r4_a, _ = st.columns(2)
-            with c1_r4_a:
+            # Row 5: Revenue Scale Unit
+            c1_r5_a, _ = st.columns(2)
+            with c1_r5_a:
                 f_rev_unit = st.selectbox(
                     "Revenue Scale Unit",
                     list(SCALE_UNITS.keys()),
@@ -661,40 +668,51 @@ with st.form("lead_qualification_form"):
             </div>
             """, unsafe_allow_html=True)
 
-            # Row 1: Contact Name & Role Title
+            # Row 1: Contact Name & Work Email
             c2_r1_a, c2_r1_b = st.columns(2)
             with c2_r1_a:
                 f_name = st.text_input("Contact Name", value=st.session_state.get("f_name", ""))
             with c2_r1_b:
-                f_role = st.text_input("Role Title", value=st.session_state.get("f_role", ""))
+                f_email = st.text_input("Work Email", value=st.session_state.get("f_email", ""), help="Corporate work email domain (e.g. name@company.com)")
 
-            # Row 2: Buying Role & Timeline (Manual Text Entry)
+            # Row 2: Role Title & Buying Role
             c2_r2_a, c2_r2_b = st.columns(2)
             with c2_r2_a:
+                f_role = st.text_input("Role Title", value=st.session_state.get("f_role", ""))
+            with c2_r2_b:
                 f_buying_role = st.text_input(
                     "Buying Role",
                     value=st.session_state.get("f_buying_role", "")
                 )
-            with c2_r2_b:
+
+            # Row 3: Buying Intent & Timeline
+            c2_r3_a, c2_r3_b = st.columns(2)
+            with c2_r3_a:
+                f_intent = st.text_input("Buying Intent", value=st.session_state.get("f_intent", ""))
+            with c2_r3_b:
                 f_timeline = st.text_input(
                     "Timeline",
                     value=st.session_state.get("f_timeline", "")
                 )
 
-            # Row 3: Buying Intent & Uses Existing Platform (Optional)
-            c2_r3_a, c2_r3_b = st.columns(2)
-            with c2_r3_a:
-                f_intent = st.text_input("Buying Intent", value=st.session_state.get("f_intent", ""))
-            with c2_r3_b:
+            # Row 4: Offering Interest & Uses Existing Platform
+            c2_r4_a, c2_r4_b = st.columns(2)
+            with c2_r4_a:
+                f_offering = st.text_input(
+                    "Offering Interest / Request Type",
+                    value=st.session_state.get("f_offering", ""),
+                    help="e.g. Market Research Report, Project Tracking Database, Custom Consulting"
+                )
+            with c2_r4_b:
                 f_platform = st.text_input(
                     "Uses Existing Platform",
                     value=st.session_state.get("f_platform", ""),
                     help="Optional: whether the prospect uses an incumbent or existing tool"
                 )
 
-            # Row 4: Budget Range & Budget Currency
-            c2_r4_a, c2_r4_b = st.columns(2)
-            with c2_r4_a:
+            # Row 5: Budget Range & Budget Currency
+            c2_r5_a, c2_r5_b = st.columns(2)
+            with c2_r5_a:
                 f_deal_val = st.number_input(
                     "Budget Range",
                     min_value=0.0,
@@ -704,26 +722,20 @@ with st.form("lead_qualification_form"):
                     format="%.2f",
                     help="Allocated budget / contract size"
                 )
-            with c2_r4_b:
+            with c2_r5_b:
                 f_deal_curr = st.selectbox(
                     "Budget Currency",
                     list(CURRENCY_OPTIONS.keys()),
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label))
                 )
 
-            # Row 5: Budget Scale Unit & Offering Interest
-            c2_r5_a, c2_r5_b = st.columns(2)
-            with c2_r5_a:
+            # Row 6: Budget Scale Unit
+            c2_r6_a, _ = st.columns(2)
+            with c2_r6_a:
                 f_deal_unit = st.selectbox(
                     "Budget Scale Unit",
                     list(SCALE_UNITS.keys()),
                     index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_deal_unit", "Thousands (k)"))
-                )
-            with c2_r5_b:
-                f_offering = st.text_input(
-                    "Offering Interest / Request Type",
-                    value=st.session_state.get("f_offering", ""),
-                    help="e.g. Market Research Report, Project Tracking Database, Custom Consulting"
                 )
 
             deal_mult = SCALE_UNITS.get(f_deal_unit, 1)
@@ -752,13 +764,16 @@ with st.form("lead_qualification_form"):
 if clear_btn:
     st.session_state["f_company"] = ""
     st.session_state["f_loc"] = ""
+    st.session_state["f_branches"] = ""
     st.session_state["f_ind"] = ""
+    st.session_state["f_sub"] = ""
     st.session_state["f_rev_val"] = 0.0
     st.session_state["f_rev_unit"] = "Millions (M)"
     st.session_state["f_deal_val"] = 0.0
     st.session_state["f_deal_unit"] = "Thousands (k)"
     st.session_state["f_hc"] = 0
     st.session_state["f_name"] = ""
+    st.session_state["f_email"] = ""
     st.session_state["f_role"] = ""
     st.session_state["f_buying_role"] = ""
     st.session_state["f_timeline"] = ""
@@ -776,7 +791,9 @@ if calc_btn:
     else:
         st.session_state["f_company"] = f_company
         st.session_state["f_loc"] = f_loc
+        st.session_state["f_branches"] = f_branches
         st.session_state["f_ind"] = f_ind
+        st.session_state["f_sub"] = f_sub
         st.session_state["f_rev_val"] = f_rev_val
         st.session_state["f_rev_curr"] = f_rev_curr
         st.session_state["f_rev_unit"] = f_rev_unit
@@ -785,6 +802,7 @@ if calc_btn:
         st.session_state["f_deal_unit"] = f_deal_unit
         st.session_state["f_hc"] = f_hc
         st.session_state["f_name"] = f_name
+        st.session_state["f_email"] = f_email
         st.session_state["f_role"] = f_role
         st.session_state["f_buying_role"] = f_buying_role
         st.session_state["f_timeline"] = f_timeline
@@ -795,6 +813,9 @@ if calc_btn:
         deal_sym = CURRENCY_OPTIONS.get(f_deal_curr, "$")
         deal_code = f_deal_curr.split()[0] if f_deal_curr else rev_code
         hc_count = int(f_hc) if (f_hc and str(f_hc).strip() != "" and int(f_hc) > 0) else None
+
+        branch_list = [b.strip() for b in f_branches.split(",") if b.strip()] if f_branches else []
+        sub_vertical_val = f_sub.strip() if f_sub.strip() else f_ind.strip()
 
         submission = StreamlinedLeadForm(
             company_name=f_company.strip(),
@@ -809,13 +830,13 @@ if calc_btn:
             deal_unit=f_deal_unit,
             deal_display_str=deal_stated_str,
             industry_sector=f_ind.strip(),
-            sub_vertical=f_ind.strip(),
+            sub_vertical=sub_vertical_val,
             annual_revenue_usd=float(f_rev_total) if f_rev_total > 0 else None,
             employee_count=hc_count,
             location=f_loc.strip(),
-            branch_locations=[],
+            branch_locations=branch_list,
             contact_name=f_name.strip(),
-            contact_email="",
+            contact_email=f_email.strip(),
             contact_role_title=f_role.strip(),
             buying_role=f_buying_role.strip(),
             buying_intent=f_intent.strip(),
@@ -962,9 +983,9 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 </div>""", unsafe_allow_html=True)
 
             with ai_col3:
-                persona_str = res.ai_role.persona_type if res.ai_role else "End User"
-                sen_str = res.ai_role.seniority_level if res.ai_role else "Standard"
-                dept_str = res.ai_role.department if res.ai_role else "General"
+                persona_str = res.ai_role.persona_type if (res.ai_role and res.ai_role.persona_type) else "Unspecified"
+                sen_str = res.ai_role.seniority_level if (res.ai_role and res.ai_role.seniority_level) else "Unspecified"
+                dept_str = res.ai_role.department if (res.ai_role and res.ai_role.department) else "Unspecified"
                 rat_str = res.ai_role.rationale if res.ai_role else ""
                 st.markdown(f"""<div class="ai-feature-card">
 <div>
@@ -985,8 +1006,8 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 </div>""", unsafe_allow_html=True)
 
             with ai_col4:
-                urgency_str = res.ai_intent.urgency_tier if res.ai_intent else "Moderate Urgency"
-                timeline_str = res.ai_intent.timeline_detected or "Standard Inbound"
+                urgency_str = res.ai_intent.urgency_tier if (res.ai_intent and res.ai_intent.urgency_tier) else "Unspecified"
+                timeline_str = res.ai_intent.timeline_detected or "Unspecified"
                 intent_rat = res.ai_intent.rationale if res.ai_intent else ""
                 st.markdown(f"""<div class="ai-feature-card">
 <div>
@@ -1017,16 +1038,22 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
                 (p4, "4. INTENT & VELOCITY", res.pillar_intent, cfg.weight_intent, "#FBBF24")
             ]
 
+            RATING_LABELS = {
+                5: "Rating: 5/5 • Strong Match",
+                4: "Rating: 4/5 • Good Match",
+                3: "Rating: 3/5 • Partial Match",
+                2: "Rating: 2/5 • Weak Match",
+                1: "Rating: 1/5 • Clear Mismatch"
+            }
+
             for col, title, p_res, weight, col_accent in pillars:
                 with col:
                     if p_res.is_known and p_res.score is not None:
                         score_disp = f"{p_res.score:.0f}"
-                        diff = p_res.score - 50.0
-                        diff_str = f"+{diff:.0f} pts" if diff >= 0 else f"{diff:.0f} pts"
-                        sub_str = f"{diff_str} vs baseline"
+                        sub_str = RATING_LABELS.get(p_res.rating, f"Rating: {p_res.rating}/5")
                     else:
                         score_disp = "UNKNOWN"
-                        sub_str = "No verified data"
+                        sub_str = "Unrated (Unknown)"
 
                     st.markdown(f"""<div class="metric-pillar-card">
 <div style="display:flex; justify-content:space-between; align-items:center;">

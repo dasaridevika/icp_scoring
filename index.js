@@ -388,8 +388,8 @@ export default {
           "Technical Champion",
           "End User / Practitioner",
           "Non-Buyer"
-        ], "Technical Champion"),
-        department: cleanStr(rawRole.department) || "Operations",
+        ], "Unspecified"),
+        department: cleanStr(rawRole.department) || "Unspecified",
         confidence: 0.90,
         rationale: cleanStr(rawRole.rationale) || "Role analysis."
       };
@@ -408,7 +408,7 @@ export default {
           "Immediate Active Buying (+5)",
           "Active Evaluation (+3)",
           "Top-of-Funnel / Browsing (+1)"
-        ], "Active Evaluation (+3)"),
+        ], "Unspecified"),
         timeline_detected: cleanStr(rawReadiness.timeline_detected), // Bug 2.1: no fake "30-60 Days"
         rationale: cleanStr(rawReadiness.rationale) || "Buying velocity and timeline analysis."
       };
