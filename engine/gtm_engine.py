@@ -661,15 +661,6 @@ class GTMScoringEngine:
         has_offering_data = bool(form.sub_vertical or form.offering_interest or form.industry_sector or form.buying_intent)
         ev_offering = raw_evidence.get("offering") or raw_evidence.get("technographic", {})
         offering_rating, offering_status, offering_rationale = extract_rating(ev_offering, has_offering_data)
-
-        # Deterministic Section 6 Rubric Fallback if AI marked UNKNOWN despite verified intent / offerings
-        if offering_rating is None and has_offering_data:
-            intent_l = f"{(form.buying_intent or '')} {(form.offering_interest or '')} {(form.sub_vertical or '')}".lower()
-            if any(kw in intent_l for kw in ["report", "rfp", "procuring", "consulting", "analysis", "market share", "project track", "tender", "database", "pipeline", "advisory", "feasibility", "modernisation", "modernization", "solution", "service"]):
-                offering_rating = 4 if any(k in intent_l for k in ["rfp", "procuring", "report", "database", "tender", "pipeline", "feasibility"]) else 3
-                offering_status = "INFERRED"
-                offering_rationale = f"Offering alignment derived from verified commercial interest: {(form.offering_interest or form.buying_intent or form.sub_vertical)[:90]}"
-
         offering_pts = offering_rating or 0
 
         platform_raw = (form.uses_existing_platform or form.existing_platform or "").strip()
