@@ -419,12 +419,15 @@ export default {
         strategy: {
           urgency_sla: cleanStr(aiResult.strategy?.urgency_sla) || "Manual Review Required",
           recommended_channel: cleanStr(aiResult.strategy?.recommended_channel) || "Direct Email",
-          value_wedge: String(aiResult.strategy?.value_wedge || ""),
-          outreach_hook: String(aiResult.strategy?.outreach_hook || "")
+          value_wedge: String(aiResult.strategy?.value_wedge || aiResult.value_wedge || ""),
+          outreach_hook: String(aiResult.strategy?.outreach_hook || aiResult.outreach_hook || ""),
+          discovery_questions: Array.isArray(aiResult.discovery_questions) ? aiResult.discovery_questions.map(String) : (Array.isArray(aiResult.strategy?.discovery_questions) ? aiResult.strategy.discovery_questions.map(String) : []),
+          key_strengths: Array.isArray(aiResult.key_strengths) ? aiResult.key_strengths.map(String) : (Array.isArray(aiResult.strategy?.key_strengths) ? aiResult.strategy.key_strengths.map(String) : []),
+          key_risks: Array.isArray(aiResult.key_risks) ? aiResult.key_risks.map(String) : (Array.isArray(aiResult.strategy?.key_risks) ? aiResult.strategy.key_risks.map(String) : [])
         },
-        discovery_questions: Array.isArray(aiResult.discovery_questions) ? aiResult.discovery_questions.map(String) : [],
-        key_strengths: Array.isArray(aiResult.key_strengths) ? aiResult.key_strengths.map(String) : [],
-        key_risks: Array.isArray(aiResult.key_risks) ? aiResult.key_risks.map(String) : []
+        discovery_questions: Array.isArray(aiResult.discovery_questions) ? aiResult.discovery_questions.map(String) : (Array.isArray(aiResult.strategy?.discovery_questions) ? aiResult.strategy.discovery_questions.map(String) : []),
+        key_strengths: Array.isArray(aiResult.key_strengths) ? aiResult.key_strengths.map(String) : (Array.isArray(aiResult.strategy?.key_strengths) ? aiResult.strategy.key_strengths.map(String) : []),
+        key_risks: Array.isArray(aiResult.key_risks) ? aiResult.key_risks.map(String) : (Array.isArray(aiResult.strategy?.key_risks) ? aiResult.strategy.key_risks.map(String) : [])
       });
 
     } catch (fatalErr) {

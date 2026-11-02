@@ -782,8 +782,16 @@ class GTMScoringEngine:
         contact = form.contact_name or "there"
         org_ref = cfg.company_name if cfg.company_name else "our team"
 
-        value_wedge = raw_strategy.get("value_wedge") or f"Accelerate strategic initiatives for {sub_niche} at {comp}."
-        outreach_hook = raw_strategy.get("outreach_hook") or f"Hi {contact}, noticed your team's focus on {sub_niche} at {comp}—wanted to share how {org_ref} supports similar organizations."
+        value_wedge = (
+            raw_strategy.get("value_wedge")
+            or ai_res.get("value_wedge")
+            or f"Accelerate strategic initiatives for {sub_niche} at {comp}."
+        )
+        outreach_hook = (
+            raw_strategy.get("outreach_hook")
+            or ai_res.get("outreach_hook")
+            or f"Hi {contact}, noticed your team's focus on {sub_niche} at {comp}—wanted to share how {org_ref} supports similar organizations."
+        )
 
         # Audit Tracker
         tracker = []
@@ -801,9 +809,21 @@ class GTMScoringEngine:
                 )
             )
 
-        discovery_questions = raw_strategy.get("discovery_questions") or []
-        key_strengths = raw_strategy.get("key_strengths") or []
-        key_risks = raw_strategy.get("key_risks") or []
+        discovery_questions = (
+            ai_res.get("discovery_questions")
+            or raw_strategy.get("discovery_questions")
+            or []
+        )
+        key_strengths = (
+            ai_res.get("key_strengths")
+            or raw_strategy.get("key_strengths")
+            or []
+        )
+        key_risks = (
+            ai_res.get("key_risks")
+            or raw_strategy.get("key_risks")
+            or []
+        )
 
         return StreamlinedScoringResult(
             company_name=form.company_name or "Unspecified",

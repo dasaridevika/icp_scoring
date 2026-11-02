@@ -1081,7 +1081,7 @@ Channel: <span style="color:#FDE68A;">{esc(res.recommended_channel)}</span>
                             clean_s = s.lstrip("✓").lstrip("•").strip()
                             st.success(f"✓ {esc(clean_s)}")
                     else:
-                        st.info("Standard baseline profile.")
+                        st.info("No specific ICP strengths identified.")
             with c_risk:
                 with st.container(border=True):
                     st.markdown("#### ⚠️ Enterprise Discovery Risks & Considerations")
@@ -1090,7 +1090,7 @@ Channel: <span style="color:#FDE68A;">{esc(res.recommended_channel)}</span>
                             clean_r = r.lstrip("⚠").lstrip("•").strip()
                             st.warning(f"⚠ {esc(clean_r)}")
                     else:
-                        st.success("✓ Zero critical risks detected.")
+                        st.info("No critical discovery risks identified.")
 
             # 6. Structured Consultative Discovery Prompts
             if res.discovery_questions:
