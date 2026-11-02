@@ -401,9 +401,22 @@ def show_settings_dialog():
         with st.container(border=True):
             s_name = st.text_input("Company / Org Identifier", value=cfg.company_name)
             
+            s_offerings_raw = st.text_area(
+                "Blackridge Core Offerings",
+                value="\n".join(getattr(cfg, "core_offerings", [
+                    "Syndicated Market Research Reports (market sizing, market share, sector forecasts)",
+                    "Capital Project Intelligence & Tracking Databases (upcoming tenders, EPC contractor awards, project pipelines)",
+                    "Custom B2B Advisory & Market Feasibility Consulting"
+                ])),
+                help="Core products & services offered, evaluated under the Offering Fit pillar (Section 4.1 & 6.2).",
+                height=85
+            )
+            s_offerings = [o.strip() for o in s_offerings_raw.split("\n") if o.strip()]
+
             s_focus_ind_raw = st.text_input(
-                "Sweet-Spot Focus Industries (+5 Pts Bonus)",
-                value=", ".join(cfg.target_focus_industries)
+                "Sweet-Spot Focus Industries",
+                value=", ".join(cfg.target_focus_industries),
+                help="Core target industries evaluated under Firmographic Fit (Section 6.3)."
             )
             s_focus_ind = [i.strip() for i in s_focus_ind_raw.split(",") if i.strip()]
 
@@ -438,6 +451,7 @@ def show_settings_dialog():
         st.session_state["custom_worker_url"] = s_worker_url.strip()
         new_cfg = CompanyStandardsConfig(
             company_name=s_name,
+            core_offerings=s_offerings,
             min_deal_size_usd=cfg.min_deal_size_usd,
             target_deal_size_usd=cfg.target_deal_size_usd,
             min_company_revenue_usd=cfg.min_company_revenue_usd,
@@ -697,13 +711,19 @@ with st.form("lead_qualification_form"):
                     index=list(CURRENCY_OPTIONS.keys()).index(st.session_state.get("f_deal_curr", curr_label))
                 )
 
-            # Row 5: Budget Scale Unit
-            c2_r5_a, _ = st.columns(2)
+            # Row 5: Budget Scale Unit & Offering Interest
+            c2_r5_a, c2_r5_b = st.columns(2)
             with c2_r5_a:
                 f_deal_unit = st.selectbox(
                     "Budget Scale Unit",
                     list(SCALE_UNITS.keys()),
                     index=list(SCALE_UNITS.keys()).index(st.session_state.get("f_deal_unit", "Thousands (k)"))
+                )
+            with c2_r5_b:
+                f_offering = st.text_input(
+                    "Offering Interest / Request Type",
+                    value=st.session_state.get("f_offering", ""),
+                    help="e.g. Market Research Report, Project Tracking Database, Custom Consulting"
                 )
 
             deal_mult = SCALE_UNITS.get(f_deal_unit, 1)
@@ -743,6 +763,7 @@ if clear_btn:
     st.session_state["f_buying_role"] = ""
     st.session_state["f_timeline"] = ""
     st.session_state["f_intent"] = ""
+    st.session_state["f_offering"] = ""
     st.session_state["f_platform"] = ""
     if "streamlined_res" in st.session_state:
         del st.session_state["streamlined_res"]
@@ -768,6 +789,7 @@ if calc_btn:
         st.session_state["f_buying_role"] = f_buying_role
         st.session_state["f_timeline"] = f_timeline
         st.session_state["f_intent"] = f_intent
+        st.session_state["f_offering"] = f_offering
         st.session_state["f_platform"] = f_platform
 
         deal_sym = CURRENCY_OPTIONS.get(f_deal_curr, "$")
@@ -797,6 +819,7 @@ if calc_btn:
             contact_role_title=f_role.strip(),
             buying_role=f_buying_role.strip(),
             buying_intent=f_intent.strip(),
+            offering_interest=f_offering.strip(),
             timeline=f_timeline.strip(),
             target_deal_size_usd=float(f_deal_total) if f_deal_total > 0 else None,
             tech_stack_notes="",
@@ -919,7 +942,7 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 </div>""", unsafe_allow_html=True)
 
             with ai_col2:
-                offering_title = "Product & Solution Alignment"
+                offering_title = "Blackridge Offering Alignment"
                 offering_rat = res.pillar_offering.field_receipts[0].rationale if (res.pillar_offering and res.pillar_offering.field_receipts) else "Offering alignment evaluation."
                 st.markdown(f"""<div class="ai-feature-card">
 <div>
@@ -930,7 +953,7 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 {esc(offering_title)}
 </div>
 <div style="margin-top:8px;">
-<span class="tag-chip tag-emerald">Offering Alignment</span>
+<span class="tag-chip tag-emerald">Blackridge Alignment</span>
 </div>
 </div>
 <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">

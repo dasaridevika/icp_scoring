@@ -29,7 +29,7 @@ except (ImportError, ModuleNotFoundError):
         return default
 
 from engine.fx import FXEngine
-from engine.rules import PolicyEngine, PolicyCheckResult
+from engine.rules import PolicyEngine, PolicyCheckResult, matches_whole_word
 
 # Read worker URL strictly from environment
 DEFAULT_WORKER_URL = os.environ.get("ICP_WORKER_URL", "")
@@ -95,17 +95,31 @@ class FootprintAIAnalysis(BaseModel):
 
 
 class CompanyStandardsConfig(BaseModel):
-    company_name: str = ""
+    company_name: str = "Blackridge Research & Consulting"
     currency_symbol: str = "$"
     currency_code: str = "USD"
-    min_deal_size_usd: float = 0.0
-    target_deal_size_usd: float = 0.0
-    min_company_revenue_usd: float = 0.0
-    ideal_revenue_usd: float = 0.0
-    min_headcount: int = 0
-    ideal_headcount: int = 0
-    target_focus_industries: List[str] = Field(default_factory=list)
-    tier1_territories: List[str] = Field(default_factory=list)
+    min_deal_size_usd: float = 5000.0
+    target_deal_size_usd: float = 25000.0
+    min_company_revenue_usd: float = 5000000.0
+    ideal_revenue_usd: float = 50000000.0
+    min_headcount: int = 20
+    ideal_headcount: int = 500
+    core_offerings: List[str] = Field(default_factory=lambda: [
+        "Syndicated Market Research Reports (market sizing, market share, sector forecasts)",
+        "Capital Project Intelligence & Tracking Databases (upcoming tenders, EPC contractor awards, project pipelines)",
+        "Custom B2B Advisory & Market Feasibility Consulting"
+    ])
+    target_focus_industries: List[str] = Field(default_factory=lambda: [
+        "Energy, Utilities & Renewables",
+        "Infrastructure & Construction",
+        "Power & Transmission",
+        "Oil, Gas & Petrochemicals",
+        "Mining & Metals",
+        "Industrial Goods & Manufacturing"
+    ])
+    tier1_territories: List[str] = Field(default_factory=lambda: [
+        "United States", "Canada", "United Kingdom", "Germany", "France", "Japan", "India", "Australia", "Singapore", "United Arab Emirates", "Saudi Arabia"
+    ])
     prohibited_countries: List[str] = Field(default_factory=lambda: [
         "North Korea", "Iran", "Syria", "Cuba", "Russia", "Belarus"
     ])
@@ -390,7 +404,10 @@ class GTMScoringEngine:
         summary_lines = []
         if form.company_name: summary_lines.append(f"Company: {form.company_name}")
         if form.industry_sector: summary_lines.append(f"Industry: {form.industry_sector}")
+        if form.sub_vertical and form.sub_vertical != form.industry_sector: summary_lines.append(f"Sub-vertical / Specialty: {form.sub_vertical}")
+        if form.offering_interest: summary_lines.append(f"Offering Interest: {form.offering_interest}")
         if form.location: summary_lines.append(f"Headquarters: {form.location}")
+        if form.branch_locations: summary_lines.append(f"Branch Locations: {', '.join(form.branch_locations)}")
         if hc_val: summary_lines.append(f"Headcount: {hc_val}")
         if prospect_rev_str != "Unknown": summary_lines.append(f"Annual Revenue: {prospect_rev_str}")
         if form.contact_name: summary_lines.append(f"Contact Name: {form.contact_name}")
@@ -433,6 +450,11 @@ class GTMScoringEngine:
             "existing_platform": form.existing_platform or None,
             "company_standards": {
                 "org_name": cfg.company_name,
+                "core_offerings": getattr(cfg, "core_offerings", [
+                    "Syndicated Market Research Reports (market sizing, market share, sector forecasts)",
+                    "Capital Project Intelligence & Tracking Databases (upcoming tenders, EPC contractor awards, project pipelines)",
+                    "Custom B2B Advisory & Market Feasibility Consulting"
+                ]),
                 "target_focus_industries": cfg.target_focus_industries,
                 "tier1_territories": cfg.tier1_territories,
                 "prohibited_countries": cfg.prohibited_countries,
@@ -642,11 +664,11 @@ class GTMScoringEngine:
 
         # Deterministic Section 6 Rubric Fallback if AI marked UNKNOWN despite verified intent / offerings
         if offering_rating is None and has_offering_data:
-            intent_l = (form.buying_intent or "").lower()
-            if any(kw in intent_l for kw in ["report", "rfp", "procuring", "consulting", "analysis", "market share", "modernisation", "modernization", "solution", "software", "service", "platform"]):
-                offering_rating = 4 if ("rfp" in intent_l or "procuring" in intent_l) else 3
+            intent_l = f"{(form.buying_intent or '')} {(form.offering_interest or '')} {(form.sub_vertical or '')}".lower()
+            if any(kw in intent_l for kw in ["report", "rfp", "procuring", "consulting", "analysis", "market share", "project track", "tender", "database", "pipeline", "advisory", "feasibility", "modernisation", "modernization", "solution", "service"]):
+                offering_rating = 4 if any(k in intent_l for k in ["rfp", "procuring", "report", "database", "tender", "pipeline", "feasibility"]) else 3
                 offering_status = "INFERRED"
-                offering_rationale = f"Offering alignment derived from verified commercial intent: {form.buying_intent[:90]}"
+                offering_rationale = f"Offering alignment derived from verified commercial interest: {(form.offering_interest or form.buying_intent or form.sub_vertical)[:90]}"
 
         offering_pts = offering_rating or 0
 
@@ -673,24 +695,47 @@ class GTMScoringEngine:
 
         # Deterministic Section 6 Rubric Fallback if AI marked UNKNOWN despite explicit role title
         if auth_rating is None and has_auth_data:
-            role_l = (form.contact_role_title or "").lower()
+            role_raw = form.contact_role_title or ""
+            role_l = role_raw.lower()
             brole_l = (form.buying_role or "").lower()
-            if any(t in role_l for t in ["vp", "vice president", "chief", "cxo", "cro", "cfo", "cto", "ceo", "president", "head of", "partner", "general manager"]) or "economic buyer" in brole_l:
+
+            # Whole-word terms to prevent partial substring matches (e.g. 'cto' in 'Director', 'cro' in 'Microbiology')
+            exec_terms = [
+                "vp", "vice president", "chief", "cxo", "cro", "cfo", "cto", "ceo",
+                "coo", "cio", "cpo", "cso", "cmo", "cco", "president", "head of",
+                "partner", "general manager", "founder", "owner"
+            ]
+            dir_terms = [
+                "director", "directors", "senior director", "managing director",
+                "executive director", "associate director", "regional director"
+            ]
+            mgr_terms = [
+                "manager", "managers", "senior manager", "lead", "team lead",
+                "principal", "supervisor"
+            ]
+            ic_terms = [
+                "engineer", "analyst", "specialist", "coordinator", "associate",
+                "consultant", "contractor", "inspector", "technician", "developer",
+                "representative", "officer", "scientist", "researcher", "practitioner",
+                "account executive", "individual contributor", "staff"
+            ]
+
+            if any(matches_whole_word(t, role_l) for t in exec_terms) or matches_whole_word("economic buyer", brole_l):
                 auth_rating = 5
                 auth_status = "VERIFIED"
-                auth_rationale = f"Executive decision authority verified: {form.contact_role_title or form.buying_role}"
-            elif any(t in role_l for t in ["director", "senior director", "managing director"]):
+                auth_rationale = f"Executive decision authority verified: {role_raw or form.buying_role}"
+            elif any(matches_whole_word(t, role_l) for t in dir_terms):
                 auth_rating = 4
                 auth_status = "VERIFIED"
-                auth_rationale = f"Director-level authority verified: {form.contact_role_title}"
-            elif any(t in role_l for t in ["manager", "lead", "principal", "supervisor"]):
+                auth_rationale = f"Director-level authority verified: {role_raw}"
+            elif any(matches_whole_word(t, role_l) for t in mgr_terms):
                 auth_rating = 3
                 auth_status = "VERIFIED"
-                auth_rationale = f"Management-level authority verified: {form.contact_role_title}"
-            elif any(t in role_l for t in ["engineer", "analyst", "specialist", "coordinator", "associate"]):
+                auth_rationale = f"Management-level authority verified: {role_raw}"
+            elif any(matches_whole_word(t, role_l) for t in ic_terms) or role_raw.strip():
                 auth_rating = 2
                 auth_status = "INFERRED"
-                auth_rationale = f"Individual contributor verified: {form.contact_role_title}"
+                auth_rationale = f"Individual contributor verified: {role_raw}"
 
         auth_pts = auth_rating or 0
 

@@ -142,8 +142,15 @@ export default {
         }, 500);
       }
 
-      const systemPrompt = "You are a Senior B2B Revenue Intelligence Analyst evaluating inbound prospect leads.\n" +
+      const systemPrompt = "You are a Senior B2B Revenue Intelligence Analyst evaluating inbound prospect leads for Blackridge Research & Consulting.\n" +
         "Rate each of the 4 ICP Pillars strictly from 1 to 5 based on verified evidence, or mark as UNKNOWN if no evidence is present.\n\n" +
+        "ORGANIZATION CONTEXT & OFFERINGS (Blackridge Research & Consulting):\n" +
+        "Blackridge Research & Consulting provides premier B2B market intelligence, capital projects tracking, and custom research advisory services for global infrastructure, energy, and heavy industrial markets.\n" +
+        "Core Offerings:\n" +
+        "1. Syndicated Market Research Reports: Comprehensive sector reports covering market sizing, competitive benchmarking, growth forecasts, supply chain dynamics, and vendor shares.\n" +
+        "2. Project Tracking Databases & Capital Projects Intelligence: Continuous tracking of global capital projects, tenders, pipeline developments, EPC contractor awards, and project milestones.\n" +
+        "3. Custom B2B Advisory & Market Feasibility Consulting: Tailor-made market studies, commercial due diligence, market entry strategy, and procurement advisory.\n" +
+        "Target Focus Sectors: Energy, Utilities & Renewables, Infrastructure & Construction, Power & Transmission, Oil, Gas & Petrochemicals, Mining & Metals, Industrial Goods & Manufacturing.\n\n" +
         "RATING RUBRIC (1 to 5):\n" +
         "5: Strong match, clear evidence\n" +
         "4: Good match\n" +
@@ -152,14 +159,14 @@ export default {
         "1: Clear mismatch (evidence says no)\n" +
         "UNKNOWN: No evidence at all (do not make up numbers)\n\n" +
         "THE 4 PILLARS:\n" +
-        "1. FIRMOGRAPHIC (35%): Company size, industry sector, target geographic focus, business vs free email.\n" +
-        "2. OFFERING FIT (25%): Does what they need match the organization's product or service offerings?\n" +
+        "1. FIRMOGRAPHIC (35%): Company size, target sector alignment (especially focus sectors listed above), geographic footprint (supported Tier 1 regions vs non-supported/sanctioned), business vs free email domain.\n" +
+        "2. OFFERING FIT (25%): Does what the lead needs match BlackRidge's core offerings (Market Research Reports, Project Tracking Databases, or Custom Consulting)? 5 = Direct match for reports, project databases, or custom advisory; 4 = High alignment with market research / capital project data needs; 3 = Partial or adjacent research/industry data request; 2 = Weak alignment (e.g. general software or raw material buyers); 1 = Clear mismatch (e.g. consumer goods, job applicant). UNKNOWN = No product or solution need stated.\n" +
         "3. BUYER AUTHORITY (25%): Seniority and decision mandate. C-Suite/VP/Director = high (4-5); Manager = mid (3); IC = low (1-2); Student/Intern = Disqualified.\n" +
         "4. INTENT (15%): Ready to buy now? RFP/Proposal/Quote/Timeline <30 days = high (5); exploratory = mid (3); browsing = low (1-2).\n\n" +
         "CRITICAL COPYWRITING:\n" +
         "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus.\n" +
-        "- value_wedge: 1-2 sentence executive ROI thesis anchored to their product and solution needs.\n" +
-        "- discovery_questions: 3 high-impact consultative questions for discovery scoping.\n" +
+        "- value_wedge: 1-2 sentence executive ROI thesis anchored to their market research, project tracking, or consulting needs.\n" +
+        "- discovery_questions: 3 high-impact consultative questions for research & data scoping.\n" +
         "- key_strengths: 3 concrete data points from the prospect text.\n" +
         "- key_risks: 2 realistic qualification risks.\n\n" +
         "RETURN STRICT JSON ONLY MATCHING THIS SCHEMA:\n" +
@@ -218,9 +225,39 @@ export default {
         "  \"key_risks\": [\"string\"]\n" +
         "}\nRespond ONLY with valid JSON.";
 
-      let userPromptContent = "Prospect Text / Payload to Evaluate:\n" + prospectInput;
+      let userPromptContent = "PROSPECT DATA TO EVALUATE:\n" + prospectInput;
       if (dealSize !== null && !isNaN(dealSize) && dealSize > 0) {
         userPromptContent += "\nTarget Contract Size: $" + dealSize.toLocaleString() + " USD";
+      }
+      if (payload.offering_interest) {
+        userPromptContent += "\nStated Offering Interest: " + payload.offering_interest;
+      }
+      if (payload.sub_vertical && payload.sub_vertical !== payload.industry_sector) {
+        userPromptContent += "\nSub-Vertical / Specialty: " + payload.sub_vertical;
+      }
+      if (Array.isArray(payload.branch_locations) && payload.branch_locations.length > 0) {
+        userPromptContent += "\nBranch Locations: " + payload.branch_locations.join(", ");
+      }
+      if (payload.existing_platform) {
+        userPromptContent += "\nIncumbent / Existing Platform: " + payload.existing_platform;
+      }
+
+      // Settings and Target Standards (Section 6 & Review Finding 10)
+      const cs = payload.company_standards || {};
+      const orgName = cs.org_name || "Blackridge Research & Consulting";
+      userPromptContent += "\n\nORGANIZATION SETTINGS & TARGET STANDARDS:";
+      userPromptContent += "\n- Evaluating Organization: " + orgName;
+      if (Array.isArray(cs.core_offerings) && cs.core_offerings.length > 0) {
+        userPromptContent += "\n- Core Offerings:\n  * " + cs.core_offerings.join("\n  * ");
+      }
+      if (Array.isArray(cs.target_focus_industries) && cs.target_focus_industries.length > 0) {
+        userPromptContent += "\n- Sweet-Spot Focus Industries: " + cs.target_focus_industries.join(", ");
+      }
+      if (Array.isArray(cs.tier1_territories) && cs.tier1_territories.length > 0) {
+        userPromptContent += "\n- Tier 1 Supported Territories: " + cs.tier1_territories.join(", ");
+      }
+      if (Array.isArray(cs.prohibited_countries) && cs.prohibited_countries.length > 0) {
+        userPromptContent += "\n- Prohibited / Sanctioned Countries: " + cs.prohibited_countries.join(", ");
       }
 
       let aiRaw = null;
