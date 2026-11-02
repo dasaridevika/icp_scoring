@@ -1057,9 +1057,15 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
                                 st.markdown(f"**{esc(item.pillar_name)}**")
                                 st.markdown(f"<div style='font-size:0.82rem; color:#475569;'><strong>Decision Basis:</strong> {esc(item.basis_criterion)}</div>", unsafe_allow_html=True)
                             with tc2:
-                                st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#4338CA;'>{item.allotted_score:.0f}</span> / 100<br/><span style='font-size:0.75rem; color:#64748B;'>Weight: {item.weight_pct * 100:.0f}%</span></div>", unsafe_allow_html=True)
+                                if "UNKNOWN" in item.basis_criterion:
+                                    st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#94A3B8;'>—</span> / 100<br/><span style='font-size:0.75rem; color:#94A3B8;'>Unrated (Unknown)</span></div>", unsafe_allow_html=True)
+                                else:
+                                    st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#4338CA;'>{item.allotted_score:.0f}</span> / 100<br/><span style='font-size:0.75rem; color:#64748B;'>Weight: {item.weight_pct * 100:.0f}%</span></div>", unsafe_allow_html=True)
                             with tc3:
-                                st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#059669;'>+{item.points_contributed:.1f}</span> pts<br/><span style='font-size:0.75rem; color:#64748B;'>to Master Score</span></div>", unsafe_allow_html=True)
+                                if "UNKNOWN" in item.basis_criterion:
+                                    st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#94A3B8;'>—</span> pts<br/><span style='font-size:0.75rem; color:#94A3B8;'>Excluded</span></div>", unsafe_allow_html=True)
+                                else:
+                                    st.markdown(f"<div style='text-align:right;'><span style='font-size:1.15rem; font-weight:800; color:#059669;'>+{item.points_contributed:.1f}</span> pts<br/><span style='font-size:0.75rem; color:#64748B;'>to Master Score</span></div>", unsafe_allow_html=True)
 
                             st.markdown(f"<div style='font-size:0.84rem; color:#334155; margin-top:4px;'><em>💡 {esc(item.decision_rationale)}</em></div>", unsafe_allow_html=True)
                             

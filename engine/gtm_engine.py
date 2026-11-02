@@ -641,7 +641,43 @@ class GTMScoringEngine:
             rationale=r_footprint.get("rationale", "Geographic footprint analysis.")
         )
 
-        # Pillar 1 receipts
+        # Pillar 1 receipts: only attribute positive points to verified signals
+        rev_known = bool(norm_rev_usd is not None and norm_rev_usd > 0)
+        hc_known = bool(hc_val is not None and hc_val > 0)
+        ind_known = bool(form.industry_sector or form.sub_vertical)
+        geo_known = bool(form.location or form.branch_locations)
+
+        firmo_receipts = [
+            FieldScoreReceipt(
+                field_name="Company Revenue",
+                pillar="Firmographics",
+                raw_value=prospect_rev_str,
+                gtm_points=firmo_pts if (rev_known and firmo_pts > 0) else 0,
+                rationale=f"Stated Revenue: {prospect_rev_str}" if rev_known else "Revenue: Unknown / Not Provided"
+            ),
+            FieldScoreReceipt(
+                field_name="Employee Headcount",
+                pillar="Firmographics",
+                raw_value=hc_str,
+                gtm_points=firmo_pts if (hc_known and firmo_pts > 0) else 0,
+                rationale=f"Headcount: {hc_str}" if hc_known else "Headcount: Unknown / Not Provided"
+            ),
+            FieldScoreReceipt(
+                field_name="Industry & Niche",
+                pillar="Firmographics",
+                raw_value=f"{form.industry_sector or 'Unknown'} • {form.sub_vertical or 'General'}",
+                gtm_points=firmo_pts if (ind_known and firmo_pts > 0) else 0,
+                rationale=firmo_rationale if ind_known else "Industry: Unknown / Not Provided"
+            ),
+            FieldScoreReceipt(
+                field_name="Geographic Footprint",
+                pillar="Firmographics",
+                raw_value=ai_footprint.geographic_reach if geo_known else "Unknown",
+                gtm_points=firmo_pts if (geo_known and firmo_pts > 0) else 0,
+                rationale=ai_footprint.rationale if geo_known else "Location: Unknown / Not Provided"
+            )
+        ]
+
         pillar_firmo = PillarScoreSummary(
             pillar_name="Firmographic Fit",
             rating=firmo_rating,
@@ -649,12 +685,7 @@ class GTMScoringEngine:
             weight_pct=cfg.weight_firmographics,
             is_known=firmo_rating is not None,
             status=firmo_status,
-            field_receipts=[
-                FieldScoreReceipt(field_name="Company Revenue", pillar="Firmographics", raw_value=prospect_rev_str, gtm_points=firmo_pts, rationale=f"Stated Revenue: {prospect_rev_str}"),
-                FieldScoreReceipt(field_name="Employee Headcount", pillar="Firmographics", raw_value=hc_str, gtm_points=firmo_pts, rationale=f"Headcount: {hc_str}"),
-                FieldScoreReceipt(field_name="Industry & Niche", pillar="Firmographics", raw_value=f"{form.industry_sector or 'Unknown'} • {form.sub_vertical or 'General'}", gtm_points=firmo_pts, rationale=firmo_rationale),
-                FieldScoreReceipt(field_name="Geographic Footprint", pillar="Firmographics", raw_value=ai_footprint.geographic_reach, gtm_points=firmo_pts, rationale=ai_footprint.rationale)
-            ]
+            field_receipts=firmo_receipts
         )
 
         # Pillar 2: Offering Fit (25%) - Replaces Tech Stack (Section 4.1, 6.2)
@@ -665,6 +696,28 @@ class GTMScoringEngine:
 
         platform_raw = (form.uses_existing_platform or form.existing_platform or "").strip()
         incumbent_str = platform_raw if platform_raw else "None Stated"
+        has_incumbent = bool(platform_raw)
+        offering_known = bool(offering_rating is not None and offering_rating > 0)
+
+        offering_receipts = [
+            FieldScoreReceipt(
+                field_name="Offering Alignment",
+                pillar="Offering Fit",
+                raw_value=form.offering_interest or form.sub_vertical or "Solution Alignment",
+                gtm_points=offering_pts if offering_known else 0,
+                rationale=offering_rationale if offering_known else "Offering: Unknown / Not Provided"
+            )
+        ]
+        if has_incumbent:
+            offering_receipts.append(
+                FieldScoreReceipt(
+                    field_name="Existing Platform / Incumbent",
+                    pillar="Offering Fit",
+                    raw_value=incumbent_str,
+                    gtm_points=offering_pts if offering_known else 0,
+                    rationale=f"Incumbent: {incumbent_str}"
+                )
+            )
 
         pillar_offering = PillarScoreSummary(
             pillar_name="Offering Fit",
@@ -673,10 +726,7 @@ class GTMScoringEngine:
             weight_pct=cfg.weight_offering,
             is_known=offering_rating is not None,
             status=offering_status,
-            field_receipts=[
-                FieldScoreReceipt(field_name="Offering Alignment", pillar="Offering Fit", raw_value=form.offering_interest or form.sub_vertical or "Solution Alignment", gtm_points=offering_pts, rationale=offering_rationale),
-                FieldScoreReceipt(field_name="Existing Platform / Incumbent", pillar="Offering Fit", raw_value=incumbent_str, gtm_points=offering_pts, rationale=f"Incumbent: {incumbent_str}")
-            ]
+            field_receipts=offering_receipts
         )
 
         # Pillar 3: Buyer Authority (25%) (Section 6.2)
@@ -829,21 +879,52 @@ class GTMScoringEngine:
             or f"Hi {contact}, noticed your team's focus on {sub_niche} at {comp}—wanted to share how {org_ref} supports similar organizations."
         )
 
-        # Audit Tracker
+        # Audit Tracker (Section 6.4: Normalized points contribution reflecting unknown pillar weight reallocation)
         tracker = []
-        for w, p in all_pillars:
-            tracker.append(
-                ScoringTrackerItem(
-                    pillar_name=p.pillar_name,
-                    allotted_score=float(p.score) if p.score is not None else 0.0,
-                    weight_pct=p.weight_pct,
-                    points_contributed=round((p.rating * w * 20.0), 1) if p.is_known and p.rating else 0.0,
-                    basis_criterion=f"{p.status} (Rating: {p.rating}/5)" if p.is_known else "UNKNOWN (No Data)",
-                    verified_signals=[r.field_name for r in p.field_receipts if r.gtm_points > 0],
-                    deduction_gaps=[r.field_name for r in p.field_receipts if r.gtm_points == 0],
-                    decision_rationale=p.field_receipts[0].rationale if p.field_receipts else "Pillar evaluation."
+        if sum_known_weights > 0:
+            raw_contribs = []
+            for w, p in all_pillars:
+                if p.is_known and p.rating is not None:
+                    adj_weight = w / sum_known_weights
+                    raw_contribs.append(p.rating * adj_weight * 20.0)
+                else:
+                    raw_contribs.append(0.0)
+
+            rounded_contribs = [round(c, 1) for c in raw_contribs]
+            known_indices = [i for i, (w, p) in enumerate(all_pillars) if p.is_known and p.rating is not None]
+            if known_indices:
+                diff = round(master_score - sum(rounded_contribs), 1)
+                if abs(diff) > 0 and abs(diff) <= 0.2:
+                    largest_idx = max(known_indices, key=lambda i: raw_contribs[i])
+                    rounded_contribs[largest_idx] = round(rounded_contribs[largest_idx] + diff, 1)
+
+            for i, (w, p) in enumerate(all_pillars):
+                tracker.append(
+                    ScoringTrackerItem(
+                        pillar_name=p.pillar_name,
+                        allotted_score=float(p.score) if p.score is not None else 0.0,
+                        weight_pct=p.weight_pct,
+                        points_contributed=rounded_contribs[i],
+                        basis_criterion=f"{p.status} (Rating: {p.rating}/5)" if p.is_known else "UNKNOWN (No Data)",
+                        verified_signals=[r.field_name for r in p.field_receipts if r.gtm_points > 0],
+                        deduction_gaps=[r.field_name for r in p.field_receipts if r.gtm_points == 0],
+                        decision_rationale=p.field_receipts[0].rationale if p.field_receipts else "Pillar evaluation."
+                    )
                 )
-            )
+        else:
+            for w, p in all_pillars:
+                tracker.append(
+                    ScoringTrackerItem(
+                        pillar_name=p.pillar_name,
+                        allotted_score=0.0,
+                        weight_pct=p.weight_pct,
+                        points_contributed=0.0,
+                        basis_criterion="UNKNOWN (No Data)",
+                        verified_signals=[],
+                        deduction_gaps=[r.field_name for r in p.field_receipts],
+                        decision_rationale="No verified data provided."
+                    )
+                )
 
         discovery_questions = (
             ai_res.get("discovery_questions")
