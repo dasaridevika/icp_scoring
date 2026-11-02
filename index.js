@@ -407,6 +407,8 @@ export default {
           is_disqualified: isDisqualified,
           disqualification_reason: String(aiResult.disqualification_reason || "")
         },
+        is_disqualified: isDisqualified,
+        disqualification_reason: String(aiResult.disqualification_reason || ""),
         evidence: validatedEvidence,
         ai_analysis: {
           role: sanitizedRole,

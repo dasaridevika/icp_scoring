@@ -487,8 +487,25 @@ class GTMScoringEngine:
         # -------------------------------------------------------------
         # 4. Enforce AI Disqualification (Bug 2.4 fix)
         # -------------------------------------------------------------
-        if ai_res.get("is_disqualified") or "Disqualified" in str(ai_res.get("priority_tier", "")):
-            disq_reason = ai_res.get("disqualification_reason") or "Disqualified by evaluation policy."
+        raw_evidence = ai_res.get("evidence", {}) or {}
+        raw_ai = ai_res.get("ai_analysis", {}) or {}
+        raw_strategy = ai_res.get("strategy", {}) or {}
+        model_used = str(ai_res.get("model_used", ai_res.get("model", "")))
+
+        ai_scores = ai_res.get("scores", {}) if isinstance(ai_res.get("scores"), dict) else {}
+        is_ai_disq = (
+            bool(ai_res.get("is_disqualified"))
+            or bool(ai_scores.get("is_disqualified"))
+            or "Disqualified" in str(ai_res.get("priority_tier", ""))
+            or "Disqualified" in str(ai_scores.get("priority_tier", ""))
+            or "-5" in str(raw_ai.get("role", {}).get("seniority_level", ""))
+        )
+        if is_ai_disq:
+            disq_reason = (
+                ai_res.get("disqualification_reason")
+                or ai_scores.get("disqualification_reason")
+                or (f"Non-commercial persona detected: {raw_ai.get('role', {}).get('seniority_level')}" if "-5" in str(raw_ai.get("role", {}).get("seniority_level", "")) else "Disqualified by evaluation policy.")
+            )
             empty_pillar = PillarScoreSummary(
                 pillar_name="Disqualified",
                 rating=None,
@@ -525,10 +542,6 @@ class GTMScoringEngine:
         # -------------------------------------------------------------
         # 5. Extract Evidence & Ratings 1–5 (Section 6.3)
         # -------------------------------------------------------------
-        raw_evidence = ai_res.get("evidence", {}) or {}
-        raw_ai = ai_res.get("ai_analysis", {}) or {}
-        raw_strategy = ai_res.get("strategy", {}) or {}
-        model_used = str(ai_res.get("model_used", ai_res.get("model", "")))
 
         def extract_rating(p_data: Dict[str, Any], has_data: bool) -> Tuple[Optional[int], str, str]:
             """Extracts rating (1 to 5) or None for Unknown."""
