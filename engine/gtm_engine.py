@@ -29,7 +29,7 @@ except (ImportError, ModuleNotFoundError):
         return default
 
 from engine.fx import FXEngine
-from engine.rules import PolicyEngine, PolicyCheckResult, matches_whole_word
+from engine.rules import PolicyEngine, PolicyCheckResult, matches_whole_word, DEFAULT_PROHIBITED_COUNTRIES
 
 # Read worker URL strictly from environment
 DEFAULT_WORKER_URL = os.environ.get("ICP_WORKER_URL", "")
@@ -120,9 +120,7 @@ class CompanyStandardsConfig(BaseModel):
     tier1_territories: List[str] = Field(default_factory=lambda: [
         "United States", "Canada", "United Kingdom", "Germany", "France", "Japan", "India", "Australia", "Singapore", "United Arab Emirates", "Saudi Arabia"
     ])
-    prohibited_countries: List[str] = Field(default_factory=lambda: [
-        "North Korea", "Iran", "Syria", "Cuba", "Russia", "Belarus"
-    ])
+    prohibited_countries: List[str] = Field(default_factory=lambda: list(DEFAULT_PROHIBITED_COUNTRIES))
     # Authoritative Section 6 Rubric Weights
     weight_firmographics: float = 0.35
     weight_offering: float = 0.25
@@ -807,10 +805,10 @@ class GTMScoringEngine:
                 "account executive", "individual contributor", "staff"
             ]
 
-            if any(matches_whole_word(t, role_l) for t in exec_terms) or matches_whole_word("economic buyer", brole_l):
+            if any(matches_whole_word(t, role_l) for t in exec_terms):
                 auth_rating = 5
                 auth_status = "VERIFIED"
-                auth_rationale = f"Executive decision authority verified: {role_raw or form.buying_role}"
+                auth_rationale = f"Executive C-Suite/VP decision authority verified: {role_raw}"
             elif any(matches_whole_word(t, role_l) for t in dir_terms):
                 auth_rating = 4
                 auth_status = "VERIFIED"
@@ -819,10 +817,18 @@ class GTMScoringEngine:
                 auth_rating = 3
                 auth_status = "VERIFIED"
                 auth_rationale = f"Management-level authority verified: {role_raw}"
-            elif any(matches_whole_word(t, role_l) for t in ic_terms) or role_raw.strip():
+            elif any(matches_whole_word(t, role_l) for t in ic_terms):
+                auth_rating = 2
+                auth_status = "VERIFIED"
+                auth_rationale = f"Individual contributor verified: {role_raw}"
+            elif matches_whole_word("economic buyer", brole_l):
+                auth_rating = 4
+                auth_status = "INFERRED"
+                auth_rationale = f"Economic buyer authority inferred: {form.buying_role}"
+            elif role_raw.strip():
                 auth_rating = 2
                 auth_status = "INFERRED"
-                auth_rationale = f"Individual contributor verified: {role_raw}"
+                auth_rationale = f"Individual contributor inferred: {role_raw}"
 
         auth_pts = auth_rating or 0
 

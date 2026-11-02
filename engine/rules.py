@@ -142,8 +142,10 @@ class PolicyEngine:
         result = PolicyCheckResult()
 
         # 1. Sanctions / Prohibited Territories & Sanctioned Cities Check
-        prohibited = prohibited_countries or DEFAULT_PROHIBITED_COUNTRIES
-        all_prohibited_terms = list(prohibited) + SANCTIONED_CITIES_OR_REGIONS
+        prohibited_set = set(DEFAULT_PROHIBITED_COUNTRIES)
+        if prohibited_countries:
+            prohibited_set.update(prohibited_countries)
+        all_prohibited_terms = list(prohibited_set) + SANCTIONED_CITIES_OR_REGIONS
 
         # Check primary location and all branch locations
         locations_to_check = [location or ""]

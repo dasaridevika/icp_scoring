@@ -161,7 +161,7 @@ export default {
         "THE 4 PILLARS:\n" +
         "1. FIRMOGRAPHIC (35%): Company size, target sector alignment (especially focus sectors listed above), geographic footprint (supported Tier 1 regions vs non-supported/sanctioned), business vs free email domain.\n" +
         "2. OFFERING FIT (25%): Does what the lead needs match BlackRidge's core offerings (Market Research Reports, Project Tracking Databases, or Custom Consulting)? 5 = Direct match for reports, project databases, or custom advisory; 4 = High alignment with market research / capital project data needs; 3 = Partial or adjacent research/industry data request; 2 = Weak alignment (e.g. general software or raw material buyers); 1 = Clear mismatch (e.g. consumer goods, job applicant). UNKNOWN = No product or solution need stated.\n" +
-        "3. BUYER AUTHORITY (25%): Seniority and decision mandate. C-Suite/VP/Director = high (4-5); Manager = mid (3); IC = low (1-2); Student/Intern = Disqualified.\n" +
+        "3. BUYER AUTHORITY (25%): Seniority and decision mandate. 5 = C-Suite / Founder / VP / Head of (Top Decision Maker); 4 = Director (Senior Decision Maker); 3 = Manager / Lead (Mid-level); 2 = Individual Contributor / Staff; 1 = Intern / Student / Non-commercial persona (Disqualified).\n" +
         "4. INTENT (15%): Ready to buy now? RFP/Proposal/Quote/Timeline <30 days = high (5); exploratory = mid (3); browsing = low (1-2).\n\n" +
         "CRITICAL COPYWRITING:\n" +
         "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus.\n" +
@@ -382,7 +382,7 @@ export default {
           "Manager (+1)",
           "Individual Contributor (+1)",
           "Student / Intern (-5)"
-        ], "Individual Contributor (+1)"),
+        ], "Unspecified"),
         persona_type: resolveEnum(rawRole.persona_type, [
           "Economic Buyer",
           "Technical Champion",
