@@ -67,7 +67,12 @@ DEFAULT_PROHIBITED_COUNTRIES: List[str] = [
     "Islamic Republic of Iran",
     # Cuba
     "Cuba",
-    "Cuban"
+    "Cuban",
+    # Comprehensive Embargoed Regions (OFAC Sanctions)
+    "Crimea",
+    "Sevastopol",
+    "Donetsk",
+    "Luhansk"
 ]
 
 # Sanctioned cities list kept for backwards compatibility but not checked against locations
@@ -97,11 +102,14 @@ def matches_whole_word(phrase: str, text: str) -> bool:
     """
     Checks if `phrase` matches in `text` with whole-word boundaries at start and end.
     Avoids false positives like 'intern' in 'International Sales Director'
-    or 'iran' in 'Miranda, Chile'.
+    or 'iran' in 'Miranda, Chile'. Handles non-word edge characters (e.g. 'D.P.R.K.').
     """
     if not phrase or not text:
         return False
-    pattern = r"\b" + re.escape(phrase.strip()) + r"\b"
+    phrase_clean = phrase.strip()
+    prefix = r"\b" if re.match(r"^\w", phrase_clean) else r"(?<!\S)"
+    suffix = r"\b" if re.search(r"\w$", phrase_clean) else r"(?!\S)"
+    pattern = prefix + re.escape(phrase_clean) + suffix
     return bool(re.search(pattern, text, re.IGNORECASE))
 
 
