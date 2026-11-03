@@ -70,22 +70,10 @@ DEFAULT_PROHIBITED_COUNTRIES: List[str] = [
     "Cuban"
 ]
 
-# Major sanctioned administrative capitals, cities, or disputed regions
-SANCTIONED_CITIES_OR_REGIONS: List[str] = [
-    "Tehran",
-    "Moscow",
-    "Saint Petersburg",
-    "St. Petersburg",
-    "St Petersburg",
-    "Minsk",
-    "Damascus",
-    "Pyongyang",
-    "Havana",
-    "Crimea",
-    "Sevastopol",
-    "Donetsk",
-    "Luhansk"
-]
+# Sanctioned cities list kept for backwards compatibility but not checked against locations
+# to prevent false-positive blocking of valid US/international leads (e.g., St. Petersburg FL, Havana IL).
+# Compliance checks check verified prohibited countries only.
+SANCTIONED_CITIES_OR_REGIONS: List[str] = []
 
 # Exemption keywords: Leadership or administrative staff in student-facing departments
 # (e.g., 'Director of Student Affairs', 'Dean of Students', 'Student Affairs Coordinator')
@@ -141,11 +129,11 @@ class PolicyEngine:
     ) -> PolicyCheckResult:
         result = PolicyCheckResult()
 
-        # 1. Sanctions / Prohibited Territories & Sanctioned Cities Check
+        # 1. Sanctions / Prohibited Countries Check (verifies country, not city names)
         prohibited_set = set(DEFAULT_PROHIBITED_COUNTRIES)
         if prohibited_countries:
             prohibited_set.update(prohibited_countries)
-        all_prohibited_terms = list(prohibited_set) + SANCTIONED_CITIES_OR_REGIONS
+        all_prohibited_terms = list(prohibited_set)
 
         # Check primary location and all branch locations
         locations_to_check = [location or ""]

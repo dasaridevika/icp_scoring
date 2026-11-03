@@ -513,59 +513,13 @@ class GTMScoringEngine:
             )
 
         # -------------------------------------------------------------
-        # 4. Enforce AI Disqualification (Bug 2.4 fix)
+        # 4. Ingest AI Evidence & Strategy Receipts
+        # (Only deterministic Python rules evaluate disqualification; AI provides ratings & strategic insights)
         # -------------------------------------------------------------
         raw_evidence = ai_res.get("evidence", {}) or {}
         raw_ai = ai_res.get("ai_analysis", {}) or {}
         raw_strategy = ai_res.get("strategy", {}) or {}
         model_used = str(ai_res.get("model_used", ai_res.get("model", "")))
-
-        ai_scores = ai_res.get("scores", {}) if isinstance(ai_res.get("scores"), dict) else {}
-        is_ai_disq = (
-            bool(ai_res.get("is_disqualified"))
-            or bool(ai_scores.get("is_disqualified"))
-            or "Disqualified" in str(ai_res.get("priority_tier", ""))
-            or "Disqualified" in str(ai_scores.get("priority_tier", ""))
-            or "-5" in str(raw_ai.get("role", {}).get("seniority_level", ""))
-        )
-        if is_ai_disq:
-            disq_reason = (
-                ai_res.get("disqualification_reason")
-                or ai_scores.get("disqualification_reason")
-                or (f"Non-commercial persona detected: {raw_ai.get('role', {}).get('seniority_level')}" if "-5" in str(raw_ai.get("role", {}).get("seniority_level", "")) else "Disqualified by evaluation policy.")
-            )
-            empty_pillar = PillarScoreSummary(
-                pillar_name="Disqualified",
-                rating=None,
-                score=0.0,
-                weight_pct=0.0,
-                is_known=False,
-                status="UNKNOWN"
-            )
-            return StreamlinedScoringResult(
-                company_name=form.company_name or "Unspecified",
-                master_icp_score=0.0,
-                coverage_pct=0.0,
-                priority_tier="Disqualified: Anti-ICP",
-                is_disqualified=True,
-                disqualification_reason=disq_reason,
-                urgency_sla="No Outreach (Archived)",
-                recommended_channel="Do Not Contact",
-                value_wedge="Disqualified prospect.",
-                outreach_hook="Do Not Contact.",
-                pillar_firmographics=empty_pillar,
-                pillar_offering=empty_pillar,
-                pillar_authority=empty_pillar,
-                pillar_intent=empty_pillar,
-                pillar_value=empty_pillar,
-                analysis_mode="live",
-                degraded_reasons=[],
-                lead_summary={
-                    "industry": form.industry_sector or "Unknown",
-                    "location": form.location or "Unknown",
-                    "contact_title": form.contact_role_title or "Unknown"
-                }
-            )
 
         # -------------------------------------------------------------
         # 5. Extract Evidence & Ratings 1–5 (Section 6.3)
@@ -788,7 +742,7 @@ class GTMScoringEngine:
             exec_terms = [
                 "vp", "vice president", "chief", "cxo", "cro", "cfo", "cto", "ceo",
                 "coo", "cio", "cpo", "cso", "cmo", "cco", "president", "head of",
-                "partner", "general manager", "founder", "owner"
+                "general manager", "founder", "owner", "partner"
             ]
             dir_terms = [
                 "director", "directors", "senior director", "managing director",
@@ -802,21 +756,40 @@ class GTMScoringEngine:
                 "engineer", "analyst", "specialist", "coordinator", "associate",
                 "consultant", "contractor", "inspector", "technician", "developer",
                 "representative", "officer", "scientist", "researcher", "practitioner",
-                "account executive", "individual contributor", "staff"
+                "account executive", "individual contributor", "staff", "product owner"
             ]
 
-            if any(matches_whole_word(t, role_l) for t in exec_terms):
+            # Assistant roles (e.g. Executive Assistant to the CEO) are support staff (rating 2)
+            if matches_whole_word("assistant", role_l):
+                auth_rating = 2
+                auth_status = "VERIFIED"
+                auth_rationale = f"Individual contributor verified: {role_raw}"
+            # Product Owner is an ordinary staff role (rating 2), not a business owner
+            elif matches_whole_word("product owner", role_l):
+                auth_rating = 2
+                auth_status = "VERIFIED"
+                auth_rationale = f"Individual contributor verified: {role_raw}"
+            # General Manager is C-suite / Executive (rating 5)
+            elif matches_whole_word("general manager", role_l):
                 auth_rating = 5
                 auth_status = "VERIFIED"
-                auth_rationale = f"Executive C-Suite/VP decision authority verified: {role_raw}"
-            elif any(matches_whole_word(t, role_l) for t in dir_terms):
-                auth_rating = 4
-                auth_status = "VERIFIED"
-                auth_rationale = f"Director-level authority verified: {role_raw}"
+                auth_rationale = f"Executive decision authority verified: {role_raw}"
+            # Manager / Channel Partner Manager (rating 3) takes precedence over 'partner' in exec_terms
             elif any(matches_whole_word(t, role_l) for t in mgr_terms):
                 auth_rating = 3
                 auth_status = "VERIFIED"
                 auth_rationale = f"Management-level authority verified: {role_raw}"
+            # Director level (rating 4)
+            elif any(matches_whole_word(t, role_l) for t in dir_terms):
+                auth_rating = 4
+                auth_status = "VERIFIED"
+                auth_rationale = f"Director-level authority verified: {role_raw}"
+            # Executive C-Suite / VP / Founder / Partner / Owner (rating 5)
+            elif any(matches_whole_word(t, role_l) for t in exec_terms):
+                auth_rating = 5
+                auth_status = "VERIFIED"
+                auth_rationale = f"Executive C-Suite/VP decision authority verified: {role_raw}"
+            # Individual Contributor (rating 2)
             elif any(matches_whole_word(t, role_l) for t in ic_terms):
                 auth_rating = 2
                 auth_status = "VERIFIED"
@@ -825,10 +798,11 @@ class GTMScoringEngine:
                 auth_rating = 4
                 auth_status = "INFERRED"
                 auth_rationale = f"Economic buyer authority inferred: {form.buying_role}"
-            elif role_raw.strip():
-                auth_rating = 2
-                auth_status = "INFERRED"
-                auth_rationale = f"Individual contributor inferred: {role_raw}"
+            else:
+                # Unrecognized title: do NOT default to 2. Leave unknown for manual review.
+                auth_rating = None
+                auth_status = "UNKNOWN"
+                auth_rationale = f"Unrecognized title requiring manual review: {role_raw}"
 
         auth_pts = auth_rating or 0
 
