@@ -22,8 +22,8 @@ AI Evidence & Rating Extractor (Cloudflare Worker `index.js` / Workers AI)
   • 1 to 5 criteria ratings (or UNKNOWN for unverified attributes; zero data fabrication)
          ↓
 Deterministic Scoring & Coverage Engine (`engine/gtm_engine.py`)
-  • Dynamic weight renormalization across known pillars
-  • Mathematical scoring based on verified evidence
+  • Authentic point contribution per verified pillar (no score reallocation or weight inflation)
+  • Mathematical scoring based strictly on verified evidence (unknown pillars contribute 0 points)
   • "Needs review" safety-tier override when coverage < 60% or authority is unknown
          ↓
 Interactive RevOps Dashboard (`app.py`) • Streamlit Cloud
@@ -33,7 +33,7 @@ Interactive RevOps Dashboard (`app.py`) • Streamlit Cloud
 * **100% Self-Contained Core**: Hard compliance rules and mathematical scoring reside entirely in Python.
 * **Deterministic Scoring Engine (`engine/gtm_engine.py`)**: Computes master composite score, tier assignment, coverage percentage, and next-action SLAs.
 * **Zero Mock Datasets & Zero Fake Fallbacks**: Missing attributes are classified as `UNKNOWN` ($0$ contribution) rather than assuming inflated values, triggering targeted sales discovery questions.
-* **Dynamic Weight Renormalization**: Scoring dynamically scales across verified pillars, ensuring incomplete leads are flagged for manual review rather than falsely awarded high-priority tiers.
+* **Authentic Pillar Point Contribution**: Each pillar contributes its true earned points ($\text{weight} \times \text{rating} \times 20$). Scores are never reallocated or inflated across missing pillars; unrated pillars contribute 0 points, and low-coverage leads are flagged for manual review.
 
 ---
 
@@ -54,7 +54,7 @@ Interactive RevOps Dashboard (`app.py`) • Streamlit Cloud
 * **UNKNOWN**: No evidence provided (excluded from score calculation)
 
 ### 3. Master ICP Score & Coverage
-$$\text{Score} = \frac{\sum_{\text{known pillars}} (\text{weight} \times \text{rating})}{\sum_{\text{known pillars}} \text{weight}} \times 20$$
+$$\text{Score} = \sum_{\text{known pillars}} (\text{weight} \times \text{rating} \times 20)$$
 
 $$\text{Coverage} = \sum_{\text{known pillars}} \text{weight} \times 100\%$$
 

@@ -850,27 +850,23 @@ class GTMScoringEngine:
         known_pillars = [(w, p) for w, p in all_pillars if p.is_known and p.rating is not None]
 
         sum_known_weights = sum(w for w, p in known_pillars)
-        if not known_pillars:
-            master_score = 0.0
-            coverage_pct = 0.0
-            priority_tier = "Tier: Needs review"
-        else:
-            sum_weighted_ratings = sum(w * p.rating for w, p in known_pillars)
-            # Section 6.4 formula: (sum of weight * rating) / (sum of known weights) * 20
-            master_score = round((sum_weighted_ratings / sum_known_weights) * 20.0, 1)
-            coverage_pct = round(sum_known_weights * 100.0, 1)
+        coverage_pct = round(sum_known_weights * 100.0, 1)
 
-            # Section 6.5: Needs review wins over score if coverage < 60% or buyer authority unknown
-            if coverage_pct < cfg.min_coverage_threshold or not pillar_auth.is_known:
-                priority_tier = "Tier: Needs review"
-            elif master_score >= cfg.tier_a_threshold:
-                priority_tier = "Tier A: Contact First"
-            elif master_score >= cfg.tier_b_threshold:
-                priority_tier = "Tier B: Follow Up"
-            elif master_score >= cfg.tier_c_threshold:
-                priority_tier = "Tier C: Nurture"
-            else:
-                priority_tier = "Tier D: Low Priority"
+        # Authentic scoring: each pillar contributes its true earned points (weight * rating * 20).
+        # Unknown pillars contribute 0.0 points. Scores are never reallocated or inflated across missing pillars.
+        master_score = round(sum(w * p.rating * 20.0 for w, p in known_pillars), 1)
+
+        # Section 6.5: Needs review wins over score if coverage < 60% or buyer authority unknown
+        if coverage_pct < cfg.min_coverage_threshold or not pillar_auth.is_known:
+            priority_tier = "Tier: Needs review"
+        elif master_score >= cfg.tier_a_threshold:
+            priority_tier = "Tier A: Contact First"
+        elif master_score >= cfg.tier_b_threshold:
+            priority_tier = "Tier B: Follow Up"
+        elif master_score >= cfg.tier_c_threshold:
+            priority_tier = "Tier C: Nurture"
+        else:
+            priority_tier = "Tier D: Low Priority"
 
         # SLA and Next Actions
         if priority_tier == "Tier: Needs review":
@@ -905,52 +901,22 @@ class GTMScoringEngine:
             or f"Hi {contact}, noticed your team's focus on {sub_niche} at {comp}—wanted to share how {org_ref} supports similar organizations."
         )
 
-        # Audit Tracker (Section 6.4: Normalized points contribution reflecting unknown pillar weight reallocation)
+        # Audit Tracker: authentic points contribution without score reallocation or fabricated adjustments
         tracker = []
-        if sum_known_weights > 0:
-            raw_contribs = []
-            for w, p in all_pillars:
-                if p.is_known and p.rating is not None:
-                    adj_weight = w / sum_known_weights
-                    raw_contribs.append(p.rating * adj_weight * 20.0)
-                else:
-                    raw_contribs.append(0.0)
-
-            rounded_contribs = [round(c, 1) for c in raw_contribs]
-            known_indices = [i for i, (w, p) in enumerate(all_pillars) if p.is_known and p.rating is not None]
-            if known_indices:
-                diff = round(master_score - sum(rounded_contribs), 1)
-                if abs(diff) > 0 and abs(diff) <= 0.2:
-                    largest_idx = max(known_indices, key=lambda i: raw_contribs[i])
-                    rounded_contribs[largest_idx] = round(rounded_contribs[largest_idx] + diff, 1)
-
-            for i, (w, p) in enumerate(all_pillars):
-                tracker.append(
-                    ScoringTrackerItem(
-                        pillar_name=p.pillar_name,
-                        allotted_score=float(p.score) if p.score is not None else 0.0,
-                        weight_pct=p.weight_pct,
-                        points_contributed=rounded_contribs[i],
-                        basis_criterion=f"{p.status} (Rating: {p.rating}/5)" if p.is_known else "UNKNOWN (No Data)",
-                        verified_signals=[r.field_name for r in p.field_receipts if r.gtm_points > 0],
-                        deduction_gaps=[r.field_name for r in p.field_receipts if r.gtm_points == 0],
-                        decision_rationale=p.field_receipts[0].rationale if p.field_receipts else "Pillar evaluation."
-                    )
+        for w, p in all_pillars:
+            pts_contrib = round(w * p.rating * 20.0, 1) if p.is_known and p.rating is not None else 0.0
+            tracker.append(
+                ScoringTrackerItem(
+                    pillar_name=p.pillar_name,
+                    allotted_score=float(p.score) if p.score is not None else 0.0,
+                    weight_pct=p.weight_pct,
+                    points_contributed=pts_contrib,
+                    basis_criterion=f"{p.status} (Rating: {p.rating}/5)" if p.is_known else "UNKNOWN (No Data)",
+                    verified_signals=[r.field_name for r in p.field_receipts if r.gtm_points > 0],
+                    deduction_gaps=[r.field_name for r in p.field_receipts if r.gtm_points == 0],
+                    decision_rationale=p.field_receipts[0].rationale if p.field_receipts else "Pillar evaluation."
                 )
-        else:
-            for w, p in all_pillars:
-                tracker.append(
-                    ScoringTrackerItem(
-                        pillar_name=p.pillar_name,
-                        allotted_score=0.0,
-                        weight_pct=p.weight_pct,
-                        points_contributed=0.0,
-                        basis_criterion="UNKNOWN (No Data)",
-                        verified_signals=[],
-                        deduction_gaps=[r.field_name for r in p.field_receipts],
-                        decision_rationale="No verified data provided."
-                    )
-                )
+            )
 
         discovery_questions = (
             ai_res.get("discovery_questions")
