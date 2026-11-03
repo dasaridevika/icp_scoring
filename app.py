@@ -402,7 +402,7 @@ def show_settings_dialog():
             s_name = st.text_input("Company / Org Identifier", value=cfg.company_name)
             
             s_offerings_raw = st.text_area(
-                "Blackridge Core Offerings",
+                f"{cfg.company_name} Core Offerings" if cfg.company_name else "Core Offerings",
                 value="\n".join(getattr(cfg, "core_offerings", [
                     "Syndicated Market Research Reports (market sizing, market share, sector forecasts)",
                     "Capital Project Intelligence & Tracking Databases (upcoming tenders, EPC contractor awards, project pipelines)",
@@ -963,7 +963,7 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 </div>""", unsafe_allow_html=True)
 
             with ai_col2:
-                offering_title = "Blackridge Offering Alignment"
+                offering_title = f"{cfg.company_name} Offering Alignment" if cfg.company_name else "Offering Alignment"
                 offering_rat = res.pillar_offering.field_receipts[0].rationale if (res.pillar_offering and res.pillar_offering.field_receipts) else "Offering alignment evaluation."
                 st.markdown(f"""<div class="ai-feature-card">
 <div>
@@ -974,7 +974,7 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 {esc(offering_title)}
 </div>
 <div style="margin-top:8px;">
-<span class="tag-chip tag-emerald">Blackridge Alignment</span>
+<span class="tag-chip tag-emerald">{esc(cfg.company_name)} Alignment</span>
 </div>
 </div>
 <div style="margin-top:14px; font-size:0.82rem; color:#CBD5E1; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
