@@ -199,7 +199,7 @@ export default {
         "4 = company is in a focus sector AND uses a business email, but region is unconfirmed or size is unverified; " +
         "3 = company is in a closely adjacent industrial/infrastructure sector (e.g. logistics, transportation, aerospace, heavy equipment) with business email; " +
         "2 = company is in a focus sector but uses a free email provider (e.g. gmail, yahoo); " +
-        "1 = sector is outside the focus list and not closely related (e.g. Beauty & Cosmetics, Retail, Higher Education, Consumer Goods, Fashion, Healthcare, Hospitality, B2C) OR company is in a prohibited country; " +
+        "1 = sector is outside the focus list (e.g. Higher Education, Beauty & Cosmetics, Retail, Consumer Goods, Fashion, Healthcare, Hospitality, B2C, Media, Academia) -> MUST rate 1 regardless of company size, revenue, title, or location; OR company is in a prohibited country; " +
         "UNKNOWN = no company, sector, location, or firmographic data provided.\n" +
         "2. OFFERING FIT (25%): Does what the lead needs match BlackRidge's core offerings (Market Research Reports, Project Tracking Databases, or Custom Consulting)? 5 = Direct match for reports, project databases, or custom advisory; 4 = High alignment with market research / capital project data needs; 3 = Partial or adjacent research/industry data request; 2 = Weak alignment (e.g. general software or raw material buyers); 1 = Clear mismatch (e.g. consumer goods, job applicant). UNKNOWN = No product or solution need stated (if no message, inquiry, or stated offering interest is provided, output null for rating and \"UNKNOWN\" for status; do not infer offering fit from company industry alone).\n" +
         "3. BUYER AUTHORITY (25%): Seniority and commercial decision mandate. " +
@@ -210,11 +210,11 @@ export default {
         "1 = Non-commercial persona (Student, Intern, Academic, Research Scholar, PhD / Master thesis data inquiry, Job Seeker, Hobbyist / Personal project). " +
         "If contact is non-commercial or academic (e.g. Research Scholar, PhD thesis inquiry, student), set rating to 1, and set is_disqualified to true with disqualification_reason explaining that this is a non-commercial academic persona.\n" +
         "4. INTENT (15%): " +
-        "5 = explicit active procurement: mentions an RFP, formal quote request, vendor selection, approved budget, or decision/purchase timeline within 30 days; " +
-        "4 = active evaluation with near-term timeline (1 to 3 months / specified quarter) or explicit commercial pilot/trial request; " +
-        "3 = stated solution need or problem to solve, but no purchasing timeline specified (e.g. 'We need data on upcoming tenders', 'looking for research on solar projects'); " +
-        "2 = early exploratory or curious: downloaded a sample, general pricing inquiry without project details, browsing, or vague top-of-funnel interest (e.g. 'Downloaded a sample, curious about pricing'); " +
-        "1 = non-commercial research, just browsing, student/thesis, or clear non-buyer (e.g. 'PhD thesis', student inquiry, academic research, job applicant); " +
+        "5 = mentions an RFP, formal quote request, vendor selection, approved budget, or purchase/decision date within 30 days; " +
+        "4 = mentions an evaluation or project timeline of 1 to 3 months (or specific quarter stated) or explicit commercial pilot/trial request; " +
+        "3 = mentions a stated project need, tender search, or data requirement with NO purchasing timeline specified (e.g. 'We need data on upcoming tenders', 'need research reports on solar pipeline'); " +
+        "2 = early exploratory or curious: downloaded a sample, general pricing curiosity, or browsing without project scope (e.g. 'Downloaded a sample, curious about pricing', general cost inquiry); " +
+        "1 = non-commercial research, academic, student/thesis, or clear non-buyer (e.g. 'PhD thesis', student inquiry, academic research, job applicant); " +
         "UNKNOWN = no inquiry, buying intent, notes, or message provided at all (output null for rating, and 'UNKNOWN' for status).\n\n" +
         "CRITICAL COPYWRITING:\n" +
         "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus. Never echo raw prospect notes or output 'UNKNOWN'.\n" +
