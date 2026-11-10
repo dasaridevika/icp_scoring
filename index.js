@@ -194,7 +194,13 @@ export default {
         "1: Clear mismatch (evidence says no)\n" +
         "UNKNOWN: No evidence at all (when unverified, output null for rating, and \"UNKNOWN\" for status; never output literal unquoted UNKNOWN).\n\n" +
         "THE 4 PILLARS:\n" +
-        "1. FIRMOGRAPHIC (35%): Company size, target sector alignment (especially focus sectors listed above), geographic footprint (supported Tier 1 regions vs non-supported/sanctioned), business vs free email domain.\n" +
+        "1. FIRMOGRAPHIC (35%): " +
+        "5 = company is in a focus sector (Energy, Utilities & Renewables, Infrastructure & Construction, Power & Transmission, Oil, Gas & Petrochemicals, Mining & Metals, Industrial Goods & Manufacturing) AND in a supported region AND uses a business email; " +
+        "4 = company is in a focus sector AND uses a business email, but region is unconfirmed or size is unverified; " +
+        "3 = company is in a closely adjacent industrial/infrastructure sector (e.g. logistics, transportation, aerospace, heavy equipment) with business email; " +
+        "2 = company is in a focus sector but uses a free email provider (e.g. gmail, yahoo); " +
+        "1 = sector is outside the focus list and not closely related (e.g. Beauty & Cosmetics, Retail, Higher Education, Consumer Goods, Fashion, Healthcare, Hospitality, B2C) OR company is in a prohibited country; " +
+        "UNKNOWN = no company, sector, location, or firmographic data provided.\n" +
         "2. OFFERING FIT (25%): Does what the lead needs match BlackRidge's core offerings (Market Research Reports, Project Tracking Databases, or Custom Consulting)? 5 = Direct match for reports, project databases, or custom advisory; 4 = High alignment with market research / capital project data needs; 3 = Partial or adjacent research/industry data request; 2 = Weak alignment (e.g. general software or raw material buyers); 1 = Clear mismatch (e.g. consumer goods, job applicant). UNKNOWN = No product or solution need stated.\n" +
         "3. BUYER AUTHORITY (25%): Seniority and decision mandate. 5 = C-Suite / Founder / VP / Head of (Top Decision Maker); 4 = Director (Senior Decision Maker); 3 = Manager / Lead (Mid-level); 2 = Individual Contributor / Staff; 1 = Intern / Student / Non-commercial persona (Disqualified).\n" +
         "4. INTENT (15%): Ready to buy now? RFP/Proposal/Quote/Timeline <30 days = high (5); exploratory = mid (3); browsing = low (1-2).\n\n" +
@@ -221,10 +227,10 @@ export default {
         "    \"intent_timeline\": \"string or null\"\n" +
         "  },\n" +
         "  \"evidence\": {\n" +
-        "    \"firmographic\": { \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\" },\n" +
-        "    \"offering\": { \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\" },\n" +
-        "    \"authority\": { \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\" },\n" +
-        "    \"intent\": { \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number, \"rationale\": \"string\" }\n" +
+        "    \"firmographic\": { \"rationale\": \"string\", \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number },\n" +
+        "    \"offering\": { \"rationale\": \"string\", \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number },\n" +
+        "    \"authority\": { \"rationale\": \"string\", \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number },\n" +
+        "    \"intent\": { \"rationale\": \"string\", \"rating\": number or null, \"score\": number or null, \"status\": \"VERIFIED|INFERRED|UNKNOWN\", \"confidence\": number }\n" +
         "  },\n" +
         "  \"ai_analysis\": {\n" +
         "    \"role\": {\n" +
