@@ -29,22 +29,57 @@ function jsonResponse(data, status = 200) {
 function parseJsonSafely(raw) {
   if (!raw) return null;
   if (typeof raw === "object") return raw;
-  const rawText = String(raw).trim();
+  let rawText = String(raw).trim();
   try {
     return JSON.parse(rawText);
   } catch (e) {
+    let errDetail = e.message;
     const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (jsonMatch) {
       try {
         return JSON.parse(jsonMatch[1]);
-      } catch (err) {}
+      } catch (err) {
+        errDetail = err.message;
+        rawText = jsonMatch[1].trim();
+      }
     }
     const match = rawText.match(/\{[\s\S]*\}/);
     if (match) {
       try {
         return JSON.parse(match[0]);
-      } catch (err) {}
+      } catch (err) {
+        errDetail = err.message;
+        rawText = match[0].trim();
+      }
     }
+
+    // Repair 0: Unquoted UNKNOWN / undefined / NaN to null
+    let candidate = rawText.replace(/:\s*(?:UNKNOWN|undefined|NaN)\b/gi, ': null');
+    try {
+      return JSON.parse(candidate);
+    } catch (err) {}
+
+    // Repair 1: Trailing array closed with '}' instead of ']' at the end
+    candidate = candidate.replace(/("[^"\\]*(?:\\.[^"\\]*)*")\s*\}\s*\}\s*$/, '$1\n  ]\n}');
+    try {
+      return JSON.parse(candidate);
+    } catch (err) {}
+
+    // Repair 2: Trailing commas before } or ]
+    candidate = candidate.replace(/,\s*([\}\]])/g, '$1');
+    try {
+      return JSON.parse(candidate);
+    } catch (err) {}
+
+    // Repair 3: Both unquoted UNKNOWN, trailing commas, and unclosed array
+    candidate = rawText.replace(/:\s*(?:UNKNOWN|undefined|NaN)\b/gi, ': null')
+                       .replace(/,\s*([\}\]])/g, '$1')
+                       .replace(/("[^"\\]*(?:\\.[^"\\]*)*")\s*\}\s*\}\s*$/, '$1\n  ]\n}');
+    try {
+      return JSON.parse(candidate);
+    } catch (err) {}
+
+    console.warn("[parseJsonSafely Error]: " + errDetail + " | Sample: " + rawText.substring(0, 300));
     return null;
   }
 }
@@ -128,7 +163,7 @@ export default {
         }, 400);
       }
 
-      const primaryModel = env?.AI_MODEL || "@cf/meta/llama-3.1-8b-instruct";
+      const primaryModel = env?.AI_MODEL || "@cf/meta/llama-3.1-8b-instruct-fast";
       const candidateModels = [primaryModel, "@cf/meta/llama-3.2-3b-instruct"];
 
       if (!env?.AI) {
@@ -157,7 +192,7 @@ export default {
         "3: Partial match\n" +
         "2: Weak match\n" +
         "1: Clear mismatch (evidence says no)\n" +
-        "UNKNOWN: No evidence at all (do not make up numbers)\n\n" +
+        "UNKNOWN: No evidence at all (when unverified, output null for rating, and \"UNKNOWN\" for status; never output literal unquoted UNKNOWN).\n\n" +
         "THE 4 PILLARS:\n" +
         "1. FIRMOGRAPHIC (35%): Company size, target sector alignment (especially focus sectors listed above), geographic footprint (supported Tier 1 regions vs non-supported/sanctioned), business vs free email domain.\n" +
         "2. OFFERING FIT (25%): Does what the lead needs match BlackRidge's core offerings (Market Research Reports, Project Tracking Databases, or Custom Consulting)? 5 = Direct match for reports, project databases, or custom advisory; 4 = High alignment with market research / capital project data needs; 3 = Partial or adjacent research/industry data request; 2 = Weak alignment (e.g. general software or raw material buyers); 1 = Clear mismatch (e.g. consumer goods, job applicant). UNKNOWN = No product or solution need stated.\n" +
@@ -223,7 +258,7 @@ export default {
         "  \"discovery_questions\": [\"string\"],\n" +
         "  \"key_strengths\": [\"string\"],\n" +
         "  \"key_risks\": [\"string\"]\n" +
-        "}\nRespond ONLY with valid JSON.";
+        "}\nRespond ONLY with valid JSON. Ensure every array [ ] and object { } is strictly and correctly closed.";
 
       let userPromptContent = "PROSPECT DATA TO EVALUATE:\n" + prospectInput;
       if (dealSize !== null && !isNaN(dealSize) && dealSize > 0) {
@@ -289,14 +324,36 @@ export default {
             aiRaw = aiResponse;
           } else if (aiResponse && typeof aiResponse.response === "string") {
             aiRaw = aiResponse.response;
+          } else if (aiResponse && typeof aiResponse.response === "object" && aiResponse.response !== null) {
+            aiResult = aiResponse.response;
+            aiRaw = JSON.stringify(aiResponse.response);
+          } else if (aiResponse && Array.isArray(aiResponse.choices) && aiResponse.choices[0]?.message?.content) {
+            aiRaw = aiResponse.choices[0].message.content;
           } else {
             aiRaw = JSON.stringify(aiResponse || "");
           }
 
-          aiResult = parseJsonSafely(aiRaw);
+          if (!aiResult) {
+            aiResult = parseJsonSafely(aiRaw);
+          }
+
           if (aiResult) {
+            if (aiResult.response && typeof aiResult.response === "object") {
+              aiResult = aiResult.response;
+            } else if (Array.isArray(aiResult.choices) && aiResult.choices[0]?.message?.content) {
+              const inner = parseJsonSafely(aiResult.choices[0].message.content);
+              if (inner) aiResult = inner;
+            }
+          }
+
+          if (aiResult && (aiResult.evidence || aiResult.account || aiResult.ai_analysis || aiResult.strategy)) {
             modelUsed = model;
             break;
+          } else {
+            const rawLen = aiRaw ? aiRaw.length : 0;
+            const tail = aiRaw && rawLen > 200 ? aiRaw.substring(rawLen - 200) : "";
+            console.warn(`[Workers AI Parse Warning][${model}][${requestId}]: Model output could not be parsed as valid JSON (len: ${rawLen}). Head: ${aiRaw ? aiRaw.substring(0, 200) : ""}. Tail: ${tail}`);
+            aiResult = null;
           }
         } catch (aiError) {
           aiErrorMsg = aiError.message || String(aiError);
