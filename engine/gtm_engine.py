@@ -687,7 +687,8 @@ class GTMScoringEngine:
         )
 
         # Pillar 2: Offering Fit (25%) - Replaces Tech Stack (Section 4.1, 6.2)
-        has_offering_data = bool(form.sub_vertical or form.offering_interest or form.industry_sector or form.buying_intent)
+        # Counted as known only when offering_interest or buying_intent is filled in; industry and sub-vertical describe the company, not what they need.
+        has_offering_data = bool((form.offering_interest and form.offering_interest.strip()) or (form.buying_intent and form.buying_intent.strip()))
         ev_offering = raw_evidence.get("offering") or raw_evidence.get("technographic", {})
         offering_rating, offering_status, offering_rationale = extract_rating(ev_offering, has_offering_data)
         offering_pts = offering_rating or 0
@@ -701,9 +702,9 @@ class GTMScoringEngine:
             FieldScoreReceipt(
                 field_name="Offering Alignment",
                 pillar="Offering Fit",
-                raw_value=form.offering_interest or form.sub_vertical or "Solution Alignment",
+                raw_value=form.offering_interest or form.buying_intent or "None Stated",
                 gtm_points=offering_pts if offering_known else 0,
-                rationale=offering_rationale if offering_known else "Offering: Unknown / Not Provided"
+                rationale=offering_rationale if offering_known else "No product or solution need stated."
             )
         ]
         if has_incumbent:
