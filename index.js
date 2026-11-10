@@ -202,7 +202,13 @@ export default {
         "1 = sector is outside the focus list and not closely related (e.g. Beauty & Cosmetics, Retail, Higher Education, Consumer Goods, Fashion, Healthcare, Hospitality, B2C) OR company is in a prohibited country; " +
         "UNKNOWN = no company, sector, location, or firmographic data provided.\n" +
         "2. OFFERING FIT (25%): Does what the lead needs match BlackRidge's core offerings (Market Research Reports, Project Tracking Databases, or Custom Consulting)? 5 = Direct match for reports, project databases, or custom advisory; 4 = High alignment with market research / capital project data needs; 3 = Partial or adjacent research/industry data request; 2 = Weak alignment (e.g. general software or raw material buyers); 1 = Clear mismatch (e.g. consumer goods, job applicant). UNKNOWN = No product or solution need stated.\n" +
-        "3. BUYER AUTHORITY (25%): Seniority and decision mandate. 5 = C-Suite / Founder / VP / Head of (Top Decision Maker); 4 = Director (Senior Decision Maker); 3 = Manager / Lead (Mid-level); 2 = Individual Contributor / Staff; 1 = Intern / Student / Non-commercial persona (Disqualified).\n" +
+        "3. BUYER AUTHORITY (25%): Seniority and commercial decision mandate. " +
+        "5 = C-Suite / Founder / VP / Head of (Top Decision Maker); " +
+        "4 = Director (Senior Decision Maker); " +
+        "3 = Manager / Lead (Mid-level); " +
+        "2 = Individual Contributor / Staff / Commercial Specialist; " +
+        "1 = Non-commercial persona (Student, Intern, Academic, Research Scholar, PhD / Master thesis data inquiry, Job Seeker, Hobbyist / Personal project). " +
+        "If contact is non-commercial or academic (e.g. Research Scholar, PhD thesis inquiry, student), set rating to 1, and set is_disqualified to true with disqualification_reason explaining that this is a non-commercial academic persona.\n" +
         "4. INTENT (15%): Ready to buy now? RFP/Proposal/Quote/Timeline <30 days = high (5); exploratory = mid (3); browsing = low (1-2).\n\n" +
         "CRITICAL COPYWRITING:\n" +
         "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus.\n" +

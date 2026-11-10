@@ -859,9 +859,24 @@ class GTMScoringEngine:
             # Section 6.4 formula: (sum of weight * rating) / (sum of known weights) * 20
             master_score = round((sum_weighted_ratings / sum_known_weights) * 20.0, 1)
 
-        # Section 6.5: Needs review wins over score if coverage < 60% or buyer authority unknown
-        if coverage_pct < cfg.min_coverage_threshold or not pillar_auth.is_known:
+        # Section 6.5: Needs review wins over score if coverage < 60% or buyer authority unknown,
+        # or when the AI flags is_disqualified or rates buyer authority 1 (non-commercial persona).
+        ai_is_disqualified = bool(ai_res.get("is_disqualified") or ai_res.get("scores", {}).get("is_disqualified"))
+        ai_disq_reason = str(ai_res.get("disqualification_reason") or ai_res.get("scores", {}).get("disqualification_reason") or "").strip()
+
+        needs_review_reason = None
+        if coverage_pct < cfg.min_coverage_threshold:
             priority_tier = "Tier: Needs review"
+            needs_review_reason = f"Data coverage is below minimum threshold ({coverage_pct:.0f}% < {cfg.min_coverage_threshold:.0f}%)."
+        elif not pillar_auth.is_known:
+            priority_tier = "Tier: Needs review"
+            needs_review_reason = "Buyer authority is unknown / unverified."
+        elif ai_is_disqualified or (pillar_auth.rating == 1):
+            priority_tier = "Tier: Needs review"
+            auth_rat = ""
+            if pillar_auth.field_receipts and pillar_auth.field_receipts[0].rationale:
+                auth_rat = pillar_auth.field_receipts[0].rationale
+            needs_review_reason = ai_disq_reason or auth_rat or "Non-commercial contact or low buyer authority detected (Authority rating: 1)."
         elif master_score >= cfg.tier_a_threshold:
             priority_tier = "Tier A: Contact First"
         elif master_score >= cfg.tier_b_threshold:
@@ -973,7 +988,7 @@ class GTMScoringEngine:
             coverage_pct=coverage_pct,
             priority_tier=priority_tier,
             is_disqualified=False,
-            disqualification_reason="",
+            disqualification_reason=needs_review_reason or "",
             urgency_sla=urgency_sla,
             recommended_channel=recommended_channel,
             value_wedge=value_wedge,
@@ -1005,6 +1020,6 @@ class GTMScoringEngine:
             key_strengths=key_strengths,
             key_risks=key_risks,
             analysis_mode="live",
-            degraded_reasons=[],
+            degraded_reasons=[needs_review_reason] if needs_review_reason else [],
             model_used=model_used
         )

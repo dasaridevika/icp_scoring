@@ -934,6 +934,8 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 
         if res.is_disqualified:
             st.error(f"❌ **Hard Disqualification Detected**: {esc(res.disqualification_reason)}")
+        elif "Needs review" in res.priority_tier and res.disqualification_reason:
+            st.warning(f"⚠️ **Review Required (AI Flag)**: {esc(res.disqualification_reason)}")
 
         # 2. 🤖 AI Semantic Strategic Intelligence Grid (GTM Partners Taxonomy)
         if not res.is_disqualified:
