@@ -92,7 +92,7 @@ function clampScore(val, fallback = null) {
 function cleanStr(v) {
   if (!v) return null;
   const s = String(v).trim();
-  if (["null", "none", "undefined", "n/a", ""].includes(s.toLowerCase())) return null;
+  if (["null", "none", "undefined", "n/a", "unknown", ""].includes(s.toLowerCase())) return null;
   return s;
 }
 
@@ -209,10 +209,16 @@ export default {
         "2 = Individual Contributor / Staff / Commercial Specialist; " +
         "1 = Non-commercial persona (Student, Intern, Academic, Research Scholar, PhD / Master thesis data inquiry, Job Seeker, Hobbyist / Personal project). " +
         "If contact is non-commercial or academic (e.g. Research Scholar, PhD thesis inquiry, student), set rating to 1, and set is_disqualified to true with disqualification_reason explaining that this is a non-commercial academic persona.\n" +
-        "4. INTENT (15%): Ready to buy now? RFP/Proposal/Quote/Timeline <30 days = high (5); exploratory = mid (3); browsing = low (1-2).\n\n" +
+        "4. INTENT (15%): " +
+        "5 = explicit active procurement: mentions an RFP, formal quote request, vendor selection, approved budget, or decision/purchase timeline within 30 days; " +
+        "4 = active evaluation with near-term timeline (1 to 3 months / specified quarter) or explicit commercial pilot/trial request; " +
+        "3 = stated solution need or problem to solve, but no purchasing timeline specified (e.g. 'We need data on upcoming tenders', 'looking for research on solar projects'); " +
+        "2 = early exploratory or curious: downloaded a sample, general pricing inquiry without project details, browsing, or vague top-of-funnel interest (e.g. 'Downloaded a sample, curious about pricing'); " +
+        "1 = non-commercial research, just browsing, student/thesis, or clear non-buyer (e.g. 'PhD thesis', student inquiry, academic research, job applicant); " +
+        "UNKNOWN = no inquiry, buying intent, notes, or message provided at all (output null for rating, and 'UNKNOWN' for status).\n\n" +
         "CRITICAL COPYWRITING:\n" +
-        "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus.\n" +
-        "- value_wedge: 1-2 sentence executive ROI thesis anchored to their market research, project tracking, or consulting needs.\n" +
+        "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus. Never echo raw prospect notes or output 'UNKNOWN'.\n" +
+        "- value_wedge: 1-2 sentence executive ROI thesis anchored to their market research, project tracking, or consulting needs. Never output 'UNKNOWN'.\n" +
         "- discovery_questions: 3 high-impact consultative questions for research & data scoping.\n" +
         "- key_strengths: 3 concrete data points from the prospect text.\n" +
         "- key_risks: 2 realistic qualification risks.\n\n" +
@@ -525,15 +531,39 @@ export default {
         strategy: {
           urgency_sla: cleanStr(aiResult.strategy?.urgency_sla) || "Manual Review Required",
           recommended_channel: cleanStr(aiResult.strategy?.recommended_channel) || "Direct Email",
-          value_wedge: String(aiResult.strategy?.value_wedge || aiResult.value_wedge || ""),
-          outreach_hook: String(aiResult.strategy?.outreach_hook || aiResult.outreach_hook || ""),
-          discovery_questions: Array.isArray(aiResult.discovery_questions) ? aiResult.discovery_questions.map(String) : (Array.isArray(aiResult.strategy?.discovery_questions) ? aiResult.strategy.discovery_questions.map(String) : []),
-          key_strengths: Array.isArray(aiResult.key_strengths) ? aiResult.key_strengths.map(String) : (Array.isArray(aiResult.strategy?.key_strengths) ? aiResult.strategy.key_strengths.map(String) : []),
-          key_risks: Array.isArray(aiResult.key_risks) ? aiResult.key_risks.map(String) : (Array.isArray(aiResult.strategy?.key_risks) ? aiResult.strategy.key_risks.map(String) : [])
+          value_wedge: cleanStr(aiResult.strategy?.value_wedge || aiResult.value_wedge) || "",
+          outreach_hook: cleanStr(aiResult.strategy?.outreach_hook || aiResult.outreach_hook) || "",
+          discovery_questions: (Array.isArray(aiResult.discovery_questions) && aiResult.discovery_questions.length > 0)
+            ? aiResult.discovery_questions.map(cleanStr).filter(Boolean)
+            : ((Array.isArray(aiResult.strategy?.discovery_questions) && aiResult.strategy.discovery_questions.length > 0)
+              ? aiResult.strategy.discovery_questions.map(cleanStr).filter(Boolean)
+              : []),
+          key_strengths: (Array.isArray(aiResult.key_strengths) && aiResult.key_strengths.length > 0)
+            ? aiResult.key_strengths.map(cleanStr).filter(Boolean)
+            : ((Array.isArray(aiResult.strategy?.key_strengths) && aiResult.strategy.key_strengths.length > 0)
+              ? aiResult.strategy.key_strengths.map(cleanStr).filter(Boolean)
+              : []),
+          key_risks: (Array.isArray(aiResult.key_risks) && aiResult.key_risks.length > 0)
+            ? aiResult.key_risks.map(cleanStr).filter(Boolean)
+            : ((Array.isArray(aiResult.strategy?.key_risks) && aiResult.strategy.key_risks.length > 0)
+              ? aiResult.strategy.key_risks.map(cleanStr).filter(Boolean)
+              : [])
         },
-        discovery_questions: Array.isArray(aiResult.discovery_questions) ? aiResult.discovery_questions.map(String) : (Array.isArray(aiResult.strategy?.discovery_questions) ? aiResult.strategy.discovery_questions.map(String) : []),
-        key_strengths: Array.isArray(aiResult.key_strengths) ? aiResult.key_strengths.map(String) : (Array.isArray(aiResult.strategy?.key_strengths) ? aiResult.strategy.key_strengths.map(String) : []),
-        key_risks: Array.isArray(aiResult.key_risks) ? aiResult.key_risks.map(String) : (Array.isArray(aiResult.strategy?.key_risks) ? aiResult.strategy.key_risks.map(String) : [])
+        discovery_questions: (Array.isArray(aiResult.discovery_questions) && aiResult.discovery_questions.length > 0)
+          ? aiResult.discovery_questions.map(cleanStr).filter(Boolean)
+          : ((Array.isArray(aiResult.strategy?.discovery_questions) && aiResult.strategy.discovery_questions.length > 0)
+            ? aiResult.strategy.discovery_questions.map(cleanStr).filter(Boolean)
+            : []),
+        key_strengths: (Array.isArray(aiResult.key_strengths) && aiResult.key_strengths.length > 0)
+          ? aiResult.key_strengths.map(cleanStr).filter(Boolean)
+          : ((Array.isArray(aiResult.strategy?.key_strengths) && aiResult.strategy.key_strengths.length > 0)
+            ? aiResult.strategy.key_strengths.map(cleanStr).filter(Boolean)
+            : []),
+        key_risks: (Array.isArray(aiResult.key_risks) && aiResult.key_risks.length > 0)
+          ? aiResult.key_risks.map(cleanStr).filter(Boolean)
+          : ((Array.isArray(aiResult.strategy?.key_risks) && aiResult.strategy.key_risks.length > 0)
+            ? aiResult.strategy.key_risks.map(cleanStr).filter(Boolean)
+            : [])
       });
 
     } catch (fatalErr) {

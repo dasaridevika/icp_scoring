@@ -739,12 +739,21 @@ class GTMScoringEngine:
             role_l = role_raw.lower()
             brole_l = (form.buying_role or "").lower()
 
-            # Whole-word terms to prevent partial substring matches (e.g. 'cto' in 'Director', 'cro' in 'Microbiology')
+            # Special Cases: Product Owner and Channel Partner
+            is_product_owner = matches_whole_word("product owner", role_l)
+            is_channel_partner = matches_whole_word("channel partner", role_l)
+
+            # Executive Terms (Level 5) - Owner matches unless Product Owner; Partner matches unless Channel Partner
             exec_terms = [
                 "vp", "vice president", "chief", "cxo", "cro", "cfo", "cto", "ceo",
                 "coo", "cio", "cpo", "cso", "cmo", "cco", "president", "head of",
-                "general manager", "founder", "owner", "partner"
+                "general manager", "founder"
             ]
+            if not is_product_owner:
+                exec_terms.append("owner")
+            if not is_channel_partner:
+                exec_terms.append("partner")
+
             dir_terms = [
                 "director", "directors", "senior director", "managing director",
                 "executive director", "associate director", "regional director"
@@ -757,41 +766,47 @@ class GTMScoringEngine:
                 "engineer", "analyst", "specialist", "coordinator", "associate",
                 "consultant", "contractor", "inspector", "technician", "developer",
                 "representative", "officer", "scientist", "researcher", "practitioner",
-                "account executive", "individual contributor", "staff", "product owner"
+                "account executive", "individual contributor", "staff"
             ]
 
-            # Assistant roles (e.g. Executive Assistant to the CEO) are support staff (rating 2)
-            if matches_whole_word("assistant", role_l):
+            is_assistant = matches_whole_word("assistant", role_l)
+
+            # Rule: Treat "Assistant X" as one level below X
+            if is_assistant:
+                if any(matches_whole_word(t, role_l) for t in ["vice president", "vp", "general manager", "president"]):
+                    auth_rating = 4
+                    auth_status = "VERIFIED"
+                    auth_rationale = f"Assistant Executive (Director-equivalent authority verified): {role_raw}"
+                elif any(matches_whole_word(t, role_l) for t in dir_terms):
+                    auth_rating = 3
+                    auth_status = "VERIFIED"
+                    auth_rationale = f"Assistant Director (Manager-equivalent authority verified): {role_raw}"
+                elif any(matches_whole_word(t, role_l) for t in mgr_terms):
+                    auth_rating = 2
+                    auth_status = "VERIFIED"
+                    auth_rationale = f"Assistant Manager (Staff authority verified): {role_raw}"
+                else:
+                    auth_rating = 2
+                    auth_status = "VERIFIED"
+                    auth_rationale = f"Support assistant / Individual contributor verified: {role_raw}"
+            elif is_product_owner and not any(matches_whole_word(t, role_l) for t in exec_terms + dir_terms + mgr_terms):
                 auth_rating = 2
                 auth_status = "VERIFIED"
-                auth_rationale = f"Individual contributor verified: {role_raw}"
-            # Product Owner is an ordinary staff role (rating 2), not a business owner
-            elif matches_whole_word("product owner", role_l):
-                auth_rating = 2
-                auth_status = "VERIFIED"
-                auth_rationale = f"Individual contributor verified: {role_raw}"
-            # General Manager is C-suite / Executive (rating 5)
-            elif matches_whole_word("general manager", role_l):
-                auth_rating = 5
-                auth_status = "VERIFIED"
-                auth_rationale = f"Executive decision authority verified: {role_raw}"
-            # Manager / Channel Partner Manager (rating 3) takes precedence over 'partner' in exec_terms
-            elif any(matches_whole_word(t, role_l) for t in mgr_terms):
-                auth_rating = 3
-                auth_status = "VERIFIED"
-                auth_rationale = f"Management-level authority verified: {role_raw}"
-            # Director level (rating 4)
-            elif any(matches_whole_word(t, role_l) for t in dir_terms):
-                auth_rating = 4
-                auth_status = "VERIFIED"
-                auth_rationale = f"Director-level authority verified: {role_raw}"
-            # Executive C-Suite / VP / Founder / Partner / Owner (rating 5)
+                auth_rationale = f"Product Owner (Individual contributor verified): {role_raw}"
+            # Highest matching level wins (exec > director > manager > staff)
             elif any(matches_whole_word(t, role_l) for t in exec_terms):
                 auth_rating = 5
                 auth_status = "VERIFIED"
                 auth_rationale = f"Executive C-Suite/VP decision authority verified: {role_raw}"
-            # Individual Contributor (rating 2)
-            elif any(matches_whole_word(t, role_l) for t in ic_terms):
+            elif any(matches_whole_word(t, role_l) for t in dir_terms):
+                auth_rating = 4
+                auth_status = "VERIFIED"
+                auth_rationale = f"Director-level authority verified: {role_raw}"
+            elif any(matches_whole_word(t, role_l) for t in mgr_terms) or is_channel_partner:
+                auth_rating = 3
+                auth_status = "VERIFIED"
+                auth_rationale = f"Management-level authority verified: {role_raw}"
+            elif any(matches_whole_word(t, role_l) for t in ic_terms) or is_product_owner:
                 auth_rating = 2
                 auth_status = "VERIFIED"
                 auth_rationale = f"Individual contributor verified: {role_raw}"
@@ -909,16 +924,19 @@ class GTMScoringEngine:
         contact = form.contact_name or "there"
         org_ref = cfg.company_name if cfg.company_name else "our team"
 
-        value_wedge = (
-            raw_strategy.get("value_wedge")
-            or ai_res.get("value_wedge")
-            or f"Accelerate strategic initiatives for {sub_niche} at {comp}."
-        )
-        outreach_hook = (
-            raw_strategy.get("outreach_hook")
-            or ai_res.get("outreach_hook")
-            or f"Hi {contact}, noticed your team's focus on {sub_niche} at {comp}—wanted to share how {org_ref} supports similar organizations."
-        )
+        def _clean_str(val: Any) -> Optional[str]:
+            if not val:
+                return None
+            s = str(val).strip()
+            if s.lower() in {"unknown", "null", "none", "undefined", "n/a", ""}:
+                return None
+            return s
+
+        val_w = _clean_str(raw_strategy.get("value_wedge")) or _clean_str(ai_res.get("value_wedge"))
+        value_wedge = val_w or f"Accelerate strategic initiatives for {sub_niche} at {comp}."
+
+        hook_w = _clean_str(raw_strategy.get("outreach_hook")) or _clean_str(ai_res.get("outreach_hook"))
+        outreach_hook = hook_w or f"Hi {contact}, noticed your team's focus on {sub_niche} at {comp}—wanted to share how {org_ref} supports similar organizations."
 
         # Audit Tracker (Section 6.4: Normalized points contribution reflecting unknown pillar weight reallocation)
         tracker = []
@@ -967,21 +985,31 @@ class GTMScoringEngine:
                     )
                 )
 
-        discovery_questions = (
-            ai_res.get("discovery_questions")
-            or raw_strategy.get("discovery_questions")
-            or []
-        )
-        key_strengths = (
-            ai_res.get("key_strengths")
-            or raw_strategy.get("key_strengths")
-            or []
-        )
-        key_risks = (
-            ai_res.get("key_risks")
-            or raw_strategy.get("key_risks")
-            or []
-        )
+        raw_dq = ai_res.get("discovery_questions") or raw_strategy.get("discovery_questions") or []
+        discovery_questions = [q for q in (_clean_str(x) for x in raw_dq) if q]
+        if not discovery_questions:
+            discovery_questions = [
+                f"What specific market intelligence or capital projects data is {comp} currently scoping?",
+                f"Which upcoming tenders or market segments in {sub_niche} are most critical for your pipeline?",
+                f"How does your team currently track competitor market shares and procurement awards?"
+            ]
+
+        raw_ks = ai_res.get("key_strengths") or raw_strategy.get("key_strengths") or []
+        key_strengths = [s for s in (_clean_str(x) for x in raw_ks) if s]
+        if not key_strengths:
+            key_strengths = [
+                f"Target sector alignment: {sub_niche}",
+                f"Account profile: {comp}",
+                f"Role authority: {form.contact_role_title or 'Commercial contact'}"
+            ]
+
+        raw_kr = ai_res.get("key_risks") or raw_strategy.get("key_risks") or []
+        key_risks = [r for r in (_clean_str(x) for x in raw_kr) if r]
+        if not key_risks:
+            key_risks = [
+                "Purchasing timeline and budget parameters unconfirmed on initial inquiry.",
+                "Commercial engagement scope requires follow-up scoping call."
+            ]
 
         return StreamlinedScoringResult(
             company_name=form.company_name or "Unspecified",
