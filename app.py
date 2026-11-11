@@ -403,11 +403,7 @@ def show_settings_dialog():
             
             s_offerings_raw = st.text_area(
                 f"{cfg.company_name} Core Offerings" if cfg.company_name else "Core Offerings",
-                value="\n".join(getattr(cfg, "core_offerings", [
-                    "Syndicated Market Research Reports (market sizing, market share, sector forecasts)",
-                    "Capital Project Intelligence & Tracking Databases (upcoming tenders, EPC contractor awards, project pipelines)",
-                    "Custom B2B Advisory & Market Feasibility Consulting"
-                ])),
+                value="\n".join(getattr(cfg, "core_offerings", None) or CompanyStandardsConfig().core_offerings),
                 help="Core products & services offered, evaluated under the Offering Fit pillar (Section 4.1 & 6.2).",
                 height=85
             )

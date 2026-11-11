@@ -184,15 +184,38 @@ export default {
         }, 500);
       }
 
-      const systemPrompt = "You are a Senior B2B Revenue Intelligence Analyst evaluating inbound prospect leads for Blackridge Research & Consulting.\n" +
+      const cs = payload.company_standards || {};
+      const orgName = cleanStr(cs.org_name) || "Blackridge Research & Consulting";
+      const coreOfferings = Array.isArray(cs.core_offerings)
+        ? cs.core_offerings.map(cleanStr).filter(Boolean)
+        : [];
+      const focusIndustries = Array.isArray(cs.target_focus_industries)
+        ? cs.target_focus_industries.map(cleanStr).filter(Boolean)
+        : [];
+      const tier1Territories = Array.isArray(cs.tier1_territories)
+        ? cs.tier1_territories.map(cleanStr).filter(Boolean)
+        : [];
+      const prohibitedCountries = Array.isArray(cs.prohibited_countries)
+        ? cs.prohibited_countries.map(cleanStr).filter(Boolean)
+        : [];
+
+      const offeringsBlock = coreOfferings.length > 0
+        ? coreOfferings.map((item, idx) => `${idx + 1}. ${item}`).join("\n")
+        : "Not explicitly enumerated in request config; evaluate alignment from the prospect's stated product, research, database, or consulting need.";
+
+      const focusBlock = focusIndustries.length > 0
+        ? focusIndustries.join(", ")
+        : "Not explicitly enumerated in request config; evaluate commercial B2B fit from the prospect's stated industry and project context.";
+
+      const systemPrompt =
+        `You are a Senior B2B Revenue Intelligence Analyst evaluating inbound prospect leads for ${orgName}.\n` +
         "Rate each of the 4 ICP Pillars strictly from 1 to 5 based on verified evidence, or mark as UNKNOWN if no evidence is present.\n\n" +
-        "ORGANIZATION CONTEXT & OFFERINGS (Blackridge Research & Consulting):\n" +
-        "Blackridge Research & Consulting provides premier B2B market intelligence, capital projects tracking, and custom research advisory services for global infrastructure, energy, and heavy industrial markets.\n" +
-        "Core Offerings:\n" +
-        "1. Syndicated Market Research Reports: Comprehensive sector reports covering market sizing, competitive benchmarking, growth forecasts, supply chain dynamics, and vendor shares.\n" +
-        "2. Project Tracking Databases & Capital Projects Intelligence: Continuous tracking of global capital projects, tenders, pipeline developments, EPC contractor awards, and project milestones.\n" +
-        "3. Custom B2B Advisory & Market Feasibility Consulting: Tailor-made market studies, commercial due diligence, market entry strategy, and procurement advisory.\n" +
-        "Target Focus Sectors: Energy, Utilities & Renewables, Infrastructure & Construction, Power & Transmission, Oil, Gas & Petrochemicals, Mining & Metals, Industrial Goods & Manufacturing.\n\n" +
+        `ORGANIZATION SETTINGS & CATALOG (${orgName}):\n` +
+        `Core Offerings (from config):\n${offeringsBlock}\n\n` +
+        `Target Focus Industries (from config):\n${focusBlock}\n` +
+        (tier1Territories.length > 0 ? `Tier 1 Supported Territories: ${tier1Territories.join(", ")}\n` : "") +
+        (prohibitedCountries.length > 0 ? `Prohibited / Sanctioned Countries: ${prohibitedCountries.join(", ")}\n` : "") +
+        "\nIMPORTANT COVERAGE RULE: Treat every industry in Target Focus Industries as an equal first-class focus sector, and treat every database, report, or service in Core Offerings as an equal direct-match offering.\n\n" +
         "RATING RUBRIC (1 to 5):\n" +
         "5: Strong match, clear evidence\n" +
         "4: Good match\n" +
@@ -202,13 +225,19 @@ export default {
         "UNKNOWN: No evidence at all (when unverified, output null for rating, and \"UNKNOWN\" for status; never output literal unquoted UNKNOWN).\n\n" +
         "THE 4 PILLARS:\n" +
         "1. FIRMOGRAPHIC (35%): " +
-        "5 = company is in a focus sector (Energy, Utilities & Renewables, Infrastructure & Construction, Power & Transmission, Oil, Gas & Petrochemicals, Mining & Metals, Industrial Goods & Manufacturing) AND in a supported region AND uses a business email; " +
-        "4 = company is in a focus sector AND uses a business email, but region is unconfirmed or size is unverified; " +
-        "3 = company is in a closely adjacent industrial/infrastructure sector (e.g. logistics, transportation, aerospace, heavy equipment) with business email; " +
-        "2 = company is in a focus sector but uses a free email provider (e.g. gmail, yahoo); " +
-        "1 = organization/sector is outside the focus list (e.g. Higher Education, University, Beauty & Cosmetics, Retail, Consumer Goods, Fashion, Healthcare, Hospitality, B2C, Media, Academia) -> MUST rate 1 regardless of size, revenue, title, or location; OR prohibited country; " +
+        "5 = company operates in OR builds/develops capital projects or facilities covered by any configured Target Focus Industry AND is in a supported territory (or not in a prohibited country) AND uses a business email; " +
+        "4 = company operates in OR builds/develops capital projects covered by a configured Target Focus Industry AND uses a business email, but location is outside Tier 1 supported territories (while not prohibited) or location is unconfirmed; " +
+        "3 = company is in a closely adjacent commercial/B2B industrial, infrastructure, engineering, EPC, or real-asset sector related to the configured Target Focus Industries with a business email; " +
+        "2 = company matches or is adjacent to a configured Target Focus Industry but uses a free email provider (e.g. gmail, yahoo); " +
+        "1 = organization/sector has no match or relevance to any configured Target Focus Industry (nor any project/facility type covered by them) -> MUST rate 1 regardless of size, revenue, title, or location; OR prohibited country; " +
         "UNKNOWN = sector and location and company details are all completely missing.\n" +
-        "2. OFFERING FIT (25%): Does what the lead needs match BlackRidge's core offerings (Market Research Reports, Project Tracking Databases, or Custom Consulting)? 5 = Direct match for reports, project databases, or custom advisory; 4 = High alignment with market research / capital project data needs; 3 = Partial or adjacent research/industry data request; 2 = Weak alignment (e.g. general software or raw material buyers); 1 = Clear mismatch (e.g. consumer goods, job applicant). UNKNOWN = No product or solution need stated (if no message, inquiry, or stated offering interest is provided, output null for rating and \"UNKNOWN\" for status; do not infer offering fit from company industry alone).\n" +
+        "2. OFFERING FIT (25%): Does what the lead needs match any item in the configured Core Offerings list above? " +
+        "5 = Direct match for a configured Core Offering (explicitly requests, evaluates, or directly maps to one of the listed project databases, reports, research, or consulting offerings); " +
+        "4 = High alignment with the scope of one or more configured Core Offerings without naming the exact offering; " +
+        "3 = Partial or adjacent data/research request weakly related to configured Core Offerings; " +
+        "2 = Weak alignment with configured Core Offerings; " +
+        "1 = Clear mismatch (needs something unrelated to configured Core Offerings, or non-commercial/job applicant request). " +
+        "UNKNOWN = No product or solution need stated (if no message, inquiry, or stated offering interest is provided, output null for rating and \"UNKNOWN\" for status; do not infer offering fit from company industry alone).\n" +
         "3. BUYER AUTHORITY (25%): Seniority and decision mandate within the organization. " +
         "5 = C-Suite / Founder / VP / Head of (Top Decision Maker); " +
         "4 = Director (Senior Decision Maker); " +
@@ -232,7 +261,7 @@ export default {
         "- When is_disqualified = true, disqualification_reason MUST quote the exact words from the lead's own title or message showing why it matched one of the 3 cases above. Do NOT copy category lists or wording from this prompt. When is_disqualified = false, set disqualification_reason to \"\".\n\n" +
         "CRITICAL COPYWRITING:\n" +
         "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus. Never echo raw prospect notes or output 'UNKNOWN'.\n" +
-        "- value_wedge: 1-2 sentence executive ROI thesis anchored to their market research, project tracking, or consulting needs. Never output 'UNKNOWN'.\n" +
+        "- value_wedge: 1-2 sentence executive ROI thesis anchored to their stated needs and matching configured Core Offerings. Never output 'UNKNOWN'.\n" +
         "- discovery_questions: Up to 3 scoping questions grounded ONLY in facts explicitly stated in the lead data (never invent unstated facts). Output an empty list [] if disqualified or if there is nothing real to ask.\n" +
         "- key_strengths: Up to 3 positive ICP fit points grounded ONLY in facts explicitly stated in the lead data (never invent years of experience, online presence, headcount, or unstated details). Output an empty list [] if there are no real strengths.\n" +
         "- key_risks: Up to 2 qualification risks grounded ONLY in facts explicitly stated in the lead data or gaps observed in the input (never invent facts). Output an empty list [] if there are no real risks.\n\n" +
@@ -307,24 +336,6 @@ export default {
       }
       if (payload.existing_platform) {
         userPromptContent += "\nIncumbent / Existing Platform: " + payload.existing_platform;
-      }
-
-      // Settings and Target Standards (Section 6 & Review Finding 10)
-      const cs = payload.company_standards || {};
-      const orgName = cs.org_name || "Blackridge Research & Consulting";
-      userPromptContent += "\n\nORGANIZATION SETTINGS & TARGET STANDARDS:";
-      userPromptContent += "\n- Evaluating Organization: " + orgName;
-      if (Array.isArray(cs.core_offerings) && cs.core_offerings.length > 0) {
-        userPromptContent += "\n- Core Offerings:\n  * " + cs.core_offerings.join("\n  * ");
-      }
-      if (Array.isArray(cs.target_focus_industries) && cs.target_focus_industries.length > 0) {
-        userPromptContent += "\n- Sweet-Spot Focus Industries: " + cs.target_focus_industries.join(", ");
-      }
-      if (Array.isArray(cs.tier1_territories) && cs.tier1_territories.length > 0) {
-        userPromptContent += "\n- Tier 1 Supported Territories: " + cs.tier1_territories.join(", ");
-      }
-      if (Array.isArray(cs.prohibited_countries) && cs.prohibited_countries.length > 0) {
-        userPromptContent += "\n- Prohibited / Sanctioned Countries: " + cs.prohibited_countries.join(", ");
       }
 
       let aiRaw = null;

@@ -105,17 +105,30 @@ class CompanyStandardsConfig(BaseModel):
     min_headcount: int = 20
     ideal_headcount: int = 500
     core_offerings: List[str] = Field(default_factory=lambda: [
-        "Syndicated Market Research Reports (market sizing, market share, sector forecasts)",
-        "Capital Project Intelligence & Tracking Databases (upcoming tenders, EPC contractor awards, project pipelines)",
-        "Custom B2B Advisory & Market Feasibility Consulting"
+        "Project Tracking Databases (Data Centers, Power, Oil & Gas, Hydrogen, Construction, Institutional Buildings, Telecom, Rail, Airports, Manufacturing, Chemicals, Metals, Mining, CCUS, BESS, Semiconductors, Solar)",
+        "Syndicated Market Research Reports",
+        "Custom Research",
+        "Consulting",
     ])
     target_focus_industries: List[str] = Field(default_factory=lambda: [
-        "Energy, Utilities & Renewables",
-        "Infrastructure & Construction",
+        "Data Centers",
         "Power & Transmission",
-        "Oil, Gas & Petrochemicals",
-        "Mining & Metals",
-        "Industrial Goods & Manufacturing"
+        "Energy, Utilities & Renewables",
+        "Oil & Gas / Petrochemicals",
+        "Hydrogen",
+        "Infrastructure & Construction",
+        "Institutional Buildings",
+        "Telecom",
+        "Rail",
+        "Airports",
+        "Industrial Goods & Manufacturing",
+        "Chemicals",
+        "Metals",
+        "Mining",
+        "CCUS",
+        "BESS",
+        "Semiconductors",
+        "Solar",
     ])
     tier1_territories: List[str] = Field(default_factory=lambda: [
         "United States", "Canada", "United Kingdom", "Germany", "France", "Japan", "India", "Australia", "Singapore", "United Arab Emirates", "Saudi Arabia"
@@ -458,11 +471,7 @@ class GTMScoringEngine:
             "existing_platform": form.existing_platform or None,
             "company_standards": {
                 "org_name": cfg.company_name,
-                "core_offerings": getattr(cfg, "core_offerings", [
-                    "Syndicated Market Research Reports (market sizing, market share, sector forecasts)",
-                    "Capital Project Intelligence & Tracking Databases (upcoming tenders, EPC contractor awards, project pipelines)",
-                    "Custom B2B Advisory & Market Feasibility Consulting"
-                ]),
+                "core_offerings": cfg.core_offerings,
                 "target_focus_industries": cfg.target_focus_industries,
                 "tier1_territories": cfg.tier1_territories,
                 "prohibited_countries": cfg.prohibited_countries,
