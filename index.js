@@ -199,23 +199,30 @@ export default {
         "4 = company is in a focus sector AND uses a business email, but region is unconfirmed or size is unverified; " +
         "3 = company is in a closely adjacent industrial/infrastructure sector (e.g. logistics, transportation, aerospace, heavy equipment) with business email; " +
         "2 = company is in a focus sector but uses a free email provider (e.g. gmail, yahoo); " +
-        "1 = sector is outside the focus list (e.g. Higher Education, Beauty & Cosmetics, Retail, Consumer Goods, Fashion, Healthcare, Hospitality, B2C, Media, Academia) -> MUST rate 1 regardless of company size, revenue, title, or location; OR company is in a prohibited country; " +
-        "UNKNOWN = no company, sector, location, or firmographic data provided.\n" +
+        "1 = organization/sector is outside the focus list (e.g. Higher Education, University, Beauty & Cosmetics, Retail, Consumer Goods, Fashion, Healthcare, Hospitality, B2C, Media, Academia) -> MUST rate 1 regardless of size, revenue, title, or location; OR prohibited country; " +
+        "UNKNOWN = sector and location and company details are all completely missing.\n" +
         "2. OFFERING FIT (25%): Does what the lead needs match BlackRidge's core offerings (Market Research Reports, Project Tracking Databases, or Custom Consulting)? 5 = Direct match for reports, project databases, or custom advisory; 4 = High alignment with market research / capital project data needs; 3 = Partial or adjacent research/industry data request; 2 = Weak alignment (e.g. general software or raw material buyers); 1 = Clear mismatch (e.g. consumer goods, job applicant). UNKNOWN = No product or solution need stated (if no message, inquiry, or stated offering interest is provided, output null for rating and \"UNKNOWN\" for status; do not infer offering fit from company industry alone).\n" +
-        "3. BUYER AUTHORITY (25%): Seniority and commercial decision mandate. " +
+        "3. BUYER AUTHORITY (25%): Seniority and decision mandate within the organization. " +
         "5 = C-Suite / Founder / VP / Head of (Top Decision Maker); " +
         "4 = Director (Senior Decision Maker); " +
         "3 = Manager / Lead (Mid-level); " +
-        "2 = Individual Contributor / Staff / Commercial Specialist; " +
-        "1 = Non-commercial persona (Student, Intern, Academic, Research Scholar, PhD / Master thesis data inquiry, Job Seeker, Hobbyist / Personal project). " +
-        "If contact is non-commercial or academic (e.g. Research Scholar, PhD thesis inquiry, student), set rating to 1, and set is_disqualified to true with disqualification_reason explaining that this is a non-commercial academic persona.\n" +
+        "2 = Junior or Individual Contributor business role (Coordinator, Specialist, Analyst, Associate, Executive Assistant, Staff, or Commercial role with low decision authority — including at poor-fit or non-target companies); " +
+        "1 = Student, intern, academic/thesis requester, job applicant, or personal/hobbyist with no business purchasing role.\n" +
         "4. INTENT (15%): " +
         "5 = mentions an RFP, formal quote request, vendor selection, approved budget, or purchase/decision date within 30 days; " +
         "4 = mentions an evaluation or project timeline of 1 to 3 months (or specific quarter stated) or explicit commercial pilot/trial request; " +
         "3 = mentions a stated project need, tender search, or data requirement with NO purchasing timeline specified (e.g. 'We need data on upcoming tenders', 'need research reports on solar pipeline'); " +
         "2 = early exploratory or curious: downloaded a sample, general pricing curiosity, or browsing without project scope (e.g. 'Downloaded a sample, curious about pricing', general cost inquiry); " +
-        "1 = non-commercial research, academic, student/thesis, or clear non-buyer (e.g. 'PhD thesis', student inquiry, academic research, job applicant); " +
+        "1 = non-commercial research, academic, student/thesis, personal/hobby project, or job applicant; " +
         "UNKNOWN = no inquiry, buying intent, notes, or message provided at all (output null for rating, and 'UNKNOWN' for status).\n\n" +
+        "DISQUALIFICATION RULE (is_disqualified & disqualification_reason):\n" +
+        "- Allow is_disqualified = true ONLY if the lead's title, email, or message/notes falls into one of these 3 cases:\n" +
+        "  1. Student, thesis, or academic/university research request;\n" +
+        "  2. Job applicant, resume/CV submission, or career/internship inquiry;\n" +
+        "  3. Personal or hobby project.\n" +
+        "- Check BOTH the title AND the message/notes: even if the lead has a normal business title (e.g. Researcher, Engineer, Manager), set is_disqualified = true when their message requests data for a thesis or academic paper, applies for a job/internship, or describes a personal/hobby project.\n" +
+        "- NEVER set is_disqualified = true for normal business contacts, junior employees (e.g. Coordinator, Associate, Analyst, Assistant), or poor-fit companies/sectors (e.g. Beauty Retail, Consumer Goods). Leave is_disqualified = false and rate their pillars low (1 or 2) instead.\n" +
+        "- When is_disqualified = true, disqualification_reason MUST quote the exact words from the lead's own title or message showing why it matched one of the 3 cases above. Do NOT copy category lists or wording from this prompt. When is_disqualified = false, set disqualification_reason to \"\".\n\n" +
         "CRITICAL COPYWRITING:\n" +
         "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus. Never echo raw prospect notes or output 'UNKNOWN'.\n" +
         "- value_wedge: 1-2 sentence executive ROI thesis anchored to their market research, project tracking, or consulting needs. Never output 'UNKNOWN'.\n" +
@@ -266,7 +273,7 @@ export default {
         "    }\n" +
         "  },\n" +
         "  \"is_disqualified\": false,\n" +
-        "  \"disqualification_reason\": \"string\",\n" +
+        "  \"disqualification_reason\": \"empty string unless is_disqualified is true; quote exact words from the lead's title or message\",\n" +
         "  \"strategy\": {\n" +
         "    \"urgency_sla\": \"string\",\n" +
         "    \"recommended_channel\": \"string\",\n" +
@@ -440,6 +447,7 @@ export default {
       };
 
       const isDisqualified = Boolean(aiResult.is_disqualified);
+      const disqReason = isDisqualified ? (cleanStr(aiResult.disqualification_reason) || "") : "";
       const branches = Array.isArray(account.branch_locations)
         ? account.branch_locations.map(String).filter(Boolean)
         : (Array.isArray(payload?.branch_locations) ? payload.branch_locations.map(String).filter(Boolean) : []);
@@ -517,10 +525,10 @@ export default {
         },
         scores: {
           is_disqualified: isDisqualified,
-          disqualification_reason: String(aiResult.disqualification_reason || "")
+          disqualification_reason: disqReason
         },
         is_disqualified: isDisqualified,
-        disqualification_reason: String(aiResult.disqualification_reason || ""),
+        disqualification_reason: disqReason,
         evidence: validatedEvidence,
         ai_analysis: {
           role: sanitizedRole,

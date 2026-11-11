@@ -878,21 +878,23 @@ class GTMScoringEngine:
         # Section 6.5: Needs review wins over score if coverage < 60% or buyer authority unknown,
         # or when the AI flags is_disqualified or rates buyer authority 1 (non-commercial persona).
         ai_is_disqualified = bool(ai_res.get("is_disqualified") or ai_res.get("scores", {}).get("is_disqualified"))
-        ai_disq_reason = str(ai_res.get("disqualification_reason") or ai_res.get("scores", {}).get("disqualification_reason") or "").strip()
+        raw_ai_disq_reason = str(ai_res.get("disqualification_reason") or ai_res.get("scores", {}).get("disqualification_reason") or "").strip()
+        ai_disq_reason = "" if raw_ai_disq_reason.lower() in {"null", "none", "unknown", "undefined", "n/a", ""} else raw_ai_disq_reason
 
-        needs_review_reason = None
-        if coverage_pct < cfg.min_coverage_threshold:
-            priority_tier = "Tier: Needs review"
-            needs_review_reason = f"Data coverage is below minimum threshold ({coverage_pct:.0f}% < {cfg.min_coverage_threshold:.0f}%)."
-        elif not pillar_auth.is_known:
-            priority_tier = "Tier: Needs review"
-            needs_review_reason = "Buyer authority is unknown / unverified."
-        elif ai_is_disqualified or (pillar_auth.rating == 1):
-            priority_tier = "Tier: Needs review"
+        review_reasons = []
+        if ai_is_disqualified or (pillar_auth.rating == 1):
             auth_rat = ""
             if pillar_auth.field_receipts and pillar_auth.field_receipts[0].rationale:
                 auth_rat = pillar_auth.field_receipts[0].rationale
-            needs_review_reason = ai_disq_reason or auth_rat or "Non-commercial contact or low buyer authority detected (Authority rating: 1)."
+            review_reasons.append(ai_disq_reason or auth_rat or "Non-commercial contact or low buyer authority detected (Authority rating: 1).")
+        if coverage_pct < cfg.min_coverage_threshold:
+            review_reasons.append(f"Data coverage is below minimum threshold ({coverage_pct:.0f}% < {cfg.min_coverage_threshold:.0f}%).")
+        if not pillar_auth.is_known:
+            review_reasons.append("Buyer authority is unknown / unverified.")
+
+        needs_review_reason = " ".join(review_reasons) if review_reasons else None
+        if review_reasons:
+            priority_tier = "Tier: Needs review"
         elif master_score >= cfg.tier_a_threshold:
             priority_tier = "Tier A: Contact First"
         elif master_score >= cfg.tier_b_threshold:
