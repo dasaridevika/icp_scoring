@@ -207,6 +207,28 @@ FREE_EMAIL_DOMAINS = {
 }
 
 
+def _clean_str(val: Any) -> Optional[str]:
+    """Return stripped text or None for empty / placeholder tokens."""
+    if val is None or isinstance(val, bool):
+        return None
+    s = str(val).strip()
+    if s.lower() in {"unknown", "null", "none", "undefined", "n/a", ""}:
+        return None
+    return s
+
+
+def _has_text(val: Optional[str]) -> bool:
+    """Return True when value has non-placeholder text."""
+    return bool(_clean_str(val))
+
+
+def _one_line_text(val: Any) -> str:
+    """Collapse line breaks and repeated whitespace into a single line."""
+    if val is None or isinstance(val, bool):
+        return ""
+    return " ".join(str(val).split())
+
+
 class FieldScoreReceipt(BaseModel):
     field_name: str = ""
     pillar: str = ""
@@ -223,6 +245,7 @@ class PillarScoreSummary(BaseModel):
     weight_pct: float = 0.0
     is_known: bool = True
     status: str = "VERIFIED"           # "VERIFIED", "INFERRED", "UNKNOWN"
+    rationale: str = ""
     field_receipts: List[FieldScoreReceipt] = Field(default_factory=list)
 
 
@@ -407,7 +430,8 @@ class GTMScoringEngine:
                 score=0.0,
                 weight_pct=0.0,
                 is_known=False,
-                status="UNKNOWN"
+                status="UNKNOWN",
+                rationale=_one_line_text(policy_res.disqualification_reason) or "Blocked by compliance policy."
             )
             return StreamlinedScoringResult(
                 company_name=form.company_name or "Unspecified",
@@ -506,15 +530,16 @@ class GTMScoringEngine:
 
         # Fail loudly if AI is unreachable (Bug 5.1, P0-1 fix)
         if not ai_res or worker_err:
+            err_msg = worker_err or "AI engine service unreachable or timed out."
             empty_pillar = PillarScoreSummary(
                 pillar_name="Unavailable",
                 rating=None,
                 score=0.0,
                 weight_pct=0.0,
                 is_known=False,
-                status="UNKNOWN"
+                status="UNKNOWN",
+                rationale=_one_line_text(err_msg)
             )
-            err_msg = worker_err or "AI engine service unreachable or timed out."
             return StreamlinedScoringResult(
                 company_name=form.company_name or "Unspecified",
                 master_icp_score=0.0,
@@ -549,17 +574,6 @@ class GTMScoringEngine:
         raw_ai = ai_res.get("ai_analysis", {}) or {}
         raw_strategy = ai_res.get("strategy", {}) or {}
         model_used = str(ai_res.get("model_used", ai_res.get("model", "")))
-
-        def _clean_str(val: Any) -> Optional[str]:
-            if val is None or isinstance(val, bool):
-                return None
-            s = str(val).strip()
-            if s.lower() in {"unknown", "null", "none", "undefined", "n/a", ""}:
-                return None
-            return s
-
-        def _has_text(val: Optional[str]) -> bool:
-            return bool(_clean_str(val))
 
         # -------------------------------------------------------------
         # 5. Extract Evidence & Ratings 1–5 (Section 6.3)
@@ -724,6 +738,10 @@ class GTMScoringEngine:
                 rationale=f"Headcount: {hc_str}"
             ))
 
+        firmo_rat_summary = _one_line_text(
+            _clean_str(firmo_rationale)
+            or ("No verified firmographic data provided." if not has_firmo_data else "Firmographic fit evaluated from account profile.")
+        )
         pillar_firmo = PillarScoreSummary(
             pillar_name="Firmographic Fit",
             rating=firmo_rating,
@@ -731,6 +749,7 @@ class GTMScoringEngine:
             weight_pct=cfg.weight_firmographics,
             is_known=firmo_rating is not None,
             status=firmo_status,
+            rationale=firmo_rat_summary,
             field_receipts=firmo_receipts
         )
 
@@ -766,6 +785,11 @@ class GTMScoringEngine:
                 )
             )
 
+        offering_rat_summary = _one_line_text(
+            (_clean_str(offering_rationale) or "Offering fit evaluated from stated interest.")
+            if has_offering_data
+            else "No product or solution need stated."
+        )
         pillar_offering = PillarScoreSummary(
             pillar_name="Offering Fit",
             rating=offering_rating,
@@ -773,6 +797,7 @@ class GTMScoringEngine:
             weight_pct=cfg.weight_offering,
             is_known=offering_rating is not None,
             status=offering_status,
+            rationale=offering_rat_summary,
             field_receipts=offering_receipts
         )
 
@@ -871,6 +896,11 @@ class GTMScoringEngine:
         auth_pts = auth_rating or 0
 
         auth_val = f"{form.contact_role_title or 'Unspecified'} ({form.buying_role or ai_role.persona_type})"
+        auth_rat_summary = _one_line_text(
+            (_clean_str(auth_rationale) or _clean_str(ai_role.rationale) or "Buyer authority evaluated from role title.")
+            if has_auth_data
+            else "No verified buyer authority data provided."
+        )
         pillar_auth = PillarScoreSummary(
             pillar_name="Buyer Authority",
             rating=auth_rating,
@@ -878,8 +908,9 @@ class GTMScoringEngine:
             weight_pct=cfg.weight_authority,
             is_known=auth_rating is not None,
             status=auth_status,
+            rationale=auth_rat_summary,
             field_receipts=[
-                FieldScoreReceipt(field_name="Role Title & Buying Persona", pillar="Buyer Authority", raw_value=auth_val, gtm_points=auth_pts, rationale=auth_rationale or ai_role.rationale)
+                FieldScoreReceipt(field_name="Role Title & Buying Persona", pillar="Buyer Authority", raw_value=auth_val, gtm_points=auth_pts, rationale=auth_rat_summary)
             ]
         )
 
@@ -890,6 +921,11 @@ class GTMScoringEngine:
         intent_pts = intent_rating or 0
 
         intent_val = f"{form.buying_intent or 'Unspecified'} (Timeline: {form.timeline or ai_intent.timeline_detected or 'Unspecified'})"
+        intent_rat_summary = _one_line_text(
+            (_clean_str(intent_rationale) or "Buying intent evaluated from prospect message.")
+            if has_intent_data
+            else "No buying intent or timeline provided."
+        )
         pillar_intent = PillarScoreSummary(
             pillar_name="Intent & Velocity",
             rating=intent_rating,
@@ -897,8 +933,9 @@ class GTMScoringEngine:
             weight_pct=cfg.weight_intent,
             is_known=intent_rating is not None,
             status=intent_status,
+            rationale=intent_rat_summary,
             field_receipts=[
-                FieldScoreReceipt(field_name="Buying Intent & Timeline", pillar="Intent", raw_value=intent_val, gtm_points=intent_pts, rationale=intent_rationale or ai_intent.rationale)
+                FieldScoreReceipt(field_name="Buying Intent & Timeline", pillar="Intent", raw_value=intent_val, gtm_points=intent_pts, rationale=intent_rat_summary)
             ]
         )
 
@@ -1008,7 +1045,7 @@ class GTMScoringEngine:
                         basis_criterion=f"{p.status} (Rating: {p.rating}/5)" if p.is_known else "UNKNOWN (No Data)",
                         verified_signals=[r.field_name for r in p.field_receipts if r.gtm_points > 0],
                         deduction_gaps=[r.field_name for r in p.field_receipts if r.gtm_points == 0],
-                        decision_rationale=p.field_receipts[0].rationale if p.field_receipts else "Pillar evaluation."
+                        decision_rationale=p.rationale or (p.field_receipts[0].rationale if p.field_receipts else "Pillar evaluation.")
                     )
                 )
         else:
