@@ -214,6 +214,7 @@ class StreamlinedScoringResult(BaseModel):
     priority_tier: str = ""
     is_disqualified: bool = False
     disqualification_reason: str = ""
+    needs_review_reason: str = ""
     urgency_sla: str = ""
     recommended_channel: str = ""
     value_wedge: str = ""
@@ -385,6 +386,7 @@ class GTMScoringEngine:
                 priority_tier="Disqualified: Anti-ICP",
                 is_disqualified=True,
                 disqualification_reason=policy_res.disqualification_reason,
+                needs_review_reason="",
                 urgency_sla="No Outreach (Archived)",
                 recommended_channel="Do Not Contact",
                 value_wedge="Account is blocked by organizational compliance policy.",
@@ -493,7 +495,8 @@ class GTMScoringEngine:
                 coverage_pct=0.0,
                 priority_tier="Evaluation Incomplete: AI Engine Offline",
                 is_disqualified=False,
-                disqualification_reason=err_msg,
+                disqualification_reason="",
+                needs_review_reason="",
                 urgency_sla="Manual Review Required",
                 recommended_channel="Hold for System Recovery",
                 value_wedge="AI Analysis Engine is offline. Please check connection or retry shortly.",
@@ -1005,7 +1008,8 @@ class GTMScoringEngine:
             coverage_pct=coverage_pct,
             priority_tier=priority_tier,
             is_disqualified=False,
-            disqualification_reason=needs_review_reason or "",
+            disqualification_reason="",
+            needs_review_reason=needs_review_reason or "",
             urgency_sla=urgency_sla,
             recommended_channel=recommended_channel,
             value_wedge=value_wedge,

@@ -879,7 +879,8 @@ if "streamlined_res" in st.session_state:
 
     # Handle Fail-Loud AI Error Mode
     if getattr(res, "analysis_mode", "live") == "failed":
-        st.error(f"⚠️ **AI Engine Unreachable**: {esc(res.disqualification_reason)}")
+        err_detail = res.degraded_reasons[0] if getattr(res, "degraded_reasons", None) else "AI engine service unreachable or timed out."
+        st.error(f"⚠️ **AI Engine Unreachable**: {esc(err_detail)}")
         st.info("💡 **How to connect**: Click **⚙️ Settings** at the top right to enter your Cloudflare Worker URL, or set `ICP_WORKER_URL` in `.streamlit/secrets.toml` or Streamlit Cloud Secrets.")
     else:
         badge_class = "badge-disq" if res.is_disqualified else (
@@ -934,8 +935,8 @@ Master ICP Score &bull; <span style="color:#38BDF8;">Coverage: {res.coverage_pct
 
         if res.is_disqualified:
             st.error(f"❌ **Hard Disqualification Detected**: {esc(res.disqualification_reason)}")
-        elif "Needs review" in res.priority_tier and res.disqualification_reason:
-            st.warning(f"⚠️ **Review Required (AI Flag)**: {esc(res.disqualification_reason)}")
+        elif "Needs review" in res.priority_tier and res.needs_review_reason:
+            st.warning(f"⚠️ **Review Required**: {esc(res.needs_review_reason)}")
 
         # 2. 🤖 AI Semantic Strategic Intelligence Grid (GTM Partners Taxonomy)
         if not res.is_disqualified:
