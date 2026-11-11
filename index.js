@@ -96,6 +96,13 @@ function cleanStr(v) {
   return s;
 }
 
+function pickCleanList(primary, secondary) {
+  const src = (Array.isArray(primary) && primary.length > 0)
+    ? primary
+    : ((Array.isArray(secondary) && secondary.length > 0) ? secondary : []);
+  return src.map(cleanStr).filter(Boolean);
+}
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
@@ -226,9 +233,9 @@ export default {
         "CRITICAL COPYWRITING:\n" +
         "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus. Never echo raw prospect notes or output 'UNKNOWN'.\n" +
         "- value_wedge: 1-2 sentence executive ROI thesis anchored to their market research, project tracking, or consulting needs. Never output 'UNKNOWN'.\n" +
-        "- discovery_questions: 3 high-impact consultative questions for research & data scoping.\n" +
-        "- key_strengths: 3 concrete data points from the prospect text.\n" +
-        "- key_risks: 2 realistic qualification risks.\n\n" +
+        "- discovery_questions: Up to 3 scoping questions grounded ONLY in facts explicitly stated in the lead data (never invent unstated facts). Output an empty list [] if disqualified or if there is nothing real to ask.\n" +
+        "- key_strengths: Up to 3 positive ICP fit points grounded ONLY in facts explicitly stated in the lead data (never invent years of experience, online presence, headcount, or unstated details). Output an empty list [] if there are no real strengths.\n" +
+        "- key_risks: Up to 2 qualification risks grounded ONLY in facts explicitly stated in the lead data or gaps observed in the input (never invent facts). Output an empty list [] if there are no real risks.\n\n" +
         "RETURN STRICT JSON ONLY MATCHING THIS SCHEMA:\n" +
         "{\n" +
         "  \"account\": {\n" +
@@ -280,9 +287,9 @@ export default {
         "    \"value_wedge\": \"string\",\n" +
         "    \"outreach_hook\": \"string\"\n" +
         "  },\n" +
-        "  \"discovery_questions\": [\"string\"],\n" +
-        "  \"key_strengths\": [\"string\"],\n" +
-        "  \"key_risks\": [\"string\"]\n" +
+        "  \"discovery_questions\": [\"string (or [] if none)\"],\n" +
+        "  \"key_strengths\": [\"string (or [] if none)\"],\n" +
+        "  \"key_risks\": [\"string (or [] if none)\"]\n" +
         "}\nRespond ONLY with valid JSON. Ensure every array [ ] and object { } is strictly and correctly closed.";
 
       let userPromptContent = "PROSPECT DATA TO EVALUATE:\n" + prospectInput;
@@ -541,37 +548,13 @@ export default {
           recommended_channel: cleanStr(aiResult.strategy?.recommended_channel) || "Direct Email",
           value_wedge: cleanStr(aiResult.strategy?.value_wedge || aiResult.value_wedge) || "",
           outreach_hook: cleanStr(aiResult.strategy?.outreach_hook || aiResult.outreach_hook) || "",
-          discovery_questions: (Array.isArray(aiResult.discovery_questions) && aiResult.discovery_questions.length > 0)
-            ? aiResult.discovery_questions.map(cleanStr).filter(Boolean)
-            : ((Array.isArray(aiResult.strategy?.discovery_questions) && aiResult.strategy.discovery_questions.length > 0)
-              ? aiResult.strategy.discovery_questions.map(cleanStr).filter(Boolean)
-              : []),
-          key_strengths: (Array.isArray(aiResult.key_strengths) && aiResult.key_strengths.length > 0)
-            ? aiResult.key_strengths.map(cleanStr).filter(Boolean)
-            : ((Array.isArray(aiResult.strategy?.key_strengths) && aiResult.strategy.key_strengths.length > 0)
-              ? aiResult.strategy.key_strengths.map(cleanStr).filter(Boolean)
-              : []),
-          key_risks: (Array.isArray(aiResult.key_risks) && aiResult.key_risks.length > 0)
-            ? aiResult.key_risks.map(cleanStr).filter(Boolean)
-            : ((Array.isArray(aiResult.strategy?.key_risks) && aiResult.strategy.key_risks.length > 0)
-              ? aiResult.strategy.key_risks.map(cleanStr).filter(Boolean)
-              : [])
+          discovery_questions: pickCleanList(aiResult.discovery_questions, aiResult.strategy?.discovery_questions),
+          key_strengths: pickCleanList(aiResult.key_strengths, aiResult.strategy?.key_strengths),
+          key_risks: pickCleanList(aiResult.key_risks, aiResult.strategy?.key_risks)
         },
-        discovery_questions: (Array.isArray(aiResult.discovery_questions) && aiResult.discovery_questions.length > 0)
-          ? aiResult.discovery_questions.map(cleanStr).filter(Boolean)
-          : ((Array.isArray(aiResult.strategy?.discovery_questions) && aiResult.strategy.discovery_questions.length > 0)
-            ? aiResult.strategy.discovery_questions.map(cleanStr).filter(Boolean)
-            : []),
-        key_strengths: (Array.isArray(aiResult.key_strengths) && aiResult.key_strengths.length > 0)
-          ? aiResult.key_strengths.map(cleanStr).filter(Boolean)
-          : ((Array.isArray(aiResult.strategy?.key_strengths) && aiResult.strategy.key_strengths.length > 0)
-            ? aiResult.strategy.key_strengths.map(cleanStr).filter(Boolean)
-            : []),
-        key_risks: (Array.isArray(aiResult.key_risks) && aiResult.key_risks.length > 0)
-          ? aiResult.key_risks.map(cleanStr).filter(Boolean)
-          : ((Array.isArray(aiResult.strategy?.key_risks) && aiResult.strategy.key_risks.length > 0)
-            ? aiResult.strategy.key_risks.map(cleanStr).filter(Boolean)
-            : [])
+        discovery_questions: pickCleanList(aiResult.discovery_questions, aiResult.strategy?.discovery_questions),
+        key_strengths: pickCleanList(aiResult.key_strengths, aiResult.strategy?.key_strengths),
+        key_risks: pickCleanList(aiResult.key_risks, aiResult.strategy?.key_risks)
       });
 
     } catch (fatalErr) {

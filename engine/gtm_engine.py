@@ -987,31 +987,17 @@ class GTMScoringEngine:
                     )
                 )
 
-        raw_dq = ai_res.get("discovery_questions") or raw_strategy.get("discovery_questions") or []
-        discovery_questions = [q for q in (_clean_str(x) for x in raw_dq) if q]
-        if not discovery_questions:
-            discovery_questions = [
-                f"What specific market intelligence or capital projects data is {comp} currently scoping?",
-                f"Which upcoming tenders or market segments in {sub_niche} are most critical for your pipeline?",
-                f"How does your team currently track competitor market shares and procurement awards?"
-            ]
+        def _clean_list(key: str) -> List[str]:
+            raw_items = ai_res.get(key)
+            if not isinstance(raw_items, list) or not raw_items:
+                raw_items = raw_strategy.get(key)
+            if not isinstance(raw_items, list):
+                return []
+            return [item for item in (_clean_str(x) for x in raw_items) if item]
 
-        raw_ks = ai_res.get("key_strengths") or raw_strategy.get("key_strengths") or []
-        key_strengths = [s for s in (_clean_str(x) for x in raw_ks) if s]
-        if not key_strengths:
-            key_strengths = [
-                f"Target sector alignment: {sub_niche}",
-                f"Account profile: {comp}",
-                f"Role authority: {form.contact_role_title or 'Commercial contact'}"
-            ]
-
-        raw_kr = ai_res.get("key_risks") or raw_strategy.get("key_risks") or []
-        key_risks = [r for r in (_clean_str(x) for x in raw_kr) if r]
-        if not key_risks:
-            key_risks = [
-                "Purchasing timeline and budget parameters unconfirmed on initial inquiry.",
-                "Commercial engagement scope requires follow-up scoping call."
-            ]
+        discovery_questions = _clean_list("discovery_questions")
+        key_strengths = _clean_list("key_strengths")
+        key_risks = _clean_list("key_risks")
 
         return StreamlinedScoringResult(
             company_name=form.company_name or "Unspecified",
