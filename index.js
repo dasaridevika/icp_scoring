@@ -215,7 +215,8 @@ export default {
         `Target Focus Industries (from config):\n${focusBlock}\n` +
         (tier1Territories.length > 0 ? `Tier 1 Supported Territories: ${tier1Territories.join(", ")}\n` : "") +
         (prohibitedCountries.length > 0 ? `Prohibited / Sanctioned Countries: ${prohibitedCountries.join(", ")}\n` : "") +
-        "\nIMPORTANT COVERAGE RULE: Treat every industry in Target Focus Industries as an equal first-class focus sector, and treat every database, report, or service in Core Offerings as an equal direct-match offering.\n\n" +
+        "\nIMPORTANT COVERAGE RULE: Treat every industry in Target Focus Industries as an equal first-class focus sector, and treat every database, report, or service in Core Offerings as an equal direct-match offering.\n" +
+        "MISSING OPTIONAL FIELDS RULE: Annual revenue, employee count/headcount, timeline, buying role, and deal size are optional and omitted by default. NEVER penalize or reduce Firmographic, Offering Fit, Buyer Authority, or Intent ratings because revenue, headcount, timeline, buying role, or deal size is absent.\n\n" +
         "RATING RUBRIC (1 to 5):\n" +
         "5: Strong match, clear evidence\n" +
         "4: Good match\n" +
@@ -225,19 +226,19 @@ export default {
         "UNKNOWN: No evidence at all (when unverified, output null for rating, and \"UNKNOWN\" for status; never output literal unquoted UNKNOWN).\n\n" +
         "THE 4 PILLARS:\n" +
         "1. FIRMOGRAPHIC (35%): " +
-        "5 = company operates in OR builds/develops capital projects or facilities covered by any configured Target Focus Industry AND is in a supported territory (or not in a prohibited country) AND uses a business email; " +
+        "5 = company operates in OR builds/develops capital projects or facilities covered by any configured Target Focus Industry AND country/location matches a Tier 1 Supported Territory (including standard abbreviations like US/USA for United States, UK for United Kingdom, UAE for United Arab Emirates) AND uses a business email; " +
         "4 = company operates in OR builds/develops capital projects covered by a configured Target Focus Industry AND uses a business email, but location is outside Tier 1 supported territories (while not prohibited) or location is unconfirmed; " +
         "3 = company is in a closely adjacent commercial/B2B industrial, infrastructure, engineering, EPC, or real-asset sector related to the configured Target Focus Industries with a business email; " +
         "2 = company matches or is adjacent to a configured Target Focus Industry but uses a free email provider (e.g. gmail, yahoo); " +
         "1 = organization/sector has no match or relevance to any configured Target Focus Industry (nor any project/facility type covered by them) -> MUST rate 1 regardless of size, revenue, title, or location; OR prohibited country; " +
         "UNKNOWN = sector and location and company details are all completely missing.\n" +
         "2. OFFERING FIT (25%): Does what the lead needs match any item in the configured Core Offerings list above? " +
-        "5 = Direct match for a configured Core Offering (explicitly requests, evaluates, or directly maps to one of the listed project databases, reports, research, or consulting offerings); " +
+        "5 = Direct match for one or more configured Core Offerings (Stated Offering Interest — even as a comma-separated list with no message — or the message directly names or maps to any listed project database, report, research, or consulting offering); " +
         "4 = High alignment with the scope of one or more configured Core Offerings without naming the exact offering; " +
         "3 = Partial or adjacent data/research request weakly related to configured Core Offerings; " +
         "2 = Weak alignment with configured Core Offerings; " +
         "1 = Clear mismatch (needs something unrelated to configured Core Offerings, or non-commercial/job applicant request). " +
-        "UNKNOWN = No product or solution need stated (if no message, inquiry, or stated offering interest is provided, output null for rating and \"UNKNOWN\" for status; do not infer offering fit from company industry alone).\n" +
+        "UNKNOWN = Neither Stated Offering Interest nor a product/solution need message is provided (if both are missing, output null for rating and \"UNKNOWN\" for status; never mark Offering Fit as UNKNOWN when Stated Offering Interest is present, and do not infer offering fit from company industry alone).\n" +
         "3. BUYER AUTHORITY (25%): Seniority and decision mandate within the organization. " +
         "5 = C-Suite / Founder / VP / Head of (Top Decision Maker); " +
         "4 = Director (Senior Decision Maker); " +
@@ -257,7 +258,7 @@ export default {
         "  2. Job applicant, resume/CV submission, or career/internship inquiry;\n" +
         "  3. Personal or hobby project.\n" +
         "- Check BOTH the title AND the message/notes: even if the lead has a normal business title (e.g. Researcher, Engineer, Manager), set is_disqualified = true when their message requests data for a thesis or academic paper, applies for a job/internship, or describes a personal/hobby project.\n" +
-        "- NEVER set is_disqualified = true for normal business contacts, junior employees (e.g. Coordinator, Associate, Analyst, Assistant), or poor-fit companies/sectors (e.g. Beauty Retail, Consumer Goods). Leave is_disqualified = false and rate their pillars low (1 or 2) instead.\n" +
+        "- NEVER set is_disqualified = true for normal business contacts, junior employees (e.g. Coordinator, Associate, Analyst, Assistant), poor-fit companies/sectors, or merely because contact role/title or message is blank/missing. Leave is_disqualified = false and rate their pillars low (1 or 2) instead.\n" +
         "- When is_disqualified = true, disqualification_reason MUST quote the exact words from the lead's own title or message showing why it matched one of the 3 cases above. Do NOT copy category lists or wording from this prompt. When is_disqualified = false, set disqualification_reason to \"\".\n\n" +
         "CRITICAL COPYWRITING:\n" +
         "- outreach_hook: A sharp 1-sentence consultative cold email opener directly referencing their sector, company, and project focus. Never echo raw prospect notes or output 'UNKNOWN'.\n" +

@@ -182,6 +182,23 @@ class StreamlinedLeadForm(BaseModel):
     uses_existing_platform: Optional[str] = ""
     existing_platform: Optional[str] = ""
 
+    def __init__(self, **data):
+        str_fields = {
+            "company_name", "currency_symbol", "currency_code", "revenue_unit",
+            "revenue_display_str", "deal_unit", "deal_display_str", "industry_sector",
+            "sub_vertical", "location", "contact_name", "contact_email",
+            "contact_role_title", "buying_role", "buying_intent", "timeline",
+            "offering_interest", "tech_stack_notes", "uses_existing_platform",
+            "existing_platform",
+        }
+        for field in str_fields:
+            if field in data and data[field] is None:
+                data[field] = ""
+        for num_field in ("revenue_entered_value", "deal_entered_value"):
+            if num_field in data and data[num_field] is None:
+                data[num_field] = 0.0
+        super().__init__(**data)
+
 
 FREE_EMAIL_DOMAINS = {
     "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com",
@@ -533,6 +550,17 @@ class GTMScoringEngine:
         raw_strategy = ai_res.get("strategy", {}) or {}
         model_used = str(ai_res.get("model_used", ai_res.get("model", "")))
 
+        def _clean_str(val: Any) -> Optional[str]:
+            if val is None or isinstance(val, bool):
+                return None
+            s = str(val).strip()
+            if s.lower() in {"unknown", "null", "none", "undefined", "n/a", ""}:
+                return None
+            return s
+
+        def _has_text(val: Optional[str]) -> bool:
+            return bool(_clean_str(val))
+
         # -------------------------------------------------------------
         # 5. Extract Evidence & Ratings 1–5 (Section 6.3)
         # -------------------------------------------------------------
@@ -569,64 +597,70 @@ class GTMScoringEngine:
         # Pillar 1: Firmographic Fit (35%)
         # Note: company_name alone does NOT count as firmographic data
         has_firmo_data = bool(
-            form.industry_sector
-            or (form.sub_vertical and form.sub_vertical != form.company_name)
+            _has_text(form.industry_sector)
+            or (_has_text(form.sub_vertical) and form.sub_vertical.strip() != (form.company_name or "").strip())
             or (norm_rev_usd is not None and norm_rev_usd > 0)
             or (hc_val is not None and hc_val > 0)
-            or form.location
-            or form.branch_locations
-            or form.contact_email
+            or _has_text(form.location)
+            or any(_has_text(b) for b in form.branch_locations)
+            or _has_text(form.contact_email)
         )
         ev_firmo = raw_evidence.get("firmographic", {})
         firmo_rating, firmo_status, firmo_rationale = extract_rating(ev_firmo, has_firmo_data)
         firmo_pts = firmo_rating or 0
 
         # Sub-AI: Role, Niche, Intent, Offering/Tech, Footprint
-        r_role = raw_ai.get("role", {})
+        r_role = raw_ai.get("role") or {}
+        role_seniority = _clean_str(r_role.get("seniority_level")) or "Unspecified"
+        try:
+            role_conf = float(r_role.get("confidence")) if r_role.get("confidence") is not None else 0.90
+        except (TypeError, ValueError):
+            role_conf = 0.90
         ai_role = RoleAIAnalysis(
             raw_title=form.contact_role_title,
-            seniority_level=r_role.get("seniority_level", "Unspecified"),
-            seniority_points=5 if "+5" in r_role.get("seniority_level", "") else (3 if "+3" in r_role.get("seniority_level", "") else 1),
-            persona_type=r_role.get("persona_type", "Unspecified"),
-            department=r_role.get("department", "Unspecified"),
-            confidence=float(r_role.get("confidence", 0.90)),
-            rationale=r_role.get("rationale", "Role authority analysis."),
-            is_disqualifier="-5" in r_role.get("seniority_level", "")
+            seniority_level=role_seniority,
+            seniority_points=5 if "+5" in role_seniority else (3 if "+3" in role_seniority else 1),
+            persona_type=_clean_str(r_role.get("persona_type")) or "Unspecified",
+            department=_clean_str(r_role.get("department")) or "Unspecified",
+            confidence=role_conf,
+            rationale=_clean_str(r_role.get("rationale")) or "Role authority analysis.",
+            is_disqualifier="-5" in role_seniority
         )
 
-        r_niche = raw_ai.get("niche", {})
+        r_niche = raw_ai.get("niche") or {}
         ai_niche = NicheAIAnalysis(
             raw_niche=form.sub_vertical,
             suggested_sector=form.industry_sector,
-            market_complexity=r_niche.get("market_complexity", "Specialized Enterprise"),
+            market_complexity=_clean_str(r_niche.get("market_complexity")) or "Specialized Enterprise",
             fit_points=3,
-            rationale=r_niche.get("rationale", "Market complexity analysis.")
+            rationale=_clean_str(r_niche.get("rationale")) or "Market complexity analysis."
         )
 
-        r_readiness = raw_ai.get("readiness", {})
+        r_readiness = raw_ai.get("readiness") or {}
+        urgency_tier = _clean_str(r_readiness.get("urgency_tier")) or "Unspecified"
         ai_intent = IntentAIAnalysis(
             raw_intent=form.buying_intent,
-            urgency_tier=r_readiness.get("urgency_tier", "Unspecified"),
-            intent_points=5 if "+5" in r_readiness.get("urgency_tier", "") else (3 if "+3" in r_readiness.get("urgency_tier", "") else 0),
-            timeline_detected=r_readiness.get("timeline_detected") or (form.timeline or None),
-            rationale=r_readiness.get("rationale", "Intent and timeline analysis.")
+            urgency_tier=urgency_tier,
+            intent_points=5 if "+5" in urgency_tier else (3 if "+3" in urgency_tier else 0),
+            timeline_detected=_clean_str(r_readiness.get("timeline_detected")) or (_clean_str(form.timeline)),
+            rationale=_clean_str(r_readiness.get("rationale")) or "Intent and timeline analysis."
         )
 
-        r_footprint = raw_ai.get("footprint", {})
+        r_footprint = raw_ai.get("footprint") or {}
         ai_footprint = FootprintAIAnalysis(
             headquarters=form.location,
             branch_locations=form.branch_locations,
             total_locations=1 + len(form.branch_locations),
-            geographic_reach=r_footprint.get("geographic_reach", "Multi-Region Enterprise"),
+            geographic_reach=_clean_str(r_footprint.get("geographic_reach")) or "Multi-Region Enterprise",
             footprint_points=3,
-            rationale=r_footprint.get("rationale", "Geographic footprint analysis.")
+            rationale=_clean_str(r_footprint.get("rationale")) or "Geographic footprint analysis."
         )
 
         # Pillar 1 receipts: only attribute positive points to verified signals
         rev_known = bool(norm_rev_usd is not None and norm_rev_usd > 0)
         hc_known = bool(hc_val is not None and hc_val > 0)
-        ind_known = bool(form.industry_sector or form.sub_vertical)
-        geo_known = bool(form.location or form.branch_locations)
+        ind_known = bool(_has_text(form.industry_sector) or _has_text(form.sub_vertical))
+        geo_known = bool(_has_text(form.location) or any(_has_text(b) for b in form.branch_locations))
 
         # Email evaluation (business vs free email)
         email_val = (form.contact_email or "").strip()
@@ -652,20 +686,6 @@ class GTMScoringEngine:
 
         firmo_receipts = [
             FieldScoreReceipt(
-                field_name="Company Revenue",
-                pillar="Firmographics",
-                raw_value=prospect_rev_str,
-                gtm_points=firmo_pts if (rev_known and firmo_pts > 0) else 0,
-                rationale=f"Stated Revenue: {prospect_rev_str}" if rev_known else "Revenue: Unknown / Not Provided"
-            ),
-            FieldScoreReceipt(
-                field_name="Employee Headcount",
-                pillar="Firmographics",
-                raw_value=hc_str,
-                gtm_points=firmo_pts if (hc_known and firmo_pts > 0) else 0,
-                rationale=f"Headcount: {hc_str}" if hc_known else "Headcount: Unknown / Not Provided"
-            ),
-            FieldScoreReceipt(
                 field_name="Industry & Niche",
                 pillar="Firmographics",
                 raw_value=f"{form.industry_sector or 'Unknown'} • {form.sub_vertical or 'General'}",
@@ -687,6 +707,22 @@ class GTMScoringEngine:
                 rationale=email_rat
             )
         ]
+        if rev_known:
+            firmo_receipts.insert(0, FieldScoreReceipt(
+                field_name="Company Revenue",
+                pillar="Firmographics",
+                raw_value=prospect_rev_str,
+                gtm_points=firmo_pts if firmo_pts > 0 else 0,
+                rationale=f"Stated Revenue: {prospect_rev_str}"
+            ))
+        if hc_known:
+            firmo_receipts.insert(1 if rev_known else 0, FieldScoreReceipt(
+                field_name="Employee Headcount",
+                pillar="Firmographics",
+                raw_value=hc_str,
+                gtm_points=firmo_pts if firmo_pts > 0 else 0,
+                rationale=f"Headcount: {hc_str}"
+            ))
 
         pillar_firmo = PillarScoreSummary(
             pillar_name="Firmographic Fit",
@@ -700,7 +736,7 @@ class GTMScoringEngine:
 
         # Pillar 2: Offering Fit (25%) - Replaces Tech Stack (Section 4.1, 6.2)
         # Counted as known only when offering_interest or buying_intent is filled in; industry and sub-vertical describe the company, not what they need.
-        has_offering_data = bool((form.offering_interest and form.offering_interest.strip()) or (form.buying_intent and form.buying_intent.strip()))
+        has_offering_data = bool(_has_text(form.offering_interest) or _has_text(form.buying_intent))
         ev_offering = raw_evidence.get("offering") or raw_evidence.get("technographic", {})
         offering_rating, offering_status, offering_rationale = extract_rating(ev_offering, has_offering_data)
         offering_pts = offering_rating or 0
@@ -741,7 +777,7 @@ class GTMScoringEngine:
         )
 
         # Pillar 3: Buyer Authority (25%) (Section 6.2)
-        has_auth_data = bool(form.contact_role_title or form.buying_role)
+        has_auth_data = bool(_has_text(form.contact_role_title) or _has_text(form.buying_role))
         ev_auth = raw_evidence.get("authority") or raw_evidence.get("qualifying", {})
         auth_rating, auth_status, auth_rationale = extract_rating(ev_auth, has_auth_data)
 
@@ -848,7 +884,7 @@ class GTMScoringEngine:
         )
 
         # Pillar 4: Intent & Velocity (15%) (Section 6.2)
-        has_intent_data = bool(form.buying_intent or form.timeline)
+        has_intent_data = bool(_has_text(form.buying_intent) or _has_text(form.timeline))
         ev_intent = raw_evidence.get("intent") or raw_evidence.get("readiness", {})
         intent_rating, intent_status, intent_rationale = extract_rating(ev_intent, has_intent_data)
         intent_pts = intent_rating or 0
@@ -890,8 +926,7 @@ class GTMScoringEngine:
         # Section 6.5: Needs review wins over score if coverage < 60% or buyer authority unknown,
         # or when the AI flags is_disqualified or rates buyer authority 1 (non-commercial persona).
         ai_is_disqualified = bool(ai_res.get("is_disqualified") or ai_res.get("scores", {}).get("is_disqualified"))
-        raw_ai_disq_reason = str(ai_res.get("disqualification_reason") or ai_res.get("scores", {}).get("disqualification_reason") or "").strip()
-        ai_disq_reason = "" if raw_ai_disq_reason.lower() in {"null", "none", "unknown", "undefined", "n/a", ""} else raw_ai_disq_reason
+        ai_disq_reason = _clean_str(ai_res.get("disqualification_reason")) or _clean_str((ai_res.get("scores") or {}).get("disqualification_reason")) or ""
 
         review_reasons = []
         if ai_is_disqualified or (pillar_auth.rating == 1):
@@ -937,14 +972,6 @@ class GTMScoringEngine:
         comp = form.company_name or "your team"
         contact = form.contact_name or "there"
         org_ref = cfg.company_name if cfg.company_name else "our team"
-
-        def _clean_str(val: Any) -> Optional[str]:
-            if not val:
-                return None
-            s = str(val).strip()
-            if s.lower() in {"unknown", "null", "none", "undefined", "n/a", ""}:
-                return None
-            return s
 
         val_w = _clean_str(raw_strategy.get("value_wedge")) or _clean_str(ai_res.get("value_wedge"))
         value_wedge = val_w or f"Accelerate strategic initiatives for {sub_niche} at {comp}."
