@@ -342,13 +342,13 @@ export default {
                 { role: "user", content: userPromptContent }
               ],
               max_tokens: 2500,
-              temperature: 0.1
+              temperature: 0
             });
           } catch (chatErr) {
             aiResponse = await env.AI.run(model, {
               prompt: systemPrompt + "\n\n" + userPromptContent,
               max_tokens: 2500,
-              temperature: 0.1
+              temperature: 0
             });
           }
 
