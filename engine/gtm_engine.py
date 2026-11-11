@@ -197,6 +197,8 @@ class StreamlinedLeadForm(BaseModel):
         for num_field in ("revenue_entered_value", "deal_entered_value"):
             if num_field in data and data[num_field] is None:
                 data[num_field] = 0.0
+        if "branch_locations" in data and data["branch_locations"] is None:
+            data["branch_locations"] = []
         super().__init__(**data)
 
 
@@ -227,6 +229,17 @@ def _one_line_text(val: Any) -> str:
     if val is None or isinstance(val, bool):
         return ""
     return " ".join(str(val).split())
+
+
+def _parse_bool(val: Any) -> bool:
+    """Parse booleans without treating string literals like 'false' as True."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.strip().lower() in {"true", "1", "yes"}
+    if isinstance(val, (int, float)):
+        return bool(val)
+    return False
 
 
 class FieldScoreReceipt(BaseModel):
@@ -462,22 +475,36 @@ class GTMScoringEngine:
         # -------------------------------------------------------------
         # 3. AI Worker Query & Fail-Loud Observability
         # -------------------------------------------------------------
+        clean_branches = [b for b in (_clean_str(x) for x in form.branch_locations) if b]
+        c_company = _clean_str(form.company_name) or ""
+        c_industry = _clean_str(form.industry_sector)
+        c_sub_vertical = _clean_str(form.sub_vertical)
+        c_offering = _clean_str(form.offering_interest)
+        c_location = _clean_str(form.location)
+        c_email = _clean_str(form.contact_email)
+        c_contact = _clean_str(form.contact_name)
+        c_title = _clean_str(form.contact_role_title)
+        c_buying_role = _clean_str(form.buying_role)
+        c_timeline = _clean_str(form.timeline)
+        c_intent = _clean_str(form.buying_intent)
+        c_platform = _clean_str(form.existing_platform)
+
         summary_lines = []
-        if form.company_name: summary_lines.append(f"Company: {form.company_name}")
-        if form.industry_sector: summary_lines.append(f"Industry: {form.industry_sector}")
-        if form.sub_vertical and form.sub_vertical != form.industry_sector: summary_lines.append(f"Sub-vertical / Specialty: {form.sub_vertical}")
-        if form.offering_interest: summary_lines.append(f"Offering Interest: {form.offering_interest}")
-        if form.location: summary_lines.append(f"Headquarters: {form.location}")
-        if form.branch_locations: summary_lines.append(f"Branch Locations: {', '.join(form.branch_locations)}")
-        if form.contact_email: summary_lines.append(f"Work Email: {form.contact_email}")
+        if c_company: summary_lines.append(f"Company: {c_company}")
+        if c_industry: summary_lines.append(f"Industry: {c_industry}")
+        if c_sub_vertical and c_sub_vertical != c_industry: summary_lines.append(f"Sub-vertical / Specialty: {c_sub_vertical}")
+        if c_offering: summary_lines.append(f"Offering Interest: {c_offering}")
+        if c_location: summary_lines.append(f"Headquarters: {c_location}")
+        if clean_branches: summary_lines.append(f"Branch Locations: {', '.join(clean_branches)}")
+        if c_email: summary_lines.append(f"Work Email: {c_email}")
         if hc_val: summary_lines.append(f"Headcount: {hc_val}")
         if prospect_rev_str != "Unknown": summary_lines.append(f"Annual Revenue: {prospect_rev_str}")
-        if form.contact_name: summary_lines.append(f"Contact Name: {form.contact_name}")
-        if form.contact_role_title: summary_lines.append(f"Role Title: {form.contact_role_title}")
-        if form.buying_role: summary_lines.append(f"Buying Role: {form.buying_role}")
-        if form.timeline: summary_lines.append(f"Timeline: {form.timeline}")
-        if form.buying_intent: summary_lines.append(f"Buying Intent: {form.buying_intent}")
-        if form.existing_platform: summary_lines.append(f"Uses Existing Platform: {form.existing_platform}")
+        if c_contact: summary_lines.append(f"Contact Name: {c_contact}")
+        if c_title: summary_lines.append(f"Role Title: {c_title}")
+        if c_buying_role: summary_lines.append(f"Buying Role: {c_buying_role}")
+        if c_timeline: summary_lines.append(f"Timeline: {c_timeline}")
+        if c_intent: summary_lines.append(f"Buying Intent: {c_intent}")
+        if c_platform: summary_lines.append(f"Uses Existing Platform: {c_platform}")
         if prospect_deal_str != "Unknown": summary_lines.append(f"Budget / Deal Size: {prospect_deal_str}")
 
         lead_text_summary = "\n".join(summary_lines)
@@ -485,9 +512,9 @@ class GTMScoringEngine:
         worker_payload = {
             "text": lead_text_summary,
             "prospect_text": lead_text_summary,
-            "company_name": form.company_name,
-            "industry_sector": form.industry_sector or None,
-            "sub_vertical": form.sub_vertical or None,
+            "company_name": c_company,
+            "industry_sector": c_industry,
+            "sub_vertical": c_sub_vertical,
             "annual_revenue_usd": norm_rev_usd,
             "annual_revenue_native": native_rev,
             "stated_annual_revenue": prospect_rev_str if prospect_rev_str != "Unknown" else None,
@@ -496,20 +523,20 @@ class GTMScoringEngine:
             "deal_currency_code": deal_curr_code,
             "revenue_unit": form.revenue_unit,
             "employee_count": hc_val,
-            "location": form.location or None,
-            "branch_locations": form.branch_locations,
-            "contact_name": form.contact_name or None,
-            "contact_email": form.contact_email or None,
-            "contact_role_title": form.contact_role_title or None,
-            "buying_role": form.buying_role or None,
-            "buying_intent": form.buying_intent or None,
-            "timeline": form.timeline or None,
-            "offering_interest": form.offering_interest or None,
+            "location": c_location,
+            "branch_locations": clean_branches,
+            "contact_name": c_contact,
+            "contact_email": c_email,
+            "contact_role_title": c_title,
+            "buying_role": c_buying_role,
+            "buying_intent": c_intent,
+            "timeline": c_timeline,
+            "offering_interest": c_offering,
             "target_deal_size_usd": norm_deal_usd,
             "target_deal_size_native": native_deal,
             "stated_deal_size": prospect_deal_str if prospect_deal_str != "Unknown" else None,
             "deal_unit": form.deal_unit,
-            "existing_platform": form.existing_platform or None,
+            "existing_platform": c_platform,
             "company_standards": {
                 "org_name": cfg.company_name,
                 "core_offerings": cfg.core_offerings,
@@ -573,7 +600,7 @@ class GTMScoringEngine:
         raw_evidence = ai_res.get("evidence", {}) or {}
         raw_ai = ai_res.get("ai_analysis", {}) or {}
         raw_strategy = ai_res.get("strategy", {}) or {}
-        model_used = str(ai_res.get("model_used", ai_res.get("model", "")))
+        model_used = _clean_str(ai_res.get("model_used")) or _clean_str(ai_res.get("model")) or ""
 
         # -------------------------------------------------------------
         # 5. Extract Evidence & Ratings 1–5 (Section 6.3)
@@ -962,15 +989,16 @@ class GTMScoringEngine:
 
         # Section 6.5: Needs review wins over score if coverage < 60% or buyer authority unknown,
         # or when the AI flags is_disqualified or rates buyer authority 1 (non-commercial persona).
-        ai_is_disqualified = bool(ai_res.get("is_disqualified") or ai_res.get("scores", {}).get("is_disqualified"))
-        ai_disq_reason = _clean_str(ai_res.get("disqualification_reason")) or _clean_str((ai_res.get("scores") or {}).get("disqualification_reason")) or ""
+        scores_obj = ai_res.get("scores") if isinstance(ai_res.get("scores"), dict) else {}
+        ai_is_disqualified = _parse_bool(ai_res.get("is_disqualified")) or _parse_bool(scores_obj.get("is_disqualified"))
+        ai_disq_reason = _clean_str(ai_res.get("disqualification_reason")) or _clean_str(scores_obj.get("disqualification_reason")) or ""
 
         review_reasons = []
         if ai_is_disqualified or (pillar_auth.rating == 1):
             auth_rat = ""
-            if pillar_auth.field_receipts and pillar_auth.field_receipts[0].rationale:
+            if pillar_auth.rating == 1 and pillar_auth.field_receipts and pillar_auth.field_receipts[0].rationale:
                 auth_rat = pillar_auth.field_receipts[0].rationale
-            review_reasons.append(ai_disq_reason or auth_rat or "Non-commercial contact or low buyer authority detected (Authority rating: 1).")
+            review_reasons.append(ai_disq_reason or auth_rat or "Non-commercial contact or low buyer authority detected.")
         if coverage_pct < cfg.min_coverage_threshold:
             review_reasons.append(f"Data coverage is below minimum threshold ({coverage_pct:.0f}% < {cfg.min_coverage_threshold:.0f}%).")
         if not pillar_auth.is_known:
